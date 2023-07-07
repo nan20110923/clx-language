@@ -1,0 +1,25 @@
+{
+  "name": "clx-language",
+  "displayName": "clx-language",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "clx",
+      "aliases": ["clx", ""],
+      "extensions": [".clx"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "clx",
+      "scopeName": "source.clx",
+      "path": "./syntaxes/.tmLanguage.json"
+    }]
+  }
+}
