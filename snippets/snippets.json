@@ -67,7 +67,7 @@
     },
     "template": {
         "prefix": "template",
-        "body": "coloX-4\nversion ${1:1}\nstyle: ${2:game}\nname: ${3:}\nauthor: ${4:}\ndesc: ${5:}\n\n__lua__\n\nfunction _draw()\n\t${6:print('hello word',10,50,red)}\nend\n\n__gfx__\n\n__gff__\n\n__map__\n\n__sfx__\n\n__music__",
+        "body": "coloX-4\nversion ${1:1}\nstyle: ${2:game}\nname: ${3:}\nauthor: ${4:}\ndesc: ${5:}\n\n__lua__\n\nfunction _draw()\n\t${6:print('hello world',10,50,red)}\nend\n\n__gfx__\n\n__gff__\n\n__map__\n\n__sfx__\n\n__music__",
         "description": "header include description",
         "scope": "source.clx"
     }
