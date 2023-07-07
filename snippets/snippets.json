@@ -1,0 +1,74 @@
+{
+    "local": {
+        "prefix": "local",
+        "body": "local ${1:var} = ${0:nil}",
+        "description": "local variable = ...",
+        "scope": "source.clx"
+    },
+    "if": {
+        "prefix": "if",
+        "body": "if ${1:condition} then\n\t${0:-- body}\nend",
+        "description": "if",
+        "scope": "source.clx"
+    },
+    "elseif": {
+        "prefix": "elseif",
+        "body": "elseif ${1:condition} then\n\t${0:-- body}",
+        "description": "elseif",
+        "scope": "source.clx"
+    },
+    "for": {
+        "prefix": "for",
+        "body": "for ${1:i} = ${2:1}, ${3:10} do\n\t${0:-- body}\nend",
+        "description": "for i = 1, n do end",
+        "scope": "source.clx"
+    },
+    "fori": {
+        "prefix": "fori",
+        "body": "for ${1:index}, ${2:value} in ipairs(${3:myTable}) do\n\t${0:-- body}\nend",
+        "description": "for i, v in ipairs(table) do end",
+        "scope": "source.clx"
+    },
+    "forp": {
+        "prefix": "forp",
+        "body": "for ${1:key}, ${2:value} in pairs(${3:myTable}) do\n\t${0:-- body}\nend",
+        "description": "for k, v in pairs(table) do end",
+        "scope": "source.clx"
+    },
+    "do": {
+        "prefix": "do",
+        "body": "do\n\t${0:-- body}\nend",
+        "description": "do",
+        "scope": "source.clx"
+    },
+    "while": {
+        "prefix": "while",
+        "body": "while ${1:condition} do\n\t${0:-- body}\nend",
+        "description": "while",
+        "scope": "source.clx"
+    },
+    "repeat": {
+        "prefix": "repeat",
+        "body": "repeat\n\t${0:-- body}\nuntil ${1:condition}",
+        "description": "repeat",
+        "scope": "source.clx"
+    },
+    "local function": {
+        "prefix": "local function",
+        "body": "local function ${1:func}(${2:})\n\t${0:-- body}\nend",
+        "description": "local function",
+        "scope": "source.clx"
+    },
+    "function": {
+        "prefix": "function",
+        "body": "function ${1:func}(${2:})\n\t${0:-- body}\nend",
+        "description": "function",
+        "scope": "source.clx"
+    },
+    "template": {
+        "prefix": "template",
+        "body": "coloX-4\nversion ${1:1}\nstyle: ${2:game}\nname: ${3:}\nauthor: ${4:}\ndesc: ${5:}\n\n__lua__\n\nfunction _draw()\n\t${6:print('hello word',10,50,red)}\nend\n\n__gfx__\n\n__gff__\n\n__map__\n\n__sfx__\n\n__music__",
+        "description": "header include description",
+        "scope": "source.clx"
+    }
+}
