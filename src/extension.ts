@@ -91,6 +91,11 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('clx', new DebugAdapterExecutableFactory()));
 
 	startServer();
+	return {
+		reportAPIDoc: (classDoc: any) => {
+			languageClient?.sendRequest("emmy/reportAPI", classDoc);
+		}
+	}
 }
 
 export function deactivate() {
