@@ -33,7 +33,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 			if (targetResource) {
 				let extensionPath = context.extensionPath;
-				console.log("lyc===111222", extensionPath)
 				let platform: string = os.platform();
 				let coloxToolPath: string = "";
 				if (platform == 'darwin') {
