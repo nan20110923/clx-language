@@ -173,7 +173,8 @@
     "rimraf": "^3.0.2",
     "typescript": "^4.6.3",
     "url": "^0.11.0",
-    "vsce": "^2.7.0"
+    "vsce": "^2.7.0",
+    "vscode-languageclient": "8.0.2"
   },
   "main": "./dist/extension.js"
 }

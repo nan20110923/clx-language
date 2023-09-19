@@ -20,9 +20,29 @@ import { ProviderResult } from 'vscode';
 import * as child_process from "child_process";
 import path = require('path');
 import * as os from 'os';
+import findJava from './findJava';
+import * as Annotator from "./annotator";
+import { LanguageClientOptions, LanguageClient, ServerOptions } from 'vscode-languageclient/node';
+import { ClxLanguageConfiguration } from './languageConfiguration';
+
+
+export let extensionContext: vscode.ExtensionContext;
+export let languageClient: LanguageClient;
+let javaExecutablePath: string | null;
+export const LANGUAGE_ID: string = "clx";
+
+let activeEditor: vscode.TextEditor;
 
 
 export function activate(context: vscode.ExtensionContext) {
+	extensionContext = context;
+	javaExecutablePath = findJava();
+
+	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(onDidChangeConfiguration, null, context.subscriptions));
+	context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocument, null, context.subscriptions));
+	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor, null, context.subscriptions));
+	context.subscriptions.push(vscode.languages.setLanguageConfiguration("clx", new ClxLanguageConfiguration()));
+
 	// regiser command
 	context.subscriptions.push(
 		vscode.commands.registerCommand('extension.clx-language.run', (resource: vscode.Uri) => {
@@ -69,10 +89,127 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// regiser debug adapter
 	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('clx', new DebugAdapterExecutableFactory()));
+
+	startServer();
 }
 
 export function deactivate() {
-	// nothing to do
+	languageClient?.stop();
+}
+
+async function validateJava(): Promise<void> {
+	const exePath = javaExecutablePath || "java";
+	console.log('exe path : ' + exePath);
+	return new Promise<void>((resolve, reject) => {
+		child_process.exec(`"${exePath}" -version`, (e, stdout, stderr) => {
+			let regexp: RegExp = /(?:java|openjdk) version "((\d+)(\.(\d+).+?)?)"/g;
+			if (stderr) {
+				let match = regexp.exec(stderr);
+				if (match) {
+					let major = parseInt(match[2]) || 0;
+					let minor = parseInt(match[4]) || 0;
+					// java 1.8+
+					if (major > 1 || (major === 1 && minor >= 8)) {
+						resolve();
+						return;
+					}
+					reject(`Unsupported Java version: ${match[1]}, please install Java 1.8 or above.`);
+					return;
+				}
+			}
+			reject("Can't find Java! Please install Java 1.8 or above and set JAVA_HOME environment variable.");
+		});
+	});
+}
+
+function restartServer() {
+	if (!languageClient) {
+		startServer();
+	} else {
+		languageClient.stop().then(startServer);
+	}
+}
+
+async function startServer() {
+	try {
+		await validateJava();
+	} catch (e) {
+		console.log("JAVA NOT FOUND");
+		return;
+	}
+
+	doStartServer().then(() => {
+		onDidChangeActiveTextEditor(vscode.window.activeTextEditor);
+	}).catch(reason => {
+		console.log(`Failed to start clx language server!\n${reason}`);
+	});
+}
+
+async function doStartServer() {
+	const clientOptions: LanguageClientOptions = {
+		documentSelector: [{ scheme: 'file', language: LANGUAGE_ID }],
+		synchronize: {
+			configurationSection: ["clx", "files.associations"],
+			fileEvents: [
+				vscode.workspace.createFileSystemWatcher("**/*.clx")
+			]
+		},
+		initializationOptions: {
+			stdFolder: vscode.Uri.file(path.resolve(extensionContext.extensionPath, "res/std")).toString(),
+			apiFolders: [],
+			client: 'vsc',
+		}
+	}
+
+
+	const cp = path.resolve(extensionContext.extensionPath, "server", "*");
+	const exePath = javaExecutablePath || "java";
+	let serverOptions: ServerOptions = {
+		command: exePath,
+		args: ["-cp", cp, "com.tang.vscode.MainKt", "-XX:+UseG1GC", "-XX:+UseStringDeduplication"]
+	};
+
+	languageClient = new LanguageClient(LANGUAGE_ID, "CLX language client", serverOptions, clientOptions);
+	languageClient.start().then(() => {
+		console.log("CLX language client ready");
+	})
+}
+
+
+
+function onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
+	if (activeEditor && activeEditor.document === event.document
+		&& activeEditor.document.languageId === LANGUAGE_ID
+		&& languageClient != undefined
+	) {
+		Annotator.requestAnnotators(activeEditor, languageClient);
+	}
+}
+
+function onDidChangeActiveTextEditor(editor: vscode.TextEditor | undefined) {
+	if (editor
+	&& editor.document.languageId === LANGUAGE_ID
+	&& languageClient != undefined) {
+		activeEditor = editor as vscode.TextEditor;
+		Annotator.requestAnnotators(activeEditor, languageClient);
+	}
+}
+
+function onDidChangeConfiguration(event: vscode.ConfigurationChangeEvent) {
+	let shouldRestart = false;
+	let newJavaExecutablePath = findJava();
+	if (newJavaExecutablePath !== javaExecutablePath) {
+		javaExecutablePath = newJavaExecutablePath;
+		shouldRestart = true;
+	}
+
+	if (languageClient !== undefined) {
+		Annotator.onDidChangeConfiguration(languageClient);
+	}
+
+	if (shouldRestart) {
+		restartServer();
+	}
 }
 
 class DebugAdapterExecutableFactory implements vscode.DebugAdapterDescriptorFactory {
