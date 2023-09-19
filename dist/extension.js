@@ -31,6 +31,9 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var vscode = __toESM(require("vscode"));
+var child_process = __toESM(require("child_process"));
+var os = __toESM(require("os"));
+var path = require("path");
 function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand("extension.clx-language.run", (resource) => {
@@ -38,18 +41,22 @@ function activate(context) {
       if (!targetResource && vscode.window.activeTextEditor) {
         targetResource = vscode.window.activeTextEditor.document.uri;
       }
-      console.log("lyc===111222", targetResource);
       if (targetResource) {
-        vscode.debug.startDebugging(
-          void 0,
-          {
-            type: "clx",
-            name: "Run File",
-            request: "launch",
-            program: targetResource.fsPath
-          },
-          { noDebug: true }
-        );
+        let extensionPath = context.extensionPath;
+        console.log("lyc===111222", extensionPath);
+        let platform2 = os.platform();
+        let coloxToolPath = "";
+        if (platform2 == "darwin") {
+          coloxToolPath = path.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
+        }
+        let dir = path.dirname(targetResource.fsPath);
+        let fileName = path.basename(targetResource.fsPath);
+        let cmdStr = `${coloxToolPath} -d ` + dir + path.sep + " -r " + fileName;
+        try {
+          child_process.execSync(cmdStr);
+        } catch (e) {
+          console.log("run coloXtool exception: ", e);
+        }
       }
     }),
     vscode.commands.registerCommand("extension.clx-language.debug", (resource) => {
@@ -69,9 +76,27 @@ function activate(context) {
       }
     })
   );
+  context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory("clx", new DebugAdapterExecutableFactory()));
 }
 function deactivate() {
 }
+var DebugAdapterExecutableFactory = class {
+  createDebugAdapterDescriptor(_session, executable) {
+    if (!executable) {
+      const command = "absolute path to my DA executable";
+      const args = [
+        "some args",
+        "another arg"
+      ];
+      const options = {
+        cwd: "working directory for executable",
+        env: { "envVariable": "some value" }
+      };
+      executable = new vscode.DebugAdapterExecutable(command, args, options);
+    }
+    return executable;
+  }
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   activate,
