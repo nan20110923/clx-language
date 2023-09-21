@@ -16,13 +16,14 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import * as net from "net";
 import { ProviderResult } from 'vscode';
 import * as child_process from "child_process";
 import path = require('path');
 import * as os from 'os';
 import findJava from './findJava';
 import * as Annotator from "./annotator";
-import { LanguageClientOptions, LanguageClient, ServerOptions } from 'vscode-languageclient/node';
+import { LanguageClientOptions, LanguageClient, ServerOptions, StreamInfo } from 'vscode-languageclient/node';
 import { ClxLanguageConfiguration } from './languageConfiguration';
 
 
@@ -70,7 +71,6 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}),
 		vscode.commands.registerCommand('extension.clx-language.debug', (resource: vscode.Uri) => {
-			console.log("lyc===222")
 			let targetResource = resource;
 			if (!targetResource && vscode.window.activeTextEditor) {
 				targetResource = vscode.window.activeTextEditor.document.uri;
@@ -85,6 +85,7 @@ export function activate(context: vscode.ExtensionContext) {
 				});
 			}
 		}),
+		vscode.commands.registerCommand("extension.clx-language.restartServer", restartServer)
 	);
 
 	// regiser debug adapter
@@ -166,13 +167,35 @@ async function doStartServer() {
 		}
 	}
 
+	let serverOptions: ServerOptions;
+    if (false) {
+        const connectionInfo = {
+            port: 9999
+        };
+        serverOptions = () => {
+            // Connect to language server via socket
+            let socket = net.connect(connectionInfo);
+            let result: StreamInfo = {
+                writer: socket,
+                reader: socket as NodeJS.ReadableStream
+            };
+            socket.on("close", () => {
+                console.log("client connect error!");
+            });
+            return Promise.resolve(result);
+        };
+    } else {
+		const cp = path.resolve(extensionContext.extensionPath, "server", "*");
+		const exePath = javaExecutablePath || "java";
+		serverOptions = {
+			command: exePath,
+			args: ["-cp", cp, "com.tang.vscode.MainKt", "-XX:+UseG1GC", "-XX:+UseStringDeduplication"]
+		};
+	}
 
-	const cp = path.resolve(extensionContext.extensionPath, "server", "*");
-	const exePath = javaExecutablePath || "java";
-	let serverOptions: ServerOptions = {
-		command: exePath,
-		args: ["-cp", cp, "com.tang.vscode.MainKt", "-XX:+UseG1GC", "-XX:+UseStringDeduplication"]
-	};
+	// languageClient.onNotification("emmy/setServerStatus", (param: ServerStatusParams) => {
+	// 	setServerStatus(param);
+	// });
 
 	languageClient = new LanguageClient(LANGUAGE_ID, "CLX language client", serverOptions, clientOptions);
 	languageClient.start().then(() => {
@@ -181,6 +204,19 @@ async function doStartServer() {
 }
 
 
+// function setServerStatus(status: ServerStatusParams) {
+// 	console.log('ServerStatus: ', status)
+// 	switch (status.health) {
+// 		case "ok":
+// 			break;
+// 		case "warning":
+// 			break;
+// 		case "error":
+// 			break;
+// 		case "stop":
+// 			break;
+// 	}
+// }
 
 function onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
 	if (activeEditor && activeEditor.document === event.document

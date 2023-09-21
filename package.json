@@ -50,6 +50,10 @@
         "category": "CLX Debug",
         "enablement": "!inDebugMode",
         "icon": "$(play)"
+      },
+      {
+        "command": "extension.clx-language.restartServer",
+        "title": "CLX: Restart Lua Server"
       }
     ],
     "breakpoints": [
