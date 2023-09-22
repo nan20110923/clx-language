@@ -168,7 +168,7 @@ async function doStartServer() {
 	}
 
 	let serverOptions: ServerOptions;
-    if (false) {
+    if (true) {
         const connectionInfo = {
             port: 9999
         };
