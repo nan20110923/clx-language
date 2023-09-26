@@ -4,7 +4,7 @@
   "publisher": "Lifesmart",
   "description": "",
   "icon": "res/icon.png",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -60,9 +60,9 @@
     "keybindings":[
       {
         "command": "extension.clx-language.run",
-        "key": "ctrl+r",
-        "mac": "cmd+r",
-        "when": "editorTextFocus"
+        "key": "f5",
+        "mac": "f5",
+        "when": "editorTextFocus && resourceLangId == clx"
       }
     ],
     "breakpoints": [
