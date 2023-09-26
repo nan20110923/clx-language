@@ -47,43 +47,10 @@ export function activate(context: vscode.ExtensionContext) {
 	// regiser command
 	context.subscriptions.push(
 		vscode.commands.registerCommand('extension.clx-language.run', (resource: vscode.Uri) => {
-			let targetResource = resource;
-			if (!targetResource && vscode.window.activeTextEditor) {
-				targetResource = vscode.window.activeTextEditor.document.uri;
-			}
-
-			if (targetResource) {
-				let extensionPath = context.extensionPath;
-				let platform: string = os.platform();
-				let coloxToolPath: string = "";
-				if (platform == 'darwin') {
-					coloxToolPath = path.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
-				}
-
-				let dir = path.dirname(targetResource.fsPath);
-				let fileName = path.basename(targetResource.fsPath);
-				let cmdStr = `${coloxToolPath} -d ` + dir + path.sep + " -r " + fileName;
-				try {
-					child_process.execSync(cmdStr);
-				} catch (e) {
-					console.log("run coloXtool exception: ", e);
-				}
-			}
+			cmdRun(context, resource)
 		}),
 		vscode.commands.registerCommand('extension.clx-language.debug', (resource: vscode.Uri) => {
-			let targetResource = resource;
-			if (!targetResource && vscode.window.activeTextEditor) {
-				targetResource = vscode.window.activeTextEditor.document.uri;
-			}
-			if (targetResource) {
-				vscode.debug.startDebugging(undefined, {
-					type: 'mock',
-					name: 'Debug File',
-					request: 'launch',
-					program: targetResource.fsPath,
-					stopOnEntry: true
-				});
-			}
+			cmdRun(context, resource)
 		}),
 		vscode.commands.registerCommand("extension.clx-language.restartServer", restartServer)
 	);
@@ -95,6 +62,36 @@ export function activate(context: vscode.ExtensionContext) {
 	return {
 		reportAPIDoc: (classDoc: any) => {
 			languageClient?.sendRequest("emmy/reportAPI", classDoc);
+		}
+	}
+}
+
+export function cmdRun(context: vscode.ExtensionContext, resource: vscode.Uri) {
+	let targetResource = resource;
+	if (!targetResource && vscode.window.activeTextEditor) {
+		targetResource = vscode.window.activeTextEditor.document.uri;
+	}
+
+	if (targetResource) {
+		let extensionPath = context.extensionPath;
+		let platform: string = os.platform();
+		let coloxToolPath: string = "";
+		if (platform == 'darwin') {
+			coloxToolPath = path.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
+		} else if (platform == 'win32') {
+			coloxToolPath = path.resolve(extensionPath, "debugger", "win32", "coloXtool.exe");
+		} else {
+			console.log("not support platform: ", platform);
+			return;
+		}
+
+		let dir = path.dirname(targetResource.fsPath);
+		let fileName = path.basename(targetResource.fsPath);
+		let cmdStr = `${coloxToolPath} -d ` + dir + path.sep + " -r " + fileName;
+		try {
+			child_process.execSync(cmdStr);
+		} catch (e) {
+			console.log("run coloXtool exception: ", e);
 		}
 	}
 }
@@ -168,7 +165,7 @@ async function doStartServer() {
 	}
 
 	let serverOptions: ServerOptions;
-    if (true) {
+    if (false) {
         const connectionInfo = {
             port: 9999
         };

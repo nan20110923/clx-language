@@ -1,6 +1,7 @@
 {
   "name": "clx-language",
   "displayName": "clx-language",
+  "publisher": "Lifesmart",
   "description": "",
   "icon": "res/icon.png",
   "version": "0.0.1",
@@ -54,6 +55,14 @@
       {
         "command": "extension.clx-language.restartServer",
         "title": "CLX: Restart Lua Server"
+      }
+    ],
+    "keybindings":[
+      {
+        "command": "extension.clx-language.run",
+        "key": "ctrl+r",
+        "mac": "cmd+r",
+        "when": "editorTextFocus"
       }
     ],
     "breakpoints": [
