@@ -2,7 +2,7 @@ import * as net from "net";
 import { Breakpoint, InitializedEvent, LoggingDebugSession, OutputEvent, Source, StackFrame, StoppedEvent, Thread } from "@vscode/debugadapter";
 import { DebugProtocol } from "@vscode/debugprotocol";
 import { FileUtil } from './FileUtil';
-import { Uri, window, workspace } from "vscode";
+import { Uri, ViewColumn, commands, window, workspace } from "vscode";
 import { basename } from "path";
 
 type MsgHook = (line: string) => { line: string | null, isEnd: boolean };
@@ -94,7 +94,10 @@ export class ClxDebugSession extends LoggingDebugSession {
                         session.sourceUri = await FileUtil.createDebugFile('debug_temp.clx', info.join('\n'))
 
                         if (session.sourceUri) {
-                            // 源码文件创建成功，发送初始化事件
+                            // 源码文件创建成功，active文件后发送初始化事件
+                            const doc = await workspace.openTextDocument(session.sourceUri.path);
+                            await window.showTextDocument(doc, ViewColumn.Active, false)
+
                             session.sendEvent(new InitializedEvent());
                         } else {
                             window.showErrorMessage("Create source code file failed")
@@ -273,10 +276,14 @@ export class ClxDebugSession extends LoggingDebugSession {
         console.log('variablesRequest')
     }
 
-    protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request | undefined): void {
+    protected async disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request | undefined): Promise<void> {
         console.log('disconnectRequest')
         if (this.sourceUri) {
-            workspace.fs.delete(this.sourceUri)
+            await workspace.fs.delete(this.sourceUri)
+            if (window.activeTextEditor?.document.uri.fsPath == this.sourceUri.path) {
+                commands.executeCommand('workbench.action.closeActiveEditor');
+            }
+            this.sourceUri = undefined
         }
         super.disconnectRequest(response, args, request)
     }

@@ -2966,7 +2966,7 @@ var require_main = __commonJS({
     var ril_1 = require_ril();
     ril_1.default.install();
     var api_1 = require_api();
-    var path6 = require("path");
+    var path5 = require("path");
     var os2 = require("os");
     var crypto_1 = require("crypto");
     var net_1 = require("net");
@@ -3061,9 +3061,9 @@ var require_main = __commonJS({
       }
       let result;
       if (XDG_RUNTIME_DIR) {
-        result = path6.join(XDG_RUNTIME_DIR, `vscode-ipc-${randomSuffix}.sock`);
+        result = path5.join(XDG_RUNTIME_DIR, `vscode-ipc-${randomSuffix}.sock`);
       } else {
-        result = path6.join(os2.tmpdir(), `vscode-${randomSuffix}.sock`);
+        result = path5.join(os2.tmpdir(), `vscode-${randomSuffix}.sock`);
       }
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0 && result.length >= limit) {
@@ -9068,7 +9068,7 @@ var require_minimatch = __commonJS({
   "node_modules/minimatch/minimatch.js"(exports, module2) {
     module2.exports = minimatch;
     minimatch.Minimatch = Minimatch;
-    var path6 = function() {
+    var path5 = function() {
       try {
         return require("path");
       } catch (e) {
@@ -9076,7 +9076,7 @@ var require_minimatch = __commonJS({
     }() || {
       sep: "/"
     };
-    minimatch.sep = path6.sep;
+    minimatch.sep = path5.sep;
     var GLOBSTAR = minimatch.GLOBSTAR = Minimatch.GLOBSTAR = {};
     var expand = require_brace_expansion();
     var plTypes = {
@@ -9167,8 +9167,8 @@ var require_minimatch = __commonJS({
       if (!options)
         options = {};
       pattern = pattern.trim();
-      if (!options.allowWindowsEscape && path6.sep !== "/") {
-        pattern = pattern.split(path6.sep).join("/");
+      if (!options.allowWindowsEscape && path5.sep !== "/") {
+        pattern = pattern.split(path5.sep).join("/");
       }
       this.options = options;
       this.set = [];
@@ -9545,8 +9545,8 @@ var require_minimatch = __commonJS({
       if (f === "/" && partial)
         return true;
       var options = this.options;
-      if (path6.sep !== "/") {
-        f = f.split(path6.sep).join("/");
+      if (path5.sep !== "/") {
+        f = f.split(path5.sep).join("/");
       }
       f = f.split(slashSplit);
       this.debug(this.pattern, "split", f);
@@ -11314,13 +11314,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path6) {
+        function ensurePath(config, path5) {
           let current = config;
-          for (let i = 0; i < path6.length - 1; i++) {
-            let obj = current[path6[i]];
+          for (let i = 0; i < path5.length - 1; i++) {
+            let obj = current[path5[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path6[i]] = obj;
+              current[path5[i]] = obj;
             }
             current = obj;
           }
@@ -11338,8 +11338,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key);
           }
           if (config) {
-            let path6 = keys[i].split(".");
-            ensurePath(result, path6)[path6[path6.length - 1]] = toJSONObject(config);
+            let path5 = keys[i].split(".");
+            ensurePath(result, path5)[path5[path5.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -13829,13 +13829,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path6 = uri.fsPath.replace(/\\/g, "/");
+          const path5 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path6)) {
+              if (filter.matcher.match(path5)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -13849,7 +13849,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path6}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path5}/`)) {
                   return true;
                 }
               }
@@ -17467,7 +17467,7 @@ var require_main4 = __commonJS({
     exports.SettingMonitor = exports.LanguageClient = exports.TransportKind = void 0;
     var cp = require("child_process");
     var fs = require("fs");
-    var path6 = require("path");
+    var path5 = require("path");
     var vscode_1 = require("vscode");
     var Is = require_is();
     var client_1 = require_client();
@@ -17874,18 +17874,18 @@ var require_main4 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path6.isAbsolute(runtime)) {
+        if (path5.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path6.join(mainRootPath, runtime);
+          const result = path5.join(mainRootPath, runtime);
           if (fs.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path6.join(serverWorkingDirectory, runtime);
+          const result = path5.join(serverWorkingDirectory, runtime);
           if (fs.existsSync(result)) {
             return result;
           }
@@ -18249,9 +18249,9 @@ var require_debugSession = __commonJS({
     var runDebugAdapter_1 = require_runDebugAdapter();
     var url_1 = require("url");
     var Source2 = class {
-      constructor(name, path6, id = 0, origin, data) {
+      constructor(name, path5, id = 0, origin, data) {
         this.name = name;
-        this.path = path6;
+        this.path = path5;
         this.sourceReference = id;
         if (origin) {
           this.origin = origin;
@@ -18898,16 +18898,16 @@ var require_debugSession = __commonJS({
         }
         return debuggerPath;
       }
-      static path2uri(path6) {
+      static path2uri(path5) {
         if (process.platform === "win32") {
-          if (/^[A-Z]:/.test(path6)) {
-            path6 = path6[0].toLowerCase() + path6.substr(1);
+          if (/^[A-Z]:/.test(path5)) {
+            path5 = path5[0].toLowerCase() + path5.substr(1);
           }
-          path6 = path6.replace(/\\/g, "/");
+          path5 = path5.replace(/\\/g, "/");
         }
-        path6 = encodeURI(path6);
+        path5 = encodeURI(path5);
         let uri = new url_1.URL(`file:`);
-        uri.pathname = path6;
+        uri.pathname = path5;
         return uri.toString();
       }
       static uri2path(sourceUri) {
@@ -18942,7 +18942,7 @@ var require_internalLogger = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InternalLogger = void 0;
     var fs = require("fs");
-    var path6 = require("path");
+    var path5 = require("path");
     var logger_1 = require_logger();
     var InternalLogger = class {
       constructor(logCallback, isServer) {
@@ -18961,13 +18961,13 @@ var require_internalLogger = __commonJS({
         this._minLogLevel = options.consoleMinLogLevel;
         this._prependTimestamp = options.prependTimestamp;
         if (options.logFilePath) {
-          if (!path6.isAbsolute(options.logFilePath)) {
+          if (!path5.isAbsolute(options.logFilePath)) {
             this.log(`logFilePath must be an absolute path: ${options.logFilePath}`, logger_1.LogLevel.Error);
           } else {
             const handleError = (err) => this.sendLog(`Error creating log file at path: ${options.logFilePath}. Error: ${err.toString()}
 `, logger_1.LogLevel.Error);
             try {
-              await fs.promises.mkdir(path6.dirname(options.logFilePath), { recursive: true });
+              await fs.promises.mkdir(path5.dirname(options.logFilePath), { recursive: true });
               this.log(`Verbose logs are written to:
 `, logger_1.LogLevel.Warn);
               this.log(options.logFilePath + "\n", logger_1.LogLevel.Warn);
@@ -19380,9 +19380,9 @@ function substituteFolder(oriPath) {
   let pattern = /(?:\$\{workspaceFolder(?:\:([^\.]+))?\})/;
   let innerMatch = pattern.exec(oriPath);
   if (innerMatch !== null) {
-    let path6 = getWorkspaceFolderByName(innerMatch[1]);
-    if (path6) {
-      ret = oriPath.replace(pattern, path6);
+    let path5 = getWorkspaceFolderByName(innerMatch[1]);
+    if (path5) {
+      ret = oriPath.replace(pattern, path5);
     }
   }
   ret = path.resolve(ret);
@@ -19641,6 +19641,8 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
             }
             session.sourceUri = await FileUtil.createDebugFile("debug_temp.clx", info.join("\n"));
             if (session.sourceUri) {
+              const doc = await import_vscode4.workspace.openTextDocument(session.sourceUri.path);
+              await import_vscode4.window.showTextDocument(doc, import_vscode4.ViewColumn.Active, false);
               session.sendEvent(new import_debugadapter.InitializedEvent());
             } else {
               import_vscode4.window.showErrorMessage("Create source code file failed");
@@ -19738,8 +19740,8 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
     return f;
   }
   async setBreakPointsRequest(response, args) {
-    const path6 = args.source.path;
-    if (path6 == this.sourceUri?.path) {
+    const path5 = args.source.path;
+    if (path5 == this.sourceUri?.path) {
       this.sendMessage("d");
       const clientLines = args.lines || [];
       console.log(`setBreakPointsRequest: ${clientLines.length}`);
@@ -19784,8 +19786,8 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
     console.log("stackTraceRequest");
     if (this.breakLineNumber && this.sourceUri) {
       const stackFrames = [];
-      let path6 = this.sourceUri.path;
-      let source = new import_debugadapter.Source((0, import_path.basename)(path6), path6);
+      let path5 = this.sourceUri.path;
+      let source = new import_debugadapter.Source((0, import_path.basename)(path5), path5);
       stackFrames.push(new import_debugadapter.StackFrame(0, "step", source, this.breakLineNumber));
       response.body = {
         stackFrames,
@@ -19800,10 +19802,14 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
   variablesRequest(response, args, request) {
     console.log("variablesRequest");
   }
-  disconnectRequest(response, args, request) {
+  async disconnectRequest(response, args, request) {
     console.log("disconnectRequest");
     if (this.sourceUri) {
-      import_vscode4.workspace.fs.delete(this.sourceUri);
+      await import_vscode4.workspace.fs.delete(this.sourceUri);
+      if (import_vscode4.window.activeTextEditor?.document.uri.fsPath == this.sourceUri.path) {
+        import_vscode4.commands.executeCommand("workbench.action.closeActiveEditor");
+      }
+      this.sourceUri = void 0;
     }
     super.disconnectRequest(response, args, request);
   }
@@ -19885,7 +19891,6 @@ var ClxDebugConfigurationProvider = class {
 };
 
 // src/debugger/activeDebug.ts
-var path4 = require("path");
 function activateDebug(context) {
   context.subscriptions.push(vscode4.debug.registerDebugConfigurationProvider("clx_debug", new ClxDebugConfigurationProvider("clx_debug", context)));
   context.subscriptions.push(vscode4.debug.registerDebugAdapterDescriptorFactory("clx_debug", new InlineDebugAdapterFactory()));
@@ -19921,7 +19926,7 @@ var ClxInlineValuesProvider = class {
 };
 
 // src/extension.ts
-var path5 = require("path");
+var path4 = require("path");
 var extensionContext;
 var languageClient;
 var javaExecutablePath;
@@ -19958,16 +19963,16 @@ function cmdRun(context, resource) {
     let platform2 = os.platform();
     let coloxToolPath = "";
     if (platform2 == "darwin") {
-      coloxToolPath = path5.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
+      coloxToolPath = path4.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
     } else if (platform2 == "win32") {
-      coloxToolPath = path5.resolve(extensionPath, "debugger", "win32", "coloXtool.exe");
+      coloxToolPath = path4.resolve(extensionPath, "debugger", "win32", "coloXtool.exe");
     } else {
       console.log("not support platform: ", platform2);
       return;
     }
-    let dir = path5.dirname(targetResource.fsPath);
-    let fileName = path5.basename(targetResource.fsPath);
-    let cmdStr = `${coloxToolPath} -d ` + dir + path5.sep + " -r " + fileName;
+    let dir = path4.dirname(targetResource.fsPath);
+    let fileName = path4.basename(targetResource.fsPath);
+    let cmdStr = `${coloxToolPath} -d ` + dir + path4.sep + " -r " + fileName;
     try {
       child_process.exec(cmdStr);
     } catch (e) {
@@ -20032,7 +20037,7 @@ async function doStartServer() {
       ]
     },
     initializationOptions: {
-      stdFolder: vscode5.Uri.file(path5.resolve(extensionContext.extensionPath, "res/std")).toString(),
+      stdFolder: vscode5.Uri.file(path4.resolve(extensionContext.extensionPath, "res/std")).toString(),
       apiFolders: [],
       client: "vsc"
     }
@@ -20054,7 +20059,7 @@ async function doStartServer() {
       return Promise.resolve(result);
     };
   } else {
-    const cp = path5.resolve(extensionContext.extensionPath, "server", "*");
+    const cp = path4.resolve(extensionContext.extensionPath, "server", "*");
     const exePath = javaExecutablePath || "java";
     serverOptions = {
       command: exePath,
