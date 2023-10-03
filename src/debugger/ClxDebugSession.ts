@@ -4,6 +4,9 @@ import { DebugProtocol } from "@vscode/debugprotocol";
 import { FileUtil } from './FileUtil';
 import { Uri, ViewColumn, commands, window, workspace } from "vscode";
 import { basename } from "path";
+import * as readline from "readline";
+import { cmdRun, isColoXToolRunning } from "../extension";
+import { delay } from "../util";
 
 type MsgHook = (line: string) => { line: string | null, isEnd: boolean };
 type MsgInfoHandler = (stat: number, info: string[]) => void;
@@ -32,27 +35,43 @@ export class ClxDebugSession extends LoggingDebugSession {
         super.customRequest(command, response, args)
     }
 
-    protected launchRequest(response: DebugProtocol.LaunchResponse, args: DebugProtocol.LaunchRequestArguments, request?: DebugProtocol.Request | undefined): void {
-        console.log('launchRequest!!!')
-        const client = net.connect(3563, '127.0.0.1')
-                .on('connect', () => {
-                    this.sendResponse(response);
-                    this.onConnect(client);
-                })
-                .on('error', err => {
-                    response.success = false;
-                    response.message = `${err}`;
-                    this.sendResponse(response);
-                    this.onSocketClose();
-                })
-                .on('close', hadErr => this.onSocketClose())
-                .on('data', data => this.onReceiveData(data));
+    protected async launchRequest(response: DebugProtocol.LaunchResponse, args: DebugProtocol.LaunchRequestArguments, request?: DebugProtocol.Request | undefined): Promise<void> {
+        console.log(`launchRequest args: ${args}`)
+
+        if (!isColoXToolRunning()) {
+            cmdRun(null)
+            await delay(1000)
+        }
+
+        const client = net.connect({
+            port: 3563,
+            host: '127.0.0.1'
+        }).on('connect', () => {
+            this.sendResponse(response);
+            this.onConnect(client);
+        }).on('error', err => {
+            response.success = false;
+            response.message = `${err}`;
+            this.sendResponse(response);
+            this.onSocketClose();
+        }).on('close', hadErr => this.onSocketClose());
+    }
+
+    handleMessage(msg: DebugProtocol.ProtocolMessage): void {
+        // console.log('handleMessage:', msg);
+        super.handleMessage(msg)
     }
 
     protected onConnect(client: net.Socket) {
-        console.log('onConnect!!!')
+        // console.log('onConnect!!!')
         this.sendEvent(new OutputEvent(`Connected.\n`));
         this.client = client;
+
+        const rl = readline.createInterface({
+            input: client,
+            crlfDelay: Infinity
+        })
+        rl.on('line', line => this.onReceiveLine(line))
 
         // setup step hook
         this.setupStepHook();
@@ -71,7 +90,7 @@ export class ClxDebugSession extends LoggingDebugSession {
                     let match = pattern.exec(info[0])
                     if (match?.groups?.line) {
                         session.breakLineNumber = Number.parseInt(match?.groups?.line);
-                        console.log(`breakLineNumber: ${session.breakLineNumber}`)
+                        // console.log(`breakLineNumber: ${session.breakLineNumber}`)
                         session.sendEvent(new StoppedEvent("breakpoint", 1));
                     }
                 }
@@ -95,8 +114,15 @@ export class ClxDebugSession extends LoggingDebugSession {
 
                         if (session.sourceUri) {
                             // 源码文件创建成功，active文件后发送初始化事件
+                            workspace.onWillSaveTextDocument((event) => {
+                                const documentUri = event.document.uri;
+                                if (documentUri.fsPath === session.sourceUri?.path) {
+                                    event.waitUntil(Promise.reject(new Error('Editing this file is not allowed.')));
+                                }
+                            })
+
                             const doc = await workspace.openTextDocument(session.sourceUri.path);
-                            await window.showTextDocument(doc, ViewColumn.Active, false)
+                            await window.showTextDocument(doc, {viewColumn: ViewColumn.Active, preserveFocus: false, preview: false})
 
                             session.sendEvent(new InitializedEvent());
                         } else {
@@ -115,24 +141,20 @@ export class ClxDebugSession extends LoggingDebugSession {
         }
     }
 
-    private onReceiveData(data: Buffer | string) {
-        const chunk = data.toString()
-        console.log(`onReceiveData: ${chunk}`)
-        const lines = chunk.split('\n')
-        if (lines.length > 0) {
-            this.hookData(lines)
-        }
+    private onReceiveLine(line: string) {
+        // console.log(`onReceiveLine: ${line}`)
+        this.hookData([line])
     }
 
     private hookData(lines: string[]) {
         if (this.msgHooks.length > 0) {
             for (let i = 0; i < lines.length; i++) {
-                let data = lines[i]
+                let line: string | null = lines[i]
                 let idx = 0
                 let hf = this.msgHooks[idx]
                 while (hf) {
-                    let ret = hf(data)
-                    let line = ret.line
+                    let ret = hf(line)
+                    line = ret.line
                     if (ret.isEnd) {
                         this.msgHooks.splice(idx, 1)
                         idx -= 1
@@ -142,6 +164,9 @@ export class ClxDebugSession extends LoggingDebugSession {
                     }
                     idx += 1
                     hf = this.msgHooks[idx]
+                }
+                if (line) {
+                    this.sendEvent(new OutputEvent(`${line}\n`))
                 }
             }
         }
@@ -207,7 +232,6 @@ export class ClxDebugSession extends LoggingDebugSession {
             this.sendMessage('d');
 
             const clientLines = args.lines || [];
-            console.log(`setBreakPointsRequest: ${clientLines.length}`)
             const actualBreakpoints0 = clientLines.map(async line => {
                 this.sendMessage(`b __lua__:${line}`)
                 const bp = new Breakpoint(true, line) as DebugProtocol.Breakpoint;
@@ -224,6 +248,13 @@ export class ClxDebugSession extends LoggingDebugSession {
         }
     }
 
+    protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments, request?: DebugProtocol.Request | undefined): void {
+        if (args.context == 'repl') {
+            this.sendMessage(args.expression)
+        }
+        super.evaluateRequest(response, args, request)
+    }
+
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
         response.body = {
             threads: [
@@ -234,27 +265,27 @@ export class ClxDebugSession extends LoggingDebugSession {
     }
 
     protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments, request?: DebugProtocol.Request | undefined): void {
-        console.log('nextRequest')
+        // console.log('nextRequest')
         this.sendDebugAction(response, 'n')
     }
 
     protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
-        console.log('continueRequest')
+        // console.log('continueRequest')
         this.sendDebugAction(response, 'c');
     }
 
     protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments, request?: DebugProtocol.Request | undefined): void {
-        console.log('stepInRequest')
+        // console.log('stepInRequest')
         this.sendDebugAction(response, 's');
     }
 
     protected stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments): void {
-        console.log('stepOutRequest')
+        // console.log('stepOutRequest')
         this.sendDebugAction(response, 'fin');
     }
 
     protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments, request?: DebugProtocol.Request | undefined): void {
-        console.log('stackTraceRequest')
+        // console.log('stackTraceRequest')
         if (this.breakLineNumber && this.sourceUri) {
             const stackFrames: StackFrame[] = [];
             let path = this.sourceUri.path
@@ -268,16 +299,16 @@ export class ClxDebugSession extends LoggingDebugSession {
         this.sendResponse(response)
     }
 
-    protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments, request?: DebugProtocol.Request | undefined): void {
-        console.log('scopesRequest')
-    }
+    // protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments, request?: DebugProtocol.Request | undefined): void {
+    //     console.log('scopesRequest')
+    // }
 
-    protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request | undefined): void {
-        console.log('variablesRequest')
-    }
+    // protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request | undefined): void {
+    //     console.log('variablesRequest')
+    // }
 
     protected async disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request | undefined): Promise<void> {
-        console.log('disconnectRequest')
+        // console.log('disconnectRequest')
         if (this.sourceUri) {
             await workspace.fs.delete(this.sourceUri)
             if (window.activeTextEditor?.document.uri.fsPath == this.sourceUri.path) {

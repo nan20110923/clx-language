@@ -76,7 +76,7 @@ export class ClxDebugConfigurationProvider implements vscode.DebugConfigurationP
     }
 
     resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, debugConfiguration: ClxDebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
-        console.log('resolveDebugConfiguration!!!')
+        // console.log('resolveDebugConfiguration!!!')
         debugConfiguration.extensionPath = this.context.extensionPath;
         debugConfiguration.sourcePaths = this.getSourceRoots();
         if (!debugConfiguration.request) {

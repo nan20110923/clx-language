@@ -25,6 +25,7 @@ import * as Annotator from "./annotator";
 import { LanguageClientOptions, LanguageClient, ServerOptions, StreamInfo } from 'vscode-languageclient/node';
 import { ClxLanguageConfiguration } from './languageConfiguration';
 import { activateDebug } from './debugger/activeDebug';
+import exp = require('constants');
 
 
 export let extensionContext: vscode.ExtensionContext;
@@ -33,6 +34,7 @@ let javaExecutablePath: string | null;
 export const LANGUAGE_ID: string = "clx";
 
 let activeEditor: vscode.TextEditor;
+let coloxProcess: child_process.ChildProcess | undefined;
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -47,7 +49,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// regiser command
 	context.subscriptions.push(
 		vscode.commands.registerCommand('extension.clx-language.run', (resource: vscode.Uri) => {
-			cmdRun(context, resource)
+			if (!isColoXToolRunning()) {
+				cmdRun(resource)
+			}
 		}),
 		// vscode.commands.registerCommand('extension.clx-language.debug', (resource: vscode.Uri) => {
 		// 	cmdRun(context, resource)
@@ -68,14 +72,18 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 }
 
-export function cmdRun(context: vscode.ExtensionContext, resource: vscode.Uri) {
+export function isColoXToolRunning() {
+	return coloxProcess && coloxProcess.exitCode == null
+}
+
+export function cmdRun(resource: vscode.Uri | null) {
 	let targetResource = resource;
 	if (!targetResource && vscode.window.activeTextEditor) {
 		targetResource = vscode.window.activeTextEditor.document.uri;
 	}
 
 	if (targetResource) {
-		let extensionPath = context.extensionPath;
+		let extensionPath = extensionContext.extensionPath;
 		let platform: string = os.platform();
 		let coloxToolPath: string = "";
 		if (platform == 'darwin') {
@@ -91,7 +99,10 @@ export function cmdRun(context: vscode.ExtensionContext, resource: vscode.Uri) {
 		let fileName = path.basename(targetResource.fsPath);
 		let cmdStr = `${coloxToolPath} -d ` + dir + path.sep + " -r " + fileName;
 		try {
-			child_process.exec(cmdStr);
+			coloxProcess = child_process.exec(cmdStr);
+			coloxProcess.addListener("exit", () => {
+				coloxProcess = undefined
+			})
 		} catch (e) {
 			console.log("run coloXtool exception: ", e);
 		}

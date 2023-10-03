@@ -6128,9 +6128,9 @@ var require_async = __commonJS({
         this.onSuccess = void 0;
         this.task = void 0;
       }
-      trigger(task, delay = this.defaultDelay) {
+      trigger(task, delay2 = this.defaultDelay) {
         this.task = task;
-        if (delay >= 0) {
+        if (delay2 >= 0) {
           this.cancelTimeout();
         }
         if (!this.completionPromise) {
@@ -6144,11 +6144,11 @@ var require_async = __commonJS({
             return result;
           });
         }
-        if (delay >= 0 || this.timeout === void 0) {
+        if (delay2 >= 0 || this.timeout === void 0) {
           this.timeout = (0, vscode_languageserver_protocol_1.RAL)().timer.setTimeout(() => {
             this.timeout = void 0;
             this.onSuccess(void 0);
-          }, delay >= 0 ? delay : this.defaultDelay);
+          }, delay2 >= 0 ? delay2 : this.defaultDelay);
         }
         return this.completionPromise;
       }
@@ -19349,6 +19349,7 @@ __export(extension_exports, {
   cmdRun: () => cmdRun,
   deactivate: () => deactivate,
   extensionContext: () => extensionContext,
+  isColoXToolRunning: () => isColoXToolRunning,
   languageClient: () => languageClient
 });
 module.exports = __toCommonJS(extension_exports);
@@ -19577,6 +19578,16 @@ var FileUtil = class {
 // src/debugger/ClxDebugSession.ts
 var import_vscode4 = require("vscode");
 var import_path = require("path");
+var readline = __toESM(require("readline"));
+
+// src/util.ts
+function delay(ms) {
+  return new Promise((resolve2) => {
+    setTimeout(resolve2, ms);
+  });
+}
+
+// src/debugger/ClxDebugSession.ts
 var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
   constructor() {
     super("clx.debug.txt");
@@ -19592,9 +19603,16 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
   customRequest(command, response, args, request) {
     super.customRequest(command, response, args);
   }
-  launchRequest(response, args, request) {
-    console.log("launchRequest!!!");
-    const client = net.connect(3563, "127.0.0.1").on("connect", () => {
+  async launchRequest(response, args, request) {
+    console.log(`launchRequest args: ${args}`);
+    if (!isColoXToolRunning()) {
+      cmdRun(null);
+      await delay(1e3);
+    }
+    const client = net.connect({
+      port: 3563,
+      host: "127.0.0.1"
+    }).on("connect", () => {
       this.sendResponse(response);
       this.onConnect(client);
     }).on("error", (err) => {
@@ -19602,13 +19620,20 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
       response.message = `${err}`;
       this.sendResponse(response);
       this.onSocketClose();
-    }).on("close", (hadErr) => this.onSocketClose()).on("data", (data) => this.onReceiveData(data));
+    }).on("close", (hadErr) => this.onSocketClose());
+  }
+  handleMessage(msg) {
+    super.handleMessage(msg);
   }
   onConnect(client) {
-    console.log("onConnect!!!");
     this.sendEvent(new import_debugadapter.OutputEvent(`Connected.
 `));
     this.client = client;
+    const rl = readline.createInterface({
+      input: client,
+      crlfDelay: Infinity
+    });
+    rl.on("line", (line) => this.onReceiveLine(line));
     this.setupStepHook();
     this.doCmd("source");
   }
@@ -19621,7 +19646,6 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
           let match = pattern.exec(info[0]);
           if (match?.groups?.line) {
             session.breakLineNumber = Number.parseInt(match?.groups?.line);
-            console.log(`breakLineNumber: ${session.breakLineNumber}`);
             session.sendEvent(new import_debugadapter.StoppedEvent("breakpoint", 1));
           }
         }
@@ -19641,8 +19665,14 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
             }
             session.sourceUri = await FileUtil.createDebugFile("debug_temp.clx", info.join("\n"));
             if (session.sourceUri) {
+              import_vscode4.workspace.onWillSaveTextDocument((event) => {
+                const documentUri = event.document.uri;
+                if (documentUri.fsPath === session.sourceUri?.path) {
+                  event.waitUntil(Promise.reject(new Error("Editing this file is not allowed.")));
+                }
+              });
               const doc = await import_vscode4.workspace.openTextDocument(session.sourceUri.path);
-              await import_vscode4.window.showTextDocument(doc, import_vscode4.ViewColumn.Active, false);
+              await import_vscode4.window.showTextDocument(doc, { viewColumn: import_vscode4.ViewColumn.Active, preserveFocus: false, preview: false });
               session.sendEvent(new import_debugadapter.InitializedEvent());
             } else {
               import_vscode4.window.showErrorMessage("Create source code file failed");
@@ -19659,23 +19689,18 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
 `);
     }
   }
-  onReceiveData(data) {
-    const chunk = data.toString();
-    console.log(`onReceiveData: ${chunk}`);
-    const lines = chunk.split("\n");
-    if (lines.length > 0) {
-      this.hookData(lines);
-    }
+  onReceiveLine(line) {
+    this.hookData([line]);
   }
   hookData(lines) {
     if (this.msgHooks.length > 0) {
       for (let i = 0; i < lines.length; i++) {
-        let data = lines[i];
+        let line = lines[i];
         let idx = 0;
         let hf = this.msgHooks[idx];
         while (hf) {
-          let ret = hf(data);
-          let line = ret.line;
+          let ret = hf(line);
+          line = ret.line;
           if (ret.isEnd) {
             this.msgHooks.splice(idx, 1);
             idx -= 1;
@@ -19685,6 +19710,10 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
           }
           idx += 1;
           hf = this.msgHooks[idx];
+        }
+        if (line) {
+          this.sendEvent(new import_debugadapter.OutputEvent(`${line}
+`));
         }
       }
     }
@@ -19744,7 +19773,6 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
     if (path5 == this.sourceUri?.path) {
       this.sendMessage("d");
       const clientLines = args.lines || [];
-      console.log(`setBreakPointsRequest: ${clientLines.length}`);
       const actualBreakpoints0 = clientLines.map(async (line) => {
         this.sendMessage(`b __lua__:${line}`);
         const bp = new import_debugadapter.Breakpoint(true, line);
@@ -19758,6 +19786,12 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
       this.sendResponse(response);
     }
   }
+  evaluateRequest(response, args, request) {
+    if (args.context == "repl") {
+      this.sendMessage(args.expression);
+    }
+    super.evaluateRequest(response, args, request);
+  }
   threadsRequest(response) {
     response.body = {
       threads: [
@@ -19767,23 +19801,18 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
     this.sendResponse(response);
   }
   nextRequest(response, args, request) {
-    console.log("nextRequest");
     this.sendDebugAction(response, "n");
   }
   continueRequest(response, args) {
-    console.log("continueRequest");
     this.sendDebugAction(response, "c");
   }
   stepInRequest(response, args, request) {
-    console.log("stepInRequest");
     this.sendDebugAction(response, "s");
   }
   stepOutRequest(response, args) {
-    console.log("stepOutRequest");
     this.sendDebugAction(response, "fin");
   }
   stackTraceRequest(response, args, request) {
-    console.log("stackTraceRequest");
     if (this.breakLineNumber && this.sourceUri) {
       const stackFrames = [];
       let path5 = this.sourceUri.path;
@@ -19796,14 +19825,7 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
     }
     this.sendResponse(response);
   }
-  scopesRequest(response, args, request) {
-    console.log("scopesRequest");
-  }
-  variablesRequest(response, args, request) {
-    console.log("variablesRequest");
-  }
   async disconnectRequest(response, args, request) {
-    console.log("disconnectRequest");
     if (this.sourceUri) {
       await import_vscode4.workspace.fs.delete(this.sourceUri);
       if (import_vscode4.window.activeTextEditor?.document.uri.fsPath == this.sourceUri.path) {
@@ -19875,7 +19897,6 @@ var ClxDebugConfigurationProvider = class {
     }));
   }
   resolveDebugConfiguration(folder, debugConfiguration, token) {
-    console.log("resolveDebugConfiguration!!!");
     debugConfiguration.extensionPath = this.context.extensionPath;
     debugConfiguration.sourcePaths = this.getSourceRoots();
     if (!debugConfiguration.request) {
@@ -19927,11 +19948,13 @@ var ClxInlineValuesProvider = class {
 
 // src/extension.ts
 var path4 = require("path");
+var exp = require("constants");
 var extensionContext;
 var languageClient;
 var javaExecutablePath;
 var LANGUAGE_ID = "clx";
 var activeEditor;
+var coloxProcess;
 function activate(context) {
   extensionContext = context;
   javaExecutablePath = findJava_default();
@@ -19941,7 +19964,9 @@ function activate(context) {
   context.subscriptions.push(vscode5.languages.setLanguageConfiguration("clx", new ClxLanguageConfiguration()));
   context.subscriptions.push(
     vscode5.commands.registerCommand("extension.clx-language.run", (resource) => {
-      cmdRun(context, resource);
+      if (!isColoXToolRunning()) {
+        cmdRun(resource);
+      }
     }),
     vscode5.commands.registerCommand("extension.clx-language.restartServer", restartServer)
   );
@@ -19953,13 +19978,16 @@ function activate(context) {
     }
   };
 }
-function cmdRun(context, resource) {
+function isColoXToolRunning() {
+  return coloxProcess && coloxProcess.exitCode == null;
+}
+function cmdRun(resource) {
   let targetResource = resource;
   if (!targetResource && vscode5.window.activeTextEditor) {
     targetResource = vscode5.window.activeTextEditor.document.uri;
   }
   if (targetResource) {
-    let extensionPath = context.extensionPath;
+    let extensionPath = extensionContext.extensionPath;
     let platform2 = os.platform();
     let coloxToolPath = "";
     if (platform2 == "darwin") {
@@ -19974,7 +20002,10 @@ function cmdRun(context, resource) {
     let fileName = path4.basename(targetResource.fsPath);
     let cmdStr = `${coloxToolPath} -d ` + dir + path4.sep + " -r " + fileName;
     try {
-      child_process.exec(cmdStr);
+      coloxProcess = child_process.exec(cmdStr);
+      coloxProcess.addListener("exit", () => {
+        coloxProcess = void 0;
+      });
     } catch (e) {
       console.log("run coloXtool exception: ", e);
     }
@@ -20103,6 +20134,7 @@ function onDidChangeConfiguration2(event) {
   cmdRun,
   deactivate,
   extensionContext,
+  isColoXToolRunning,
   languageClient
 });
 //# sourceMappingURL=extension.js.map
