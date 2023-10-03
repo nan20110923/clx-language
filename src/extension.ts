@@ -17,7 +17,6 @@
 
 import * as vscode from 'vscode';
 import * as net from "net";
-import { ProviderResult } from 'vscode';
 import * as child_process from "child_process";
 import path = require('path');
 import * as os from 'os';
@@ -25,6 +24,7 @@ import findJava from './findJava';
 import * as Annotator from "./annotator";
 import { LanguageClientOptions, LanguageClient, ServerOptions, StreamInfo } from 'vscode-languageclient/node';
 import { ClxLanguageConfiguration } from './languageConfiguration';
+import { activateDebug } from './debugger/activeDebug';
 
 
 export let extensionContext: vscode.ExtensionContext;
@@ -49,16 +49,18 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand('extension.clx-language.run', (resource: vscode.Uri) => {
 			cmdRun(context, resource)
 		}),
-		vscode.commands.registerCommand('extension.clx-language.debug', (resource: vscode.Uri) => {
-			cmdRun(context, resource)
-		}),
+		// vscode.commands.registerCommand('extension.clx-language.debug', (resource: vscode.Uri) => {
+		// 	cmdRun(context, resource)
+		// }),
 		vscode.commands.registerCommand("extension.clx-language.restartServer", restartServer)
 	);
 
-	// regiser debug adapter
-	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('clx', new DebugAdapterExecutableFactory()));
 
 	startServer();
+
+	// debug
+	activateDebug(context);
+
 	return {
 		reportAPIDoc: (classDoc: any) => {
 			languageClient?.sendRequest("emmy/reportAPI", classDoc);
@@ -89,7 +91,7 @@ export function cmdRun(context: vscode.ExtensionContext, resource: vscode.Uri) {
 		let fileName = path.basename(targetResource.fsPath);
 		let cmdStr = `${coloxToolPath} -d ` + dir + path.sep + " -r " + fileName;
 		try {
-			child_process.execSync(cmdStr);
+			child_process.exec(cmdStr);
 		} catch (e) {
 			console.log("run coloXtool exception: ", e);
 		}
@@ -247,32 +249,5 @@ function onDidChangeConfiguration(event: vscode.ConfigurationChangeEvent) {
 
 	if (shouldRestart) {
 		restartServer();
-	}
-}
-
-class DebugAdapterExecutableFactory implements vscode.DebugAdapterDescriptorFactory {
-
-	// The following use of a DebugAdapter factory shows how to control what debug adapter executable is used.
-	// Since the code implements the default behavior, it is absolutely not neccessary and we show it here only for educational purpose.
-
-	createDebugAdapterDescriptor(_session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined): ProviderResult<vscode.DebugAdapterDescriptor> {
-		// param "executable" contains the executable optionally specified in the package.json (if any)
-
-		// use the executable specified in the package.json if it exists or determine it based on some other information (e.g. the session)
-		if (!executable) {
-			const command = "absolute path to my DA executable";
-			const args = [
-				"some args",
-				"another arg"
-			];
-			const options = {
-				cwd: "working directory for executable",
-				env: { "envVariable": "some value" }
-			};
-			executable = new vscode.DebugAdapterExecutable(command, args, options);
-		}
-
-		// make VS Code launch the DA executable
-		return executable;
 	}
 }

@@ -19,20 +19,11 @@
           "command": "extension.clx-language.run",
           "when": "resourceLangId == clx",
           "group": "navigation@1"
-        },
-        {
-          "command": "extension.clx-language.debug",
-          "when": "resourceLangId == clx",
-          "group": "navigation@2"
         }
       ],
       "commandPalette": [
         {
           "command": "extension.clx-language.run",
-          "when": "resourceLangId == clx"
-        },
-        {
-          "command": "extension.clx-language.debug",
           "when": "resourceLangId == clx"
         }
       ]
@@ -41,14 +32,7 @@
       {
         "command": "extension.clx-language.run",
         "title": "Run File",
-        "category": "CLX Debug",
-        "enablement": "!inDebugMode",
-        "icon": "$(debug-alt)"
-      },
-      {
-        "command": "extension.clx-language.debug",
-        "title": "Debug File",
-        "category": "CLX Debug",
+        "category": "CLX Run",
         "enablement": "!inDebugMode",
         "icon": "$(play)"
       },
@@ -72,54 +56,55 @@
     ],
     "debuggers": [
       {
-        "type": "clx",
-        "label": "CLX Debug",
-        "osx": {
-          "program": "./debuggers/osx/MacOS/coloXtool"
-        },
+        "type": "clx_debug",
+        "label": "CLX Debugger",
+        "program": "./out/debugger/ClxDebugAdapter.js",
+        "runtime": "node",
         "configurationAttributes": {
-          "launch": {
-            "required": [
-              "program"
-            ],
-            "properties": {
-              "program": {
-                "type": "string",
-                "description": "Absolute path to a text file.",
-                "default": "${workspaceFolder}/${command:AskForProgramName}"
-              },
-              "stopOnEntry": {
-                "type": "boolean",
-                "description": "Automatically stop after launch.",
-                "default": true
-              }
+            "launch": {
+                "required": [
+                    "host",
+                    "port"
+                ],
+                "properties": {
+                    "host": {
+                        "type": "string",
+                        "description": "host",
+                        "default": "localhost"
+                    },
+                    "port": {
+                        "type": "number",
+                        "description": "port",
+                        "default": 3563
+                    }
+                }
             }
-          }
         },
         "initialConfigurations": [
-          {
-            "type": "mock",
-            "request": "launch",
-            "name": "Ask for file name",
-            "program": "${workspaceFolder}/${command:AskForProgramName}",
-            "stopOnEntry": true
-          }
+            {
+                "type": "clx_debug",
+                "request": "launch",
+                "name": "CLX Debugger",
+                "host": "localhost",
+                "port": 3563
+            }
         ],
         "configurationSnippets": [
-          {
-            "label": "Mock Debug: Launch",
-            "description": "A new configuration for launching a mock debug program",
-            "body": {
-              "type": "mock",
-              "request": "launch",
-              "name": "${2:Launch Program}",
-              "program": "^\"\\${workspaceFolder}/${1:Program}\""
+            {
+                "label": "CLX Debugger",
+                "description": "CLX Debugger",
+                "body": {
+                    "type": "clx_debug",
+                    "request": "launch",
+                    "name": "CLX Debugger",
+                    "host": "localhost",
+                    "port": 3563
+                }
             }
-          }
         ],
-        "variables": {
-          "AskForProgramName": "extension.mock-debug.getProgramName"
-        }
+        "languages": [
+            "clx"
+        ]
       }
     ],
     "snippets": [
@@ -190,5 +175,7 @@
     "vscode-languageclient": "8.0.2"
   },
   "main": "./dist/extension.js",
-  "activationEvents": []
+  "activationEvents": [
+    "onDebug"
+  ]
 }

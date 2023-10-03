@@ -1262,7 +1262,7 @@ var require_cancellation = __commonJS({
         }
       }
     };
-    var CancellationTokenSource = class {
+    var CancellationTokenSource2 = class {
       get token() {
         if (!this._token) {
           this._token = new MutableToken();
@@ -1284,7 +1284,7 @@ var require_cancellation = __commonJS({
         }
       }
     };
-    exports.CancellationTokenSource = CancellationTokenSource;
+    exports.CancellationTokenSource = CancellationTokenSource2;
   }
 });
 
@@ -2966,7 +2966,7 @@ var require_main = __commonJS({
     var ril_1 = require_ril();
     ril_1.default.install();
     var api_1 = require_api();
-    var path4 = require("path");
+    var path6 = require("path");
     var os2 = require("os");
     var crypto_1 = require("crypto");
     var net_1 = require("net");
@@ -3061,9 +3061,9 @@ var require_main = __commonJS({
       }
       let result;
       if (XDG_RUNTIME_DIR) {
-        result = path4.join(XDG_RUNTIME_DIR, `vscode-ipc-${randomSuffix}.sock`);
+        result = path6.join(XDG_RUNTIME_DIR, `vscode-ipc-${randomSuffix}.sock`);
       } else {
-        result = path4.join(os2.tmpdir(), `vscode-${randomSuffix}.sock`);
+        result = path6.join(os2.tmpdir(), `vscode-${randomSuffix}.sock`);
       }
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0 && result.length >= limit) {
@@ -3234,8 +3234,8 @@ var require_main2 = __commonJS({
         }
         Position2.is = is;
       })(Position = exports2.Position || (exports2.Position = {}));
-      var Range;
-      (function(Range2) {
+      var Range2;
+      (function(Range3) {
         function create(one, two, three, four) {
           if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
             return { start: Position.create(one, two), end: Position.create(three, four) };
@@ -3245,13 +3245,13 @@ var require_main2 = __commonJS({
             throw new Error("Range#create called with invalid arguments[".concat(one, ", ").concat(two, ", ").concat(three, ", ").concat(four, "]"));
           }
         }
-        Range2.create = create;
+        Range3.create = create;
         function is(value) {
           var candidate = value;
           return Is.objectLiteral(candidate) && Position.is(candidate.start) && Position.is(candidate.end);
         }
-        Range2.is = is;
-      })(Range = exports2.Range || (exports2.Range = {}));
+        Range3.is = is;
+      })(Range2 = exports2.Range || (exports2.Range = {}));
       var Location;
       (function(Location2) {
         function create(uri, range) {
@@ -3260,7 +3260,7 @@ var require_main2 = __commonJS({
         Location2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Range.is(candidate.range) && (Is.string(candidate.uri) || Is.undefined(candidate.uri));
+          return Is.objectLiteral(candidate) && Range2.is(candidate.range) && (Is.string(candidate.uri) || Is.undefined(candidate.uri));
         }
         Location2.is = is;
       })(Location = exports2.Location || (exports2.Location = {}));
@@ -3272,7 +3272,7 @@ var require_main2 = __commonJS({
         LocationLink2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Range.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range.is(candidate.targetSelectionRange) && (Range.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
+          return Is.objectLiteral(candidate) && Range2.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range2.is(candidate.targetSelectionRange) && (Range2.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
         }
         LocationLink2.is = is;
       })(LocationLink = exports2.LocationLink || (exports2.LocationLink = {}));
@@ -3304,7 +3304,7 @@ var require_main2 = __commonJS({
         ColorInformation2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Range.is(candidate.range) && Color.is(candidate.color);
+          return Is.objectLiteral(candidate) && Range2.is(candidate.range) && Color.is(candidate.color);
         }
         ColorInformation2.is = is;
       })(ColorInformation = exports2.ColorInformation || (exports2.ColorInformation = {}));
@@ -3415,7 +3415,7 @@ var require_main2 = __commonJS({
         function is(value) {
           var _a;
           var candidate = value;
-          return Is.defined(candidate) && Range.is(candidate.range) && Is.string(candidate.message) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
+          return Is.defined(candidate) && Range2.is(candidate.range) && Is.string(candidate.message) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
         }
         Diagnostic2.is = is;
       })(Diagnostic = exports2.Diagnostic || (exports2.Diagnostic = {}));
@@ -3455,7 +3455,7 @@ var require_main2 = __commonJS({
         TextEdit2.del = del;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Is.string(candidate.newText) && Range.is(candidate.range);
+          return Is.objectLiteral(candidate) && Is.string(candidate.newText) && Range2.is(candidate.range);
         }
         TextEdit2.is = is;
       })(TextEdit = exports2.TextEdit || (exports2.TextEdit = {}));
@@ -3986,7 +3986,7 @@ var require_main2 = __commonJS({
         InsertReplaceEdit2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate && Is.string(candidate.newText) && Range.is(candidate.insert) && Range.is(candidate.replace);
+          return candidate && Is.string(candidate.newText) && Range2.is(candidate.insert) && Range2.is(candidate.replace);
         }
         InsertReplaceEdit2.is = is;
       })(InsertReplaceEdit = exports2.InsertReplaceEdit || (exports2.InsertReplaceEdit = {}));
@@ -4033,7 +4033,7 @@ var require_main2 = __commonJS({
       (function(Hover2) {
         function is(value) {
           var candidate = value;
-          return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range.is(value.range));
+          return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range2.is(value.range));
         }
         Hover2.is = is;
       })(Hover = exports2.Hover || (exports2.Hover = {}));
@@ -4154,7 +4154,7 @@ var require_main2 = __commonJS({
         DocumentSymbol2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate && Is.string(candidate.name) && Is.number(candidate.kind) && Range.is(candidate.range) && Range.is(candidate.selectionRange) && (candidate.detail === void 0 || Is.string(candidate.detail)) && (candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) && (candidate.children === void 0 || Array.isArray(candidate.children)) && (candidate.tags === void 0 || Array.isArray(candidate.tags));
+          return candidate && Is.string(candidate.name) && Is.number(candidate.kind) && Range2.is(candidate.range) && Range2.is(candidate.selectionRange) && (candidate.detail === void 0 || Is.string(candidate.detail)) && (candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) && (candidate.children === void 0 || Array.isArray(candidate.children)) && (candidate.tags === void 0 || Array.isArray(candidate.tags));
         }
         DocumentSymbol2.is = is;
       })(DocumentSymbol = exports2.DocumentSymbol || (exports2.DocumentSymbol = {}));
@@ -4231,7 +4231,7 @@ var require_main2 = __commonJS({
         CodeLens2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.defined(candidate) && Range.is(candidate.range) && (Is.undefined(candidate.command) || Command.is(candidate.command));
+          return Is.defined(candidate) && Range2.is(candidate.range) && (Is.undefined(candidate.command) || Command.is(candidate.command));
         }
         CodeLens2.is = is;
       })(CodeLens = exports2.CodeLens || (exports2.CodeLens = {}));
@@ -4255,7 +4255,7 @@ var require_main2 = __commonJS({
         DocumentLink2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.defined(candidate) && Range.is(candidate.range) && (Is.undefined(candidate.target) || Is.string(candidate.target));
+          return Is.defined(candidate) && Range2.is(candidate.range) && (Is.undefined(candidate.target) || Is.string(candidate.target));
         }
         DocumentLink2.is = is;
       })(DocumentLink = exports2.DocumentLink || (exports2.DocumentLink = {}));
@@ -4267,7 +4267,7 @@ var require_main2 = __commonJS({
         SelectionRange2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.objectLiteral(candidate) && Range.is(candidate.range) && (candidate.parent === void 0 || SelectionRange2.is(candidate.parent));
+          return Is.objectLiteral(candidate) && Range2.is(candidate.range) && (candidate.parent === void 0 || SelectionRange2.is(candidate.parent));
         }
         SelectionRange2.is = is;
       })(SelectionRange = exports2.SelectionRange || (exports2.SelectionRange = {}));
@@ -4326,22 +4326,22 @@ var require_main2 = __commonJS({
         InlineValueText2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && Is.string(candidate.text);
+          return candidate !== void 0 && candidate !== null && Range2.is(candidate.range) && Is.string(candidate.text);
         }
         InlineValueText2.is = is;
       })(InlineValueText = exports2.InlineValueText || (exports2.InlineValueText = {}));
-      var InlineValueVariableLookup;
-      (function(InlineValueVariableLookup2) {
+      var InlineValueVariableLookup2;
+      (function(InlineValueVariableLookup3) {
         function create(range, variableName, caseSensitiveLookup) {
           return { range, variableName, caseSensitiveLookup };
         }
-        InlineValueVariableLookup2.create = create;
+        InlineValueVariableLookup3.create = create;
         function is(value) {
           var candidate = value;
-          return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && Is.boolean(candidate.caseSensitiveLookup) && (Is.string(candidate.variableName) || candidate.variableName === void 0);
+          return candidate !== void 0 && candidate !== null && Range2.is(candidate.range) && Is.boolean(candidate.caseSensitiveLookup) && (Is.string(candidate.variableName) || candidate.variableName === void 0);
         }
-        InlineValueVariableLookup2.is = is;
-      })(InlineValueVariableLookup = exports2.InlineValueVariableLookup || (exports2.InlineValueVariableLookup = {}));
+        InlineValueVariableLookup3.is = is;
+      })(InlineValueVariableLookup2 = exports2.InlineValueVariableLookup || (exports2.InlineValueVariableLookup = {}));
       var InlineValueEvaluatableExpression;
       (function(InlineValueEvaluatableExpression2) {
         function create(range, expression) {
@@ -4350,7 +4350,7 @@ var require_main2 = __commonJS({
         InlineValueEvaluatableExpression2.create = create;
         function is(value) {
           var candidate = value;
-          return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && (Is.string(candidate.expression) || candidate.expression === void 0);
+          return candidate !== void 0 && candidate !== null && Range2.is(candidate.range) && (Is.string(candidate.expression) || candidate.expression === void 0);
         }
         InlineValueEvaluatableExpression2.is = is;
       })(InlineValueEvaluatableExpression = exports2.InlineValueEvaluatableExpression || (exports2.InlineValueEvaluatableExpression = {}));
@@ -4362,7 +4362,7 @@ var require_main2 = __commonJS({
         InlineValueContext2.create = create;
         function is(value) {
           var candidate = value;
-          return Is.defined(candidate) && Range.is(value.stoppedLocation);
+          return Is.defined(candidate) && Range2.is(value.stoppedLocation);
         }
         InlineValueContext2.is = is;
       })(InlineValueContext = exports2.InlineValueContext || (exports2.InlineValueContext = {}));
@@ -6426,8 +6426,8 @@ var require_protocolCodeAction = __commonJS({
   "node_modules/vscode-languageclient/lib/common/protocolCodeAction.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var vscode4 = require("vscode");
-    var ProtocolCodeAction = class extends vscode4.CodeAction {
+    var vscode6 = require("vscode");
+    var ProtocolCodeAction = class extends vscode6.CodeAction {
       constructor(title, data) {
         super(title);
         this.data = data;
@@ -6443,7 +6443,7 @@ var require_protocolDiagnostic = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ProtocolDiagnostic = exports.DiagnosticCode = void 0;
-    var vscode4 = require("vscode");
+    var vscode6 = require("vscode");
     var Is = require_is();
     var DiagnosticCode;
     (function(DiagnosticCode2) {
@@ -6453,7 +6453,7 @@ var require_protocolDiagnostic = __commonJS({
       }
       DiagnosticCode2.is = is;
     })(DiagnosticCode = exports.DiagnosticCode || (exports.DiagnosticCode = {}));
-    var ProtocolDiagnostic = class extends vscode4.Diagnostic {
+    var ProtocolDiagnostic = class extends vscode6.Diagnostic {
       constructor(range, message, severity, data) {
         super(range, message, severity);
         this.data = data;
@@ -9068,7 +9068,7 @@ var require_minimatch = __commonJS({
   "node_modules/minimatch/minimatch.js"(exports, module2) {
     module2.exports = minimatch;
     minimatch.Minimatch = Minimatch;
-    var path4 = function() {
+    var path6 = function() {
       try {
         return require("path");
       } catch (e) {
@@ -9076,7 +9076,7 @@ var require_minimatch = __commonJS({
     }() || {
       sep: "/"
     };
-    minimatch.sep = path4.sep;
+    minimatch.sep = path6.sep;
     var GLOBSTAR = minimatch.GLOBSTAR = Minimatch.GLOBSTAR = {};
     var expand = require_brace_expansion();
     var plTypes = {
@@ -9167,8 +9167,8 @@ var require_minimatch = __commonJS({
       if (!options)
         options = {};
       pattern = pattern.trim();
-      if (!options.allowWindowsEscape && path4.sep !== "/") {
-        pattern = pattern.split(path4.sep).join("/");
+      if (!options.allowWindowsEscape && path6.sep !== "/") {
+        pattern = pattern.split(path6.sep).join("/");
       }
       this.options = options;
       this.set = [];
@@ -9197,7 +9197,7 @@ var require_minimatch = __commonJS({
       this.parseNegate();
       var set = this.globSet = this.braceExpand();
       if (options.debug)
-        this.debug = function debug2() {
+        this.debug = function debug3() {
           console.error.apply(console, arguments);
         };
       this.debug(this.pattern, set);
@@ -9545,8 +9545,8 @@ var require_minimatch = __commonJS({
       if (f === "/" && partial)
         return true;
       var options = this.options;
-      if (path4.sep !== "/") {
-        f = f.split(path4.sep).join("/");
+      if (path6.sep !== "/") {
+        f = f.split(path6.sep).join("/");
       }
       f = f.split(slashSplit);
       this.debug(this.pattern, "split", f);
@@ -10380,7 +10380,7 @@ var require_notebook = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NotebookDocumentSyncFeature = void 0;
-    var vscode4 = require("vscode");
+    var vscode6 = require("vscode");
     var minimatch = require_minimatch();
     var proto = require_main3();
     var UUID = require_uuid();
@@ -10435,9 +10435,9 @@ var require_notebook = __commonJS({
         c2p2.asNotebookCell = asNotebookCell;
         function asNotebookCellKind(kind) {
           switch (kind) {
-            case vscode4.NotebookCellKind.Markup:
+            case vscode6.NotebookCellKind.Markup:
               return proto.NotebookCellKind.Markup;
-            case vscode4.NotebookCellKind.Code:
+            case vscode6.NotebookCellKind.Code:
               return proto.NotebookCellKind.Code;
           }
         }
@@ -10688,25 +10688,25 @@ var require_notebook = __commonJS({
         this.notebookDidOpen = /* @__PURE__ */ new Set();
         this.disposables = [];
         this.selector = client.protocol2CodeConverter.asDocumentSelector($NotebookDocumentSyncOptions.asDocumentSelector(options));
-        vscode4.workspace.onDidOpenNotebookDocument((notebookDocument) => {
+        vscode6.workspace.onDidOpenNotebookDocument((notebookDocument) => {
           this.notebookDidOpen.add(notebookDocument.uri.toString());
           this.didOpen(notebookDocument);
         }, void 0, this.disposables);
-        for (const notebookDocument of vscode4.workspace.notebookDocuments) {
+        for (const notebookDocument of vscode6.workspace.notebookDocuments) {
           this.notebookDidOpen.add(notebookDocument.uri.toString());
           this.didOpen(notebookDocument);
         }
-        vscode4.workspace.onDidChangeNotebookDocument((event) => this.didChangeNotebookDocument(event), void 0, this.disposables);
+        vscode6.workspace.onDidChangeNotebookDocument((event) => this.didChangeNotebookDocument(event), void 0, this.disposables);
         if (this.options.save === true) {
-          vscode4.workspace.onDidSaveNotebookDocument((notebookDocument) => this.didSave(notebookDocument), void 0, this.disposables);
+          vscode6.workspace.onDidSaveNotebookDocument((notebookDocument) => this.didSave(notebookDocument), void 0, this.disposables);
         }
-        vscode4.workspace.onDidCloseNotebookDocument((notebookDocument) => {
+        vscode6.workspace.onDidCloseNotebookDocument((notebookDocument) => {
           this.didClose(notebookDocument);
           this.notebookDidOpen.delete(notebookDocument.uri.toString());
         }, void 0, this.disposables);
       }
       getState() {
-        for (const notebook of vscode4.workspace.notebookDocuments) {
+        for (const notebook of vscode6.workspace.notebookDocuments) {
           const matchingCells = this.getMatchingCells(notebook);
           if (matchingCells !== void 0) {
             return { kind: "document", id: "$internal", registrations: true, matches: true };
@@ -10718,10 +10718,10 @@ var require_notebook = __commonJS({
         return "notebook";
       }
       handles(textDocument) {
-        return vscode4.languages.match(this.selector, textDocument) > 0;
+        return vscode6.languages.match(this.selector, textDocument) > 0;
       }
       didOpenNotebookCellTextDocument(notebookDocument, cell) {
-        if (vscode4.languages.match(this.selector, cell.document) === 0) {
+        if (vscode6.languages.match(this.selector, cell.document) === 0) {
           return;
         }
         if (!this.notebookDidOpen.has(notebookDocument.uri.toString())) {
@@ -10752,7 +10752,7 @@ var require_notebook = __commonJS({
         }
       }
       didChangeNotebookCellTextDocument(notebookDocument, event) {
-        if (vscode4.languages.match(this.selector, event.document) === 0) {
+        if (vscode6.languages.match(this.selector, event.document) === 0) {
           return;
         }
         this.doSendChange({
@@ -11025,7 +11025,7 @@ var require_notebook = __commonJS({
         this.client = client;
         this.registrations = /* @__PURE__ */ new Map();
         this.registrationType = proto.NotebookDocumentSyncRegistrationType.type;
-        vscode4.workspace.onDidOpenTextDocument((textDocument) => {
+        vscode6.workspace.onDidOpenTextDocument((textDocument) => {
           if (textDocument.uri.scheme !== NotebookDocumentSyncFeature.CellScheme) {
             return;
           }
@@ -11039,7 +11039,7 @@ var require_notebook = __commonJS({
             }
           }
         });
-        vscode4.workspace.onDidChangeTextDocument((event) => {
+        vscode6.workspace.onDidChangeTextDocument((event) => {
           if (event.contentChanges.length === 0) {
             return;
           }
@@ -11057,7 +11057,7 @@ var require_notebook = __commonJS({
             }
           }
         });
-        vscode4.workspace.onDidCloseTextDocument((textDocument) => {
+        vscode6.workspace.onDidCloseTextDocument((textDocument) => {
           if (textDocument.uri.scheme !== NotebookDocumentSyncFeature.CellScheme) {
             return;
           }
@@ -11122,7 +11122,7 @@ var require_notebook = __commonJS({
         if (textDocument.uri.scheme !== NotebookDocumentSyncFeature.CellScheme) {
           return false;
         }
-        if (this.dedicatedChannel !== void 0 && vscode4.languages.match(this.dedicatedChannel, textDocument) > 0) {
+        if (this.dedicatedChannel !== void 0 && vscode6.languages.match(this.dedicatedChannel, textDocument) > 0) {
           return true;
         }
         for (const provider of this.registrations.values()) {
@@ -11142,7 +11142,7 @@ var require_notebook = __commonJS({
       }
       findNotebookDocumentAndCell(textDocument) {
         const uri = textDocument.uri.toString();
-        for (const notebookDocument of vscode4.workspace.notebookDocuments) {
+        for (const notebookDocument of vscode6.workspace.notebookDocuments) {
           for (const cell of notebookDocument.getCells()) {
             if (cell.document.uri.toString() === uri) {
               return [notebookDocument, cell];
@@ -11314,13 +11314,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path4) {
+        function ensurePath(config, path6) {
           let current = config;
-          for (let i = 0; i < path4.length - 1; i++) {
-            let obj = current[path4[i]];
+          for (let i = 0; i < path6.length - 1; i++) {
+            let obj = current[path6[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path4[i]] = obj;
+              current[path6[i]] = obj;
             }
             current = obj;
           }
@@ -11338,8 +11338,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key);
           }
           if (config) {
-            let path4 = keys[i].split(".");
-            ensurePath(result, path4)[path4[path4.length - 1]] = toJSONObject(config);
+            let path6 = keys[i].split(".");
+            ensurePath(result, path6)[path6[path6.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -13575,7 +13575,7 @@ var require_semanticTokens = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SemanticTokensFeature = void 0;
-    var vscode4 = require("vscode");
+    var vscode6 = require("vscode");
     var vscode_languageserver_protocol_1 = require_main3();
     var features_1 = require_features();
     var Is = require_is();
@@ -13653,7 +13653,7 @@ var require_semanticTokens = __commonJS({
         const selector = options.documentSelector;
         const fullProvider = Is.boolean(options.full) ? options.full : options.full !== void 0;
         const hasEditProvider = options.full !== void 0 && typeof options.full !== "boolean" && options.full.delta === true;
-        const eventEmitter = new vscode4.EventEmitter();
+        const eventEmitter = new vscode6.EventEmitter();
         const documentProvider = fullProvider ? {
           onDidChangeSemanticTokens: eventEmitter.event,
           provideDocumentSemanticTokens: (document, token) => {
@@ -13725,12 +13725,12 @@ var require_semanticTokens = __commonJS({
         const legend = client.protocol2CodeConverter.asSemanticTokensLegend(options.legend);
         const documentSelector = client.protocol2CodeConverter.asDocumentSelector(selector);
         if (documentProvider !== void 0) {
-          disposables.push(vscode4.languages.registerDocumentSemanticTokensProvider(documentSelector, documentProvider, legend));
+          disposables.push(vscode6.languages.registerDocumentSemanticTokensProvider(documentSelector, documentProvider, legend));
         }
         if (rangeProvider !== void 0) {
-          disposables.push(vscode4.languages.registerDocumentRangeSemanticTokensProvider(documentSelector, rangeProvider, legend));
+          disposables.push(vscode6.languages.registerDocumentRangeSemanticTokensProvider(documentSelector, rangeProvider, legend));
         }
-        return [new vscode4.Disposable(() => disposables.forEach((item) => item.dispose())), { range: rangeProvider, full: documentProvider, onDidChangeSemanticTokensEmitter: eventEmitter }];
+        return [new vscode6.Disposable(() => disposables.forEach((item) => item.dispose())), { range: rangeProvider, full: documentProvider, onDidChangeSemanticTokensEmitter: eventEmitter }];
       }
     };
     exports.SemanticTokensFeature = SemanticTokensFeature;
@@ -13829,13 +13829,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path4 = uri.fsPath.replace(/\\/g, "/");
+          const path6 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path4)) {
+              if (filter.matcher.match(path6)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -13849,7 +13849,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path4}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path6}/`)) {
                   return true;
                 }
               }
@@ -15735,9 +15735,9 @@ var require_node2 = __commonJS({
 // node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
   "node_modules/semver/internal/debug.js"(exports, module2) {
-    var debug2 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
+    var debug3 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
-    module2.exports = debug2;
+    module2.exports = debug3;
   }
 });
 
@@ -15779,7 +15779,7 @@ var require_re = __commonJS({
       MAX_SAFE_BUILD_LENGTH,
       MAX_LENGTH
     } = require_constants();
-    var debug2 = require_debug();
+    var debug3 = require_debug();
     exports = module2.exports = {};
     var re = exports.re = [];
     var safeRe = exports.safeRe = [];
@@ -15801,7 +15801,7 @@ var require_re = __commonJS({
     var createToken = (name, value, isGlobal) => {
       const safe = makeSafeRegex(value);
       const index = R++;
-      debug2(name, index, value);
+      debug3(name, index, value);
       t[name] = index;
       src[index] = value;
       re[index] = new RegExp(value, isGlobal ? "g" : void 0);
@@ -15895,7 +15895,7 @@ var require_identifiers = __commonJS({
 // node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
   "node_modules/semver/classes/semver.js"(exports, module2) {
-    var debug2 = require_debug();
+    var debug3 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
     var { safeRe: re, t } = require_re();
     var parseOptions = require_parse_options();
@@ -15917,7 +15917,7 @@ var require_semver = __commonJS({
             `version is longer than ${MAX_LENGTH} characters`
           );
         }
-        debug2("SemVer", version, options);
+        debug3("SemVer", version, options);
         this.options = options;
         this.loose = !!options.loose;
         this.includePrerelease = !!options.includePrerelease;
@@ -15965,7 +15965,7 @@ var require_semver = __commonJS({
         return this.version;
       }
       compare(other) {
-        debug2("SemVer.compare", this.version, this.options, other);
+        debug3("SemVer.compare", this.version, this.options, other);
         if (!(other instanceof SemVer)) {
           if (typeof other === "string" && other === this.version) {
             return 0;
@@ -15998,7 +15998,7 @@ var require_semver = __commonJS({
         do {
           const a = this.prerelease[i];
           const b = other.prerelease[i];
-          debug2("prerelease compare", i, a, b);
+          debug3("prerelease compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -16020,7 +16020,7 @@ var require_semver = __commonJS({
         do {
           const a = this.build[i];
           const b = other.build[i];
-          debug2("prerelease compare", i, a, b);
+          debug3("prerelease compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -16934,7 +16934,7 @@ var require_comparator = __commonJS({
           }
         }
         comp = comp.trim().split(/\s+/).join(" ");
-        debug2("comparator", comp, options);
+        debug3("comparator", comp, options);
         this.options = options;
         this.loose = !!options.loose;
         this.parse(comp);
@@ -16943,7 +16943,7 @@ var require_comparator = __commonJS({
         } else {
           this.value = this.operator + this.semver.version;
         }
-        debug2("comp", this);
+        debug3("comp", this);
       }
       parse(comp) {
         const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
@@ -16965,7 +16965,7 @@ var require_comparator = __commonJS({
         return this.value;
       }
       test(version) {
-        debug2("Comparator.test", version, this.options.loose);
+        debug3("Comparator.test", version, this.options.loose);
         if (this.semver === ANY || version === ANY) {
           return true;
         }
@@ -16986,12 +16986,12 @@ var require_comparator = __commonJS({
           if (this.value === "") {
             return true;
           }
-          return new Range(comp.value, options).test(this.value);
+          return new Range2(comp.value, options).test(this.value);
         } else if (comp.operator === "") {
           if (comp.value === "") {
             return true;
           }
-          return new Range(this.value, options).test(comp.semver);
+          return new Range2(this.value, options).test(comp.semver);
         }
         options = parseOptions(options);
         if (options.includePrerelease && (this.value === "<0.0.0-0" || comp.value === "<0.0.0-0")) {
@@ -17022,23 +17022,23 @@ var require_comparator = __commonJS({
     var parseOptions = require_parse_options();
     var { safeRe: re, t } = require_re();
     var cmp = require_cmp();
-    var debug2 = require_debug();
+    var debug3 = require_debug();
     var SemVer = require_semver();
-    var Range = require_range();
+    var Range2 = require_range();
   }
 });
 
 // node_modules/semver/classes/range.js
 var require_range = __commonJS({
   "node_modules/semver/classes/range.js"(exports, module2) {
-    var Range = class {
+    var Range2 = class {
       constructor(range, options) {
         options = parseOptions(options);
-        if (range instanceof Range) {
+        if (range instanceof Range2) {
           if (range.loose === !!options.loose && range.includePrerelease === !!options.includePrerelease) {
             return range;
           } else {
-            return new Range(range.raw, options);
+            return new Range2(range.raw, options);
           }
         }
         if (range instanceof Comparator) {
@@ -17088,21 +17088,21 @@ var require_range = __commonJS({
         const loose = this.options.loose;
         const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
         range = range.replace(hr, hyphenReplace(this.options.includePrerelease));
-        debug2("hyphen replace", range);
+        debug3("hyphen replace", range);
         range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
-        debug2("comparator trim", range);
+        debug3("comparator trim", range);
         range = range.replace(re[t.TILDETRIM], tildeTrimReplace);
-        debug2("tilde trim", range);
+        debug3("tilde trim", range);
         range = range.replace(re[t.CARETTRIM], caretTrimReplace);
-        debug2("caret trim", range);
+        debug3("caret trim", range);
         let rangeList = range.split(" ").map((comp) => parseComparator(comp, this.options)).join(" ").split(/\s+/).map((comp) => replaceGTE0(comp, this.options));
         if (loose) {
           rangeList = rangeList.filter((comp) => {
-            debug2("loose invalid filter", comp, this.options);
+            debug3("loose invalid filter", comp, this.options);
             return !!comp.match(re[t.COMPARATORLOOSE]);
           });
         }
-        debug2("range list", rangeList);
+        debug3("range list", rangeList);
         const rangeMap = /* @__PURE__ */ new Map();
         const comparators = rangeList.map((comp) => new Comparator(comp, this.options));
         for (const comp of comparators) {
@@ -17119,7 +17119,7 @@ var require_range = __commonJS({
         return result;
       }
       intersects(range, options) {
-        if (!(range instanceof Range)) {
+        if (!(range instanceof Range2)) {
           throw new TypeError("a Range is required");
         }
         return this.set.some((thisComparators) => {
@@ -17151,12 +17151,12 @@ var require_range = __commonJS({
         return false;
       }
     };
-    module2.exports = Range;
+    module2.exports = Range2;
     var LRU = require_lru_cache();
     var cache = new LRU({ max: 1e3 });
     var parseOptions = require_parse_options();
     var Comparator = require_comparator();
-    var debug2 = require_debug();
+    var debug3 = require_debug();
     var SemVer = require_semver();
     var {
       safeRe: re,
@@ -17181,15 +17181,15 @@ var require_range = __commonJS({
       return result;
     };
     var parseComparator = (comp, options) => {
-      debug2("comp", comp, options);
+      debug3("comp", comp, options);
       comp = replaceCarets(comp, options);
-      debug2("caret", comp);
+      debug3("caret", comp);
       comp = replaceTildes(comp, options);
-      debug2("tildes", comp);
+      debug3("tildes", comp);
       comp = replaceXRanges(comp, options);
-      debug2("xrange", comp);
+      debug3("xrange", comp);
       comp = replaceStars(comp, options);
-      debug2("stars", comp);
+      debug3("stars", comp);
       return comp;
     };
     var isX = (id) => !id || id.toLowerCase() === "x" || id === "*";
@@ -17199,7 +17199,7 @@ var require_range = __commonJS({
     var replaceTilde = (comp, options) => {
       const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug2("tilde", comp, _, M, m, p, pr);
+        debug3("tilde", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -17208,12 +17208,12 @@ var require_range = __commonJS({
         } else if (isX(p)) {
           ret = `>=${M}.${m}.0 <${M}.${+m + 1}.0-0`;
         } else if (pr) {
-          debug2("replaceTilde pr", pr);
+          debug3("replaceTilde pr", pr);
           ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
         } else {
           ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
         }
-        debug2("tilde return", ret);
+        debug3("tilde return", ret);
         return ret;
       });
     };
@@ -17221,11 +17221,11 @@ var require_range = __commonJS({
       return comp.trim().split(/\s+/).map((c) => replaceCaret(c, options)).join(" ");
     };
     var replaceCaret = (comp, options) => {
-      debug2("caret", comp, options);
+      debug3("caret", comp, options);
       const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug2("caret", comp, _, M, m, p, pr);
+        debug3("caret", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -17238,7 +17238,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
           }
         } else if (pr) {
-          debug2("replaceCaret pr", pr);
+          debug3("replaceCaret pr", pr);
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p}-${pr} <${M}.${m}.${+p + 1}-0`;
@@ -17249,7 +17249,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p}-${pr} <${+M + 1}.0.0-0`;
           }
         } else {
-          debug2("no pr");
+          debug3("no pr");
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p}${z} <${M}.${m}.${+p + 1}-0`;
@@ -17260,19 +17260,19 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p} <${+M + 1}.0.0-0`;
           }
         }
-        debug2("caret return", ret);
+        debug3("caret return", ret);
         return ret;
       });
     };
     var replaceXRanges = (comp, options) => {
-      debug2("replaceXRanges", comp, options);
+      debug3("replaceXRanges", comp, options);
       return comp.split(/\s+/).map((c) => replaceXRange(c, options)).join(" ");
     };
     var replaceXRange = (comp, options) => {
       comp = comp.trim();
       const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
       return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
-        debug2("xRange", comp, ret, gtlt, M, m, p, pr);
+        debug3("xRange", comp, ret, gtlt, M, m, p, pr);
         const xM = isX(M);
         const xm = xM || isX(m);
         const xp = xm || isX(p);
@@ -17319,16 +17319,16 @@ var require_range = __commonJS({
         } else if (xp) {
           ret = `>=${M}.${m}.0${pr} <${M}.${+m + 1}.0-0`;
         }
-        debug2("xRange return", ret);
+        debug3("xRange return", ret);
         return ret;
       });
     };
     var replaceStars = (comp, options) => {
-      debug2("replaceStars", comp, options);
+      debug3("replaceStars", comp, options);
       return comp.trim().replace(re[t.STAR], "");
     };
     var replaceGTE0 = (comp, options) => {
-      debug2("replaceGTE0", comp, options);
+      debug3("replaceGTE0", comp, options);
       return comp.trim().replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], "");
     };
     var hyphenReplace = (incPr) => ($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr, tb) => {
@@ -17366,7 +17366,7 @@ var require_range = __commonJS({
       }
       if (version.prerelease.length && !options.includePrerelease) {
         for (let i = 0; i < set.length; i++) {
-          debug2(set[i].semver);
+          debug3(set[i].semver);
           if (set[i].semver === Comparator.ANY) {
             continue;
           }
@@ -17387,10 +17387,10 @@ var require_range = __commonJS({
 // node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
   "node_modules/semver/functions/satisfies.js"(exports, module2) {
-    var Range = require_range();
+    var Range2 = require_range();
     var satisfies = (version, range, options) => {
       try {
-        range = new Range(range, options);
+        range = new Range2(range, options);
       } catch (er) {
         return false;
       }
@@ -17467,7 +17467,7 @@ var require_main4 = __commonJS({
     exports.SettingMonitor = exports.LanguageClient = exports.TransportKind = void 0;
     var cp = require("child_process");
     var fs = require("fs");
-    var path4 = require("path");
+    var path6 = require("path");
     var vscode_1 = require("vscode");
     var Is = require_is();
     var client_1 = require_client();
@@ -17874,18 +17874,18 @@ var require_main4 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path4.isAbsolute(runtime)) {
+        if (path6.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path4.join(mainRootPath, runtime);
+          const result = path6.join(mainRootPath, runtime);
           if (fs.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path4.join(serverWorkingDirectory, runtime);
+          const result = path6.join(serverWorkingDirectory, runtime);
           if (fs.existsSync(result)) {
             return result;
           }
@@ -17984,6 +17984,1363 @@ var require_node3 = __commonJS({
   }
 });
 
+// node_modules/@vscode/debugadapter/lib/messages.js
+var require_messages3 = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/messages.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Event = exports.Response = exports.Message = void 0;
+    var Message = class {
+      constructor(type) {
+        this.seq = 0;
+        this.type = type;
+      }
+    };
+    exports.Message = Message;
+    var Response = class extends Message {
+      constructor(request, message) {
+        super("response");
+        this.request_seq = request.seq;
+        this.command = request.command;
+        if (message) {
+          this.success = false;
+          this.message = message;
+        } else {
+          this.success = true;
+        }
+      }
+    };
+    exports.Response = Response;
+    var Event = class extends Message {
+      constructor(event, body) {
+        super("event");
+        this.event = event;
+        if (body) {
+          this.body = body;
+        }
+      }
+    };
+    exports.Event = Event;
+  }
+});
+
+// node_modules/@vscode/debugadapter/lib/protocol.js
+var require_protocol2 = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/protocol.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.ProtocolServer = void 0;
+    var ee = require("events");
+    var messages_1 = require_messages3();
+    var Emitter = class {
+      get event() {
+        if (!this._event) {
+          this._event = (listener, thisArg) => {
+            this._listener = listener;
+            this._this = thisArg;
+            let result;
+            result = {
+              dispose: () => {
+                this._listener = void 0;
+                this._this = void 0;
+              }
+            };
+            return result;
+          };
+        }
+        return this._event;
+      }
+      fire(event) {
+        if (this._listener) {
+          try {
+            this._listener.call(this._this, event);
+          } catch (e) {
+          }
+        }
+      }
+      hasListener() {
+        return !!this._listener;
+      }
+      dispose() {
+        this._listener = void 0;
+        this._this = void 0;
+      }
+    };
+    var ProtocolServer = class extends ee.EventEmitter {
+      constructor() {
+        super();
+        this._sendMessage = new Emitter();
+        this._sequence = 1;
+        this._pendingRequests = /* @__PURE__ */ new Map();
+        this.onDidSendMessage = this._sendMessage.event;
+      }
+      dispose() {
+      }
+      handleMessage(msg) {
+        if (msg.type === "request") {
+          this.dispatchRequest(msg);
+        } else if (msg.type === "response") {
+          const response = msg;
+          const clb = this._pendingRequests.get(response.request_seq);
+          if (clb) {
+            this._pendingRequests.delete(response.request_seq);
+            clb(response);
+          }
+        }
+      }
+      _isRunningInline() {
+        return this._sendMessage && this._sendMessage.hasListener();
+      }
+      start(inStream, outStream) {
+        this._writableStream = outStream;
+        this._rawData = Buffer.alloc(0);
+        inStream.on("data", (data) => this._handleData(data));
+        inStream.on("close", () => {
+          this._emitEvent(new messages_1.Event("close"));
+        });
+        inStream.on("error", (error) => {
+          this._emitEvent(new messages_1.Event("error", "inStream error: " + (error && error.message)));
+        });
+        outStream.on("error", (error) => {
+          this._emitEvent(new messages_1.Event("error", "outStream error: " + (error && error.message)));
+        });
+        inStream.resume();
+      }
+      stop() {
+        if (this._writableStream) {
+          this._writableStream.end();
+        }
+      }
+      sendEvent(event) {
+        this._send("event", event);
+      }
+      sendResponse(response) {
+        if (response.seq > 0) {
+          console.error(`attempt to send more than one response for command ${response.command}`);
+        } else {
+          this._send("response", response);
+        }
+      }
+      sendRequest(command, args, timeout, cb) {
+        const request = {
+          command
+        };
+        if (args && Object.keys(args).length > 0) {
+          request.arguments = args;
+        }
+        this._send("request", request);
+        if (cb) {
+          this._pendingRequests.set(request.seq, cb);
+          const timer = setTimeout(() => {
+            clearTimeout(timer);
+            const clb = this._pendingRequests.get(request.seq);
+            if (clb) {
+              this._pendingRequests.delete(request.seq);
+              clb(new messages_1.Response(request, "timeout"));
+            }
+          }, timeout);
+        }
+      }
+      dispatchRequest(request) {
+      }
+      _emitEvent(event) {
+        this.emit(event.event, event);
+      }
+      _send(typ, message) {
+        message.type = typ;
+        message.seq = this._sequence++;
+        if (this._writableStream) {
+          const json = JSON.stringify(message);
+          this._writableStream.write(`Content-Length: ${Buffer.byteLength(json, "utf8")}\r
+\r
+${json}`, "utf8");
+        }
+        this._sendMessage.fire(message);
+      }
+      _handleData(data) {
+        this._rawData = Buffer.concat([this._rawData, data]);
+        while (true) {
+          if (this._contentLength >= 0) {
+            if (this._rawData.length >= this._contentLength) {
+              const message = this._rawData.toString("utf8", 0, this._contentLength);
+              this._rawData = this._rawData.slice(this._contentLength);
+              this._contentLength = -1;
+              if (message.length > 0) {
+                try {
+                  let msg = JSON.parse(message);
+                  this.handleMessage(msg);
+                } catch (e) {
+                  this._emitEvent(new messages_1.Event("error", "Error handling data: " + (e && e.message)));
+                }
+              }
+              continue;
+            }
+          } else {
+            const idx = this._rawData.indexOf(ProtocolServer.TWO_CRLF);
+            if (idx !== -1) {
+              const header = this._rawData.toString("utf8", 0, idx);
+              const lines = header.split("\r\n");
+              for (let i = 0; i < lines.length; i++) {
+                const pair = lines[i].split(/: +/);
+                if (pair[0] == "Content-Length") {
+                  this._contentLength = +pair[1];
+                }
+              }
+              this._rawData = this._rawData.slice(idx + ProtocolServer.TWO_CRLF.length);
+              continue;
+            }
+          }
+          break;
+        }
+      }
+    };
+    exports.ProtocolServer = ProtocolServer;
+    ProtocolServer.TWO_CRLF = "\r\n\r\n";
+  }
+});
+
+// node_modules/@vscode/debugadapter/lib/runDebugAdapter.js
+var require_runDebugAdapter = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/runDebugAdapter.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.runDebugAdapter = void 0;
+    var Net = require("net");
+    function runDebugAdapter(debugSession) {
+      let port = 0;
+      const args = process.argv.slice(2);
+      args.forEach(function(val, index, array) {
+        const portMatch = /^--server=(\d{4,5})$/.exec(val);
+        if (portMatch) {
+          port = parseInt(portMatch[1], 10);
+        }
+      });
+      if (port > 0) {
+        console.error(`waiting for debug protocol on port ${port}`);
+        Net.createServer((socket) => {
+          console.error(">> accepted connection from client");
+          socket.on("end", () => {
+            console.error(">> client connection closed\n");
+          });
+          const session = new debugSession(false, true);
+          session.setRunAsServer(true);
+          session.start(socket, socket);
+        }).listen(port);
+      } else {
+        const session = new debugSession(false);
+        process.on("SIGTERM", () => {
+          session.shutdown();
+        });
+        session.start(process.stdin, process.stdout);
+      }
+    }
+    exports.runDebugAdapter = runDebugAdapter;
+  }
+});
+
+// node_modules/@vscode/debugadapter/lib/debugSession.js
+var require_debugSession = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/debugSession.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.DebugSession = exports.ErrorDestination = exports.MemoryEvent = exports.InvalidatedEvent = exports.ProgressEndEvent = exports.ProgressUpdateEvent = exports.ProgressStartEvent = exports.CapabilitiesEvent = exports.LoadedSourceEvent = exports.ModuleEvent = exports.BreakpointEvent = exports.ThreadEvent = exports.OutputEvent = exports.ExitedEvent = exports.TerminatedEvent = exports.InitializedEvent = exports.ContinuedEvent = exports.StoppedEvent = exports.CompletionItem = exports.Module = exports.Breakpoint = exports.Variable = exports.Thread = exports.StackFrame = exports.Scope = exports.Source = void 0;
+    var protocol_1 = require_protocol2();
+    var messages_1 = require_messages3();
+    var runDebugAdapter_1 = require_runDebugAdapter();
+    var url_1 = require("url");
+    var Source2 = class {
+      constructor(name, path6, id = 0, origin, data) {
+        this.name = name;
+        this.path = path6;
+        this.sourceReference = id;
+        if (origin) {
+          this.origin = origin;
+        }
+        if (data) {
+          this.adapterData = data;
+        }
+      }
+    };
+    exports.Source = Source2;
+    var Scope = class {
+      constructor(name, reference, expensive = false) {
+        this.name = name;
+        this.variablesReference = reference;
+        this.expensive = expensive;
+      }
+    };
+    exports.Scope = Scope;
+    var StackFrame2 = class {
+      constructor(i, nm, src, ln = 0, col = 0) {
+        this.id = i;
+        this.source = src;
+        this.line = ln;
+        this.column = col;
+        this.name = nm;
+      }
+    };
+    exports.StackFrame = StackFrame2;
+    var Thread2 = class {
+      constructor(id, name) {
+        this.id = id;
+        if (name) {
+          this.name = name;
+        } else {
+          this.name = "Thread #" + id;
+        }
+      }
+    };
+    exports.Thread = Thread2;
+    var Variable = class {
+      constructor(name, value, ref = 0, indexedVariables, namedVariables) {
+        this.name = name;
+        this.value = value;
+        this.variablesReference = ref;
+        if (typeof namedVariables === "number") {
+          this.namedVariables = namedVariables;
+        }
+        if (typeof indexedVariables === "number") {
+          this.indexedVariables = indexedVariables;
+        }
+      }
+    };
+    exports.Variable = Variable;
+    var Breakpoint2 = class {
+      constructor(verified, line, column, source) {
+        this.verified = verified;
+        const e = this;
+        if (typeof line === "number") {
+          e.line = line;
+        }
+        if (typeof column === "number") {
+          e.column = column;
+        }
+        if (source) {
+          e.source = source;
+        }
+      }
+      setId(id) {
+        this.id = id;
+      }
+    };
+    exports.Breakpoint = Breakpoint2;
+    var Module = class {
+      constructor(id, name) {
+        this.id = id;
+        this.name = name;
+      }
+    };
+    exports.Module = Module;
+    var CompletionItem = class {
+      constructor(label, start, length = 0) {
+        this.label = label;
+        this.start = start;
+        this.length = length;
+      }
+    };
+    exports.CompletionItem = CompletionItem;
+    var StoppedEvent2 = class extends messages_1.Event {
+      constructor(reason, threadId, exceptionText) {
+        super("stopped");
+        this.body = {
+          reason
+        };
+        if (typeof threadId === "number") {
+          this.body.threadId = threadId;
+        }
+        if (typeof exceptionText === "string") {
+          this.body.text = exceptionText;
+        }
+      }
+    };
+    exports.StoppedEvent = StoppedEvent2;
+    var ContinuedEvent = class extends messages_1.Event {
+      constructor(threadId, allThreadsContinued) {
+        super("continued");
+        this.body = {
+          threadId
+        };
+        if (typeof allThreadsContinued === "boolean") {
+          this.body.allThreadsContinued = allThreadsContinued;
+        }
+      }
+    };
+    exports.ContinuedEvent = ContinuedEvent;
+    var InitializedEvent2 = class extends messages_1.Event {
+      constructor() {
+        super("initialized");
+      }
+    };
+    exports.InitializedEvent = InitializedEvent2;
+    var TerminatedEvent = class extends messages_1.Event {
+      constructor(restart) {
+        super("terminated");
+        if (typeof restart === "boolean" || restart) {
+          const e = this;
+          e.body = {
+            restart
+          };
+        }
+      }
+    };
+    exports.TerminatedEvent = TerminatedEvent;
+    var ExitedEvent = class extends messages_1.Event {
+      constructor(exitCode) {
+        super("exited");
+        this.body = {
+          exitCode
+        };
+      }
+    };
+    exports.ExitedEvent = ExitedEvent;
+    var OutputEvent2 = class extends messages_1.Event {
+      constructor(output, category = "console", data) {
+        super("output");
+        this.body = {
+          category,
+          output
+        };
+        if (data !== void 0) {
+          this.body.data = data;
+        }
+      }
+    };
+    exports.OutputEvent = OutputEvent2;
+    var ThreadEvent = class extends messages_1.Event {
+      constructor(reason, threadId) {
+        super("thread");
+        this.body = {
+          reason,
+          threadId
+        };
+      }
+    };
+    exports.ThreadEvent = ThreadEvent;
+    var BreakpointEvent = class extends messages_1.Event {
+      constructor(reason, breakpoint) {
+        super("breakpoint");
+        this.body = {
+          reason,
+          breakpoint
+        };
+      }
+    };
+    exports.BreakpointEvent = BreakpointEvent;
+    var ModuleEvent = class extends messages_1.Event {
+      constructor(reason, module3) {
+        super("module");
+        this.body = {
+          reason,
+          module: module3
+        };
+      }
+    };
+    exports.ModuleEvent = ModuleEvent;
+    var LoadedSourceEvent = class extends messages_1.Event {
+      constructor(reason, source) {
+        super("loadedSource");
+        this.body = {
+          reason,
+          source
+        };
+      }
+    };
+    exports.LoadedSourceEvent = LoadedSourceEvent;
+    var CapabilitiesEvent = class extends messages_1.Event {
+      constructor(capabilities) {
+        super("capabilities");
+        this.body = {
+          capabilities
+        };
+      }
+    };
+    exports.CapabilitiesEvent = CapabilitiesEvent;
+    var ProgressStartEvent = class extends messages_1.Event {
+      constructor(progressId, title, message) {
+        super("progressStart");
+        this.body = {
+          progressId,
+          title
+        };
+        if (typeof message === "string") {
+          this.body.message = message;
+        }
+      }
+    };
+    exports.ProgressStartEvent = ProgressStartEvent;
+    var ProgressUpdateEvent = class extends messages_1.Event {
+      constructor(progressId, message) {
+        super("progressUpdate");
+        this.body = {
+          progressId
+        };
+        if (typeof message === "string") {
+          this.body.message = message;
+        }
+      }
+    };
+    exports.ProgressUpdateEvent = ProgressUpdateEvent;
+    var ProgressEndEvent = class extends messages_1.Event {
+      constructor(progressId, message) {
+        super("progressEnd");
+        this.body = {
+          progressId
+        };
+        if (typeof message === "string") {
+          this.body.message = message;
+        }
+      }
+    };
+    exports.ProgressEndEvent = ProgressEndEvent;
+    var InvalidatedEvent = class extends messages_1.Event {
+      constructor(areas, threadId, stackFrameId) {
+        super("invalidated");
+        this.body = {};
+        if (areas) {
+          this.body.areas = areas;
+        }
+        if (threadId) {
+          this.body.threadId = threadId;
+        }
+        if (stackFrameId) {
+          this.body.stackFrameId = stackFrameId;
+        }
+      }
+    };
+    exports.InvalidatedEvent = InvalidatedEvent;
+    var MemoryEvent = class extends messages_1.Event {
+      constructor(memoryReference, offset, count) {
+        super("memory");
+        this.body = { memoryReference, offset, count };
+      }
+    };
+    exports.MemoryEvent = MemoryEvent;
+    var ErrorDestination;
+    (function(ErrorDestination2) {
+      ErrorDestination2[ErrorDestination2["User"] = 1] = "User";
+      ErrorDestination2[ErrorDestination2["Telemetry"] = 2] = "Telemetry";
+    })(ErrorDestination = exports.ErrorDestination || (exports.ErrorDestination = {}));
+    var DebugSession = class extends protocol_1.ProtocolServer {
+      constructor(obsolete_debuggerLinesAndColumnsStartAt1, obsolete_isServer) {
+        super();
+        const linesAndColumnsStartAt1 = typeof obsolete_debuggerLinesAndColumnsStartAt1 === "boolean" ? obsolete_debuggerLinesAndColumnsStartAt1 : false;
+        this._debuggerLinesStartAt1 = linesAndColumnsStartAt1;
+        this._debuggerColumnsStartAt1 = linesAndColumnsStartAt1;
+        this._debuggerPathsAreURIs = false;
+        this._clientLinesStartAt1 = true;
+        this._clientColumnsStartAt1 = true;
+        this._clientPathsAreURIs = false;
+        this._isServer = typeof obsolete_isServer === "boolean" ? obsolete_isServer : false;
+        this.on("close", () => {
+          this.shutdown();
+        });
+        this.on("error", (error) => {
+          this.shutdown();
+        });
+      }
+      setDebuggerPathFormat(format) {
+        this._debuggerPathsAreURIs = format !== "path";
+      }
+      setDebuggerLinesStartAt1(enable) {
+        this._debuggerLinesStartAt1 = enable;
+      }
+      setDebuggerColumnsStartAt1(enable) {
+        this._debuggerColumnsStartAt1 = enable;
+      }
+      setRunAsServer(enable) {
+        this._isServer = enable;
+      }
+      static run(debugSession) {
+        (0, runDebugAdapter_1.runDebugAdapter)(debugSession);
+      }
+      shutdown() {
+        if (this._isServer || this._isRunningInline()) {
+        } else {
+          setTimeout(() => {
+            process.exit(0);
+          }, 100);
+        }
+      }
+      sendErrorResponse(response, codeOrMessage, format, variables, dest = ErrorDestination.User) {
+        let msg;
+        if (typeof codeOrMessage === "number") {
+          msg = {
+            id: codeOrMessage,
+            format
+          };
+          if (variables) {
+            msg.variables = variables;
+          }
+          if (dest & ErrorDestination.User) {
+            msg.showUser = true;
+          }
+          if (dest & ErrorDestination.Telemetry) {
+            msg.sendTelemetry = true;
+          }
+        } else {
+          msg = codeOrMessage;
+        }
+        response.success = false;
+        response.message = DebugSession.formatPII(msg.format, true, msg.variables);
+        if (!response.body) {
+          response.body = {};
+        }
+        response.body.error = msg;
+        this.sendResponse(response);
+      }
+      runInTerminalRequest(args, timeout, cb) {
+        this.sendRequest("runInTerminal", args, timeout, cb);
+      }
+      dispatchRequest(request) {
+        const response = new messages_1.Response(request);
+        try {
+          if (request.command === "initialize") {
+            var args = request.arguments;
+            if (typeof args.linesStartAt1 === "boolean") {
+              this._clientLinesStartAt1 = args.linesStartAt1;
+            }
+            if (typeof args.columnsStartAt1 === "boolean") {
+              this._clientColumnsStartAt1 = args.columnsStartAt1;
+            }
+            if (args.pathFormat !== "path") {
+              this.sendErrorResponse(response, 2018, "debug adapter only supports native paths", null, ErrorDestination.Telemetry);
+            } else {
+              const initializeResponse = response;
+              initializeResponse.body = {};
+              this.initializeRequest(initializeResponse, args);
+            }
+          } else if (request.command === "launch") {
+            this.launchRequest(response, request.arguments, request);
+          } else if (request.command === "attach") {
+            this.attachRequest(response, request.arguments, request);
+          } else if (request.command === "disconnect") {
+            this.disconnectRequest(response, request.arguments, request);
+          } else if (request.command === "terminate") {
+            this.terminateRequest(response, request.arguments, request);
+          } else if (request.command === "restart") {
+            this.restartRequest(response, request.arguments, request);
+          } else if (request.command === "setBreakpoints") {
+            this.setBreakPointsRequest(response, request.arguments, request);
+          } else if (request.command === "setFunctionBreakpoints") {
+            this.setFunctionBreakPointsRequest(response, request.arguments, request);
+          } else if (request.command === "setExceptionBreakpoints") {
+            this.setExceptionBreakPointsRequest(response, request.arguments, request);
+          } else if (request.command === "configurationDone") {
+            this.configurationDoneRequest(response, request.arguments, request);
+          } else if (request.command === "continue") {
+            this.continueRequest(response, request.arguments, request);
+          } else if (request.command === "next") {
+            this.nextRequest(response, request.arguments, request);
+          } else if (request.command === "stepIn") {
+            this.stepInRequest(response, request.arguments, request);
+          } else if (request.command === "stepOut") {
+            this.stepOutRequest(response, request.arguments, request);
+          } else if (request.command === "stepBack") {
+            this.stepBackRequest(response, request.arguments, request);
+          } else if (request.command === "reverseContinue") {
+            this.reverseContinueRequest(response, request.arguments, request);
+          } else if (request.command === "restartFrame") {
+            this.restartFrameRequest(response, request.arguments, request);
+          } else if (request.command === "goto") {
+            this.gotoRequest(response, request.arguments, request);
+          } else if (request.command === "pause") {
+            this.pauseRequest(response, request.arguments, request);
+          } else if (request.command === "stackTrace") {
+            this.stackTraceRequest(response, request.arguments, request);
+          } else if (request.command === "scopes") {
+            this.scopesRequest(response, request.arguments, request);
+          } else if (request.command === "variables") {
+            this.variablesRequest(response, request.arguments, request);
+          } else if (request.command === "setVariable") {
+            this.setVariableRequest(response, request.arguments, request);
+          } else if (request.command === "setExpression") {
+            this.setExpressionRequest(response, request.arguments, request);
+          } else if (request.command === "source") {
+            this.sourceRequest(response, request.arguments, request);
+          } else if (request.command === "threads") {
+            this.threadsRequest(response, request);
+          } else if (request.command === "terminateThreads") {
+            this.terminateThreadsRequest(response, request.arguments, request);
+          } else if (request.command === "evaluate") {
+            this.evaluateRequest(response, request.arguments, request);
+          } else if (request.command === "stepInTargets") {
+            this.stepInTargetsRequest(response, request.arguments, request);
+          } else if (request.command === "gotoTargets") {
+            this.gotoTargetsRequest(response, request.arguments, request);
+          } else if (request.command === "completions") {
+            this.completionsRequest(response, request.arguments, request);
+          } else if (request.command === "exceptionInfo") {
+            this.exceptionInfoRequest(response, request.arguments, request);
+          } else if (request.command === "loadedSources") {
+            this.loadedSourcesRequest(response, request.arguments, request);
+          } else if (request.command === "dataBreakpointInfo") {
+            this.dataBreakpointInfoRequest(response, request.arguments, request);
+          } else if (request.command === "setDataBreakpoints") {
+            this.setDataBreakpointsRequest(response, request.arguments, request);
+          } else if (request.command === "readMemory") {
+            this.readMemoryRequest(response, request.arguments, request);
+          } else if (request.command === "writeMemory") {
+            this.writeMemoryRequest(response, request.arguments, request);
+          } else if (request.command === "disassemble") {
+            this.disassembleRequest(response, request.arguments, request);
+          } else if (request.command === "cancel") {
+            this.cancelRequest(response, request.arguments, request);
+          } else if (request.command === "breakpointLocations") {
+            this.breakpointLocationsRequest(response, request.arguments, request);
+          } else if (request.command === "setInstructionBreakpoints") {
+            this.setInstructionBreakpointsRequest(response, request.arguments, request);
+          } else {
+            this.customRequest(request.command, response, request.arguments, request);
+          }
+        } catch (e) {
+          this.sendErrorResponse(response, 1104, "{_stack}", { _exception: e.message, _stack: e.stack }, ErrorDestination.Telemetry);
+        }
+      }
+      initializeRequest(response, args) {
+        response.body.supportsConditionalBreakpoints = false;
+        response.body.supportsHitConditionalBreakpoints = false;
+        response.body.supportsFunctionBreakpoints = false;
+        response.body.supportsConfigurationDoneRequest = true;
+        response.body.supportsEvaluateForHovers = false;
+        response.body.supportsStepBack = false;
+        response.body.supportsSetVariable = false;
+        response.body.supportsRestartFrame = false;
+        response.body.supportsStepInTargetsRequest = false;
+        response.body.supportsGotoTargetsRequest = false;
+        response.body.supportsCompletionsRequest = false;
+        response.body.supportsRestartRequest = false;
+        response.body.supportsExceptionOptions = false;
+        response.body.supportsValueFormattingOptions = false;
+        response.body.supportsExceptionInfoRequest = false;
+        response.body.supportTerminateDebuggee = false;
+        response.body.supportsDelayedStackTraceLoading = false;
+        response.body.supportsLoadedSourcesRequest = false;
+        response.body.supportsLogPoints = false;
+        response.body.supportsTerminateThreadsRequest = false;
+        response.body.supportsSetExpression = false;
+        response.body.supportsTerminateRequest = false;
+        response.body.supportsDataBreakpoints = false;
+        response.body.supportsReadMemoryRequest = false;
+        response.body.supportsDisassembleRequest = false;
+        response.body.supportsCancelRequest = false;
+        response.body.supportsBreakpointLocationsRequest = false;
+        response.body.supportsClipboardContext = false;
+        response.body.supportsSteppingGranularity = false;
+        response.body.supportsInstructionBreakpoints = false;
+        response.body.supportsExceptionFilterOptions = false;
+        this.sendResponse(response);
+      }
+      disconnectRequest(response, args, request) {
+        this.sendResponse(response);
+        this.shutdown();
+      }
+      launchRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      attachRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      terminateRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      restartRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      setBreakPointsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      setFunctionBreakPointsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      setExceptionBreakPointsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      configurationDoneRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      continueRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      nextRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      stepInRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      stepOutRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      stepBackRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      reverseContinueRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      restartFrameRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      gotoRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      pauseRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      sourceRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      threadsRequest(response, request) {
+        this.sendResponse(response);
+      }
+      terminateThreadsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      stackTraceRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      scopesRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      variablesRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      setVariableRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      setExpressionRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      evaluateRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      stepInTargetsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      gotoTargetsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      completionsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      exceptionInfoRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      loadedSourcesRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      dataBreakpointInfoRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      setDataBreakpointsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      readMemoryRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      writeMemoryRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      disassembleRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      cancelRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      breakpointLocationsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      setInstructionBreakpointsRequest(response, args, request) {
+        this.sendResponse(response);
+      }
+      customRequest(command, response, args, request) {
+        this.sendErrorResponse(response, 1014, "unrecognized request", null, ErrorDestination.Telemetry);
+      }
+      convertClientLineToDebugger(line) {
+        if (this._debuggerLinesStartAt1) {
+          return this._clientLinesStartAt1 ? line : line + 1;
+        }
+        return this._clientLinesStartAt1 ? line - 1 : line;
+      }
+      convertDebuggerLineToClient(line) {
+        if (this._debuggerLinesStartAt1) {
+          return this._clientLinesStartAt1 ? line : line - 1;
+        }
+        return this._clientLinesStartAt1 ? line + 1 : line;
+      }
+      convertClientColumnToDebugger(column) {
+        if (this._debuggerColumnsStartAt1) {
+          return this._clientColumnsStartAt1 ? column : column + 1;
+        }
+        return this._clientColumnsStartAt1 ? column - 1 : column;
+      }
+      convertDebuggerColumnToClient(column) {
+        if (this._debuggerColumnsStartAt1) {
+          return this._clientColumnsStartAt1 ? column : column - 1;
+        }
+        return this._clientColumnsStartAt1 ? column + 1 : column;
+      }
+      convertClientPathToDebugger(clientPath) {
+        if (this._clientPathsAreURIs !== this._debuggerPathsAreURIs) {
+          if (this._clientPathsAreURIs) {
+            return DebugSession.uri2path(clientPath);
+          } else {
+            return DebugSession.path2uri(clientPath);
+          }
+        }
+        return clientPath;
+      }
+      convertDebuggerPathToClient(debuggerPath) {
+        if (this._debuggerPathsAreURIs !== this._clientPathsAreURIs) {
+          if (this._debuggerPathsAreURIs) {
+            return DebugSession.uri2path(debuggerPath);
+          } else {
+            return DebugSession.path2uri(debuggerPath);
+          }
+        }
+        return debuggerPath;
+      }
+      static path2uri(path6) {
+        if (process.platform === "win32") {
+          if (/^[A-Z]:/.test(path6)) {
+            path6 = path6[0].toLowerCase() + path6.substr(1);
+          }
+          path6 = path6.replace(/\\/g, "/");
+        }
+        path6 = encodeURI(path6);
+        let uri = new url_1.URL(`file:`);
+        uri.pathname = path6;
+        return uri.toString();
+      }
+      static uri2path(sourceUri) {
+        let uri = new url_1.URL(sourceUri);
+        let s = decodeURIComponent(uri.pathname);
+        if (process.platform === "win32") {
+          if (/^\/[a-zA-Z]:/.test(s)) {
+            s = s[1].toLowerCase() + s.substr(2);
+          }
+          s = s.replace(/\//g, "\\");
+        }
+        return s;
+      }
+      static formatPII(format, excludePII, args) {
+        return format.replace(DebugSession._formatPIIRegexp, function(match, paramName) {
+          if (excludePII && paramName.length > 0 && paramName[0] !== "_") {
+            return match;
+          }
+          return args[paramName] && args.hasOwnProperty(paramName) ? args[paramName] : match;
+        });
+      }
+    };
+    exports.DebugSession = DebugSession;
+    DebugSession._formatPIIRegexp = /{([^}]+)}/g;
+  }
+});
+
+// node_modules/@vscode/debugadapter/lib/internalLogger.js
+var require_internalLogger = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/internalLogger.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.InternalLogger = void 0;
+    var fs = require("fs");
+    var path6 = require("path");
+    var logger_1 = require_logger();
+    var InternalLogger = class {
+      constructor(logCallback, isServer) {
+        this.beforeExitCallback = () => this.dispose();
+        this._logCallback = logCallback;
+        this._logToConsole = isServer;
+        this._minLogLevel = logger_1.LogLevel.Warn;
+        this.disposeCallback = (signal, code) => {
+          this.dispose();
+          code = code || 2;
+          code += 128;
+          process.exit(code);
+        };
+      }
+      async setup(options) {
+        this._minLogLevel = options.consoleMinLogLevel;
+        this._prependTimestamp = options.prependTimestamp;
+        if (options.logFilePath) {
+          if (!path6.isAbsolute(options.logFilePath)) {
+            this.log(`logFilePath must be an absolute path: ${options.logFilePath}`, logger_1.LogLevel.Error);
+          } else {
+            const handleError = (err) => this.sendLog(`Error creating log file at path: ${options.logFilePath}. Error: ${err.toString()}
+`, logger_1.LogLevel.Error);
+            try {
+              await fs.promises.mkdir(path6.dirname(options.logFilePath), { recursive: true });
+              this.log(`Verbose logs are written to:
+`, logger_1.LogLevel.Warn);
+              this.log(options.logFilePath + "\n", logger_1.LogLevel.Warn);
+              this._logFileStream = fs.createWriteStream(options.logFilePath);
+              this.logDateTime();
+              this.setupShutdownListeners();
+              this._logFileStream.on("error", (err) => {
+                handleError(err);
+              });
+            } catch (err) {
+              handleError(err);
+            }
+          }
+        }
+      }
+      logDateTime() {
+        let d = new Date();
+        let dateString = d.getUTCFullYear() + `-${d.getUTCMonth() + 1}-` + d.getUTCDate();
+        const timeAndDateStamp = dateString + ", " + getFormattedTimeString();
+        this.log(timeAndDateStamp + "\n", logger_1.LogLevel.Verbose, false);
+      }
+      setupShutdownListeners() {
+        process.on("beforeExit", this.beforeExitCallback);
+        process.on("SIGTERM", this.disposeCallback);
+        process.on("SIGINT", this.disposeCallback);
+      }
+      removeShutdownListeners() {
+        process.removeListener("beforeExit", this.beforeExitCallback);
+        process.removeListener("SIGTERM", this.disposeCallback);
+        process.removeListener("SIGINT", this.disposeCallback);
+      }
+      dispose() {
+        return new Promise((resolve2) => {
+          this.removeShutdownListeners();
+          if (this._logFileStream) {
+            this._logFileStream.end(resolve2);
+            this._logFileStream = null;
+          } else {
+            resolve2();
+          }
+        });
+      }
+      log(msg, level, prependTimestamp = true) {
+        if (this._minLogLevel === logger_1.LogLevel.Stop) {
+          return;
+        }
+        if (level >= this._minLogLevel) {
+          this.sendLog(msg, level);
+        }
+        if (this._logToConsole) {
+          const logFn = level === logger_1.LogLevel.Error ? console.error : level === logger_1.LogLevel.Warn ? console.warn : null;
+          if (logFn) {
+            logFn((0, logger_1.trimLastNewline)(msg));
+          }
+        }
+        if (level === logger_1.LogLevel.Error) {
+          msg = `[${logger_1.LogLevel[level]}] ${msg}`;
+        }
+        if (this._prependTimestamp && prependTimestamp) {
+          msg = "[" + getFormattedTimeString() + "] " + msg;
+        }
+        if (this._logFileStream) {
+          this._logFileStream.write(msg);
+        }
+      }
+      sendLog(msg, level) {
+        if (msg.length > 1500) {
+          const endsInNewline = !!msg.match(/(\n|\r\n)$/);
+          msg = msg.substr(0, 1500) + "[...]";
+          if (endsInNewline) {
+            msg = msg + "\n";
+          }
+        }
+        if (this._logCallback) {
+          const event = new logger_1.LogOutputEvent(msg, level);
+          this._logCallback(event);
+        }
+      }
+    };
+    exports.InternalLogger = InternalLogger;
+    function getFormattedTimeString() {
+      let d = new Date();
+      let hourString = _padZeroes(2, String(d.getUTCHours()));
+      let minuteString = _padZeroes(2, String(d.getUTCMinutes()));
+      let secondString = _padZeroes(2, String(d.getUTCSeconds()));
+      let millisecondString = _padZeroes(3, String(d.getUTCMilliseconds()));
+      return hourString + ":" + minuteString + ":" + secondString + "." + millisecondString + " UTC";
+    }
+    function _padZeroes(minDesiredLength, numberToPad) {
+      if (numberToPad.length >= minDesiredLength) {
+        return numberToPad;
+      } else {
+        return String("0".repeat(minDesiredLength) + numberToPad).slice(-minDesiredLength);
+      }
+    }
+  }
+});
+
+// node_modules/@vscode/debugadapter/lib/logger.js
+var require_logger = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/logger.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.trimLastNewline = exports.LogOutputEvent = exports.logger = exports.Logger = exports.LogLevel = void 0;
+    var internalLogger_1 = require_internalLogger();
+    var debugSession_1 = require_debugSession();
+    var LogLevel;
+    (function(LogLevel2) {
+      LogLevel2[LogLevel2["Verbose"] = 0] = "Verbose";
+      LogLevel2[LogLevel2["Log"] = 1] = "Log";
+      LogLevel2[LogLevel2["Warn"] = 2] = "Warn";
+      LogLevel2[LogLevel2["Error"] = 3] = "Error";
+      LogLevel2[LogLevel2["Stop"] = 4] = "Stop";
+    })(LogLevel = exports.LogLevel || (exports.LogLevel = {}));
+    var Logger = class {
+      constructor() {
+        this._pendingLogQ = [];
+      }
+      log(msg, level = LogLevel.Log) {
+        msg = msg + "\n";
+        this._write(msg, level);
+      }
+      verbose(msg) {
+        this.log(msg, LogLevel.Verbose);
+      }
+      warn(msg) {
+        this.log(msg, LogLevel.Warn);
+      }
+      error(msg) {
+        this.log(msg, LogLevel.Error);
+      }
+      dispose() {
+        if (this._currentLogger) {
+          const disposeP = this._currentLogger.dispose();
+          this._currentLogger = null;
+          return disposeP;
+        } else {
+          return Promise.resolve();
+        }
+      }
+      _write(msg, level = LogLevel.Log) {
+        msg = msg + "";
+        if (this._pendingLogQ) {
+          this._pendingLogQ.push({ msg, level });
+        } else if (this._currentLogger) {
+          this._currentLogger.log(msg, level);
+        }
+      }
+      setup(consoleMinLogLevel, _logFilePath, prependTimestamp = true) {
+        const logFilePath = typeof _logFilePath === "string" ? _logFilePath : _logFilePath && this._logFilePathFromInit;
+        if (this._currentLogger) {
+          const options = {
+            consoleMinLogLevel,
+            logFilePath,
+            prependTimestamp
+          };
+          this._currentLogger.setup(options).then(() => {
+            if (this._pendingLogQ) {
+              const logQ = this._pendingLogQ;
+              this._pendingLogQ = null;
+              logQ.forEach((item) => this._write(item.msg, item.level));
+            }
+          });
+        }
+      }
+      init(logCallback, logFilePath, logToConsole) {
+        this._pendingLogQ = this._pendingLogQ || [];
+        this._currentLogger = new internalLogger_1.InternalLogger(logCallback, logToConsole);
+        this._logFilePathFromInit = logFilePath;
+      }
+    };
+    exports.Logger = Logger;
+    exports.logger = new Logger();
+    var LogOutputEvent = class extends debugSession_1.OutputEvent {
+      constructor(msg, level) {
+        const category = level === LogLevel.Error ? "stderr" : level === LogLevel.Warn ? "console" : "stdout";
+        super(msg, category);
+      }
+    };
+    exports.LogOutputEvent = LogOutputEvent;
+    function trimLastNewline(str) {
+      return str.replace(/(\n|\r\n)$/, "");
+    }
+    exports.trimLastNewline = trimLastNewline;
+  }
+});
+
+// node_modules/@vscode/debugadapter/lib/loggingDebugSession.js
+var require_loggingDebugSession = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/loggingDebugSession.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.LoggingDebugSession = void 0;
+    var Logger = require_logger();
+    var logger = Logger.logger;
+    var debugSession_1 = require_debugSession();
+    var LoggingDebugSession2 = class extends debugSession_1.DebugSession {
+      constructor(obsolete_logFilePath, obsolete_debuggerLinesAndColumnsStartAt1, obsolete_isServer) {
+        super(obsolete_debuggerLinesAndColumnsStartAt1, obsolete_isServer);
+        this.obsolete_logFilePath = obsolete_logFilePath;
+        this.on("error", (event) => {
+          logger.error(event.body);
+        });
+      }
+      start(inStream, outStream) {
+        super.start(inStream, outStream);
+        logger.init((e) => this.sendEvent(e), this.obsolete_logFilePath, this._isServer);
+      }
+      sendEvent(event) {
+        if (!(event instanceof Logger.LogOutputEvent)) {
+          let objectToLog = event;
+          if (event instanceof debugSession_1.OutputEvent && event.body && event.body.data && event.body.data.doNotLogOutput) {
+            delete event.body.data.doNotLogOutput;
+            objectToLog = { ...event };
+            objectToLog.body = { ...event.body, output: "<output not logged>" };
+          }
+          logger.verbose(`To client: ${JSON.stringify(objectToLog)}`);
+        }
+        super.sendEvent(event);
+      }
+      sendRequest(command, args, timeout, cb) {
+        logger.verbose(`To client: ${JSON.stringify(command)}(${JSON.stringify(args)}), timeout: ${timeout}`);
+        super.sendRequest(command, args, timeout, cb);
+      }
+      sendResponse(response) {
+        logger.verbose(`To client: ${JSON.stringify(response)}`);
+        super.sendResponse(response);
+      }
+      dispatchRequest(request) {
+        logger.verbose(`From client: ${request.command}(${JSON.stringify(request.arguments)})`);
+        super.dispatchRequest(request);
+      }
+    };
+    exports.LoggingDebugSession = LoggingDebugSession2;
+  }
+});
+
+// node_modules/@vscode/debugadapter/lib/handles.js
+var require_handles = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/handles.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Handles = void 0;
+    var Handles = class {
+      constructor(startHandle) {
+        this.START_HANDLE = 1e3;
+        this._handleMap = /* @__PURE__ */ new Map();
+        this._nextHandle = typeof startHandle === "number" ? startHandle : this.START_HANDLE;
+      }
+      reset() {
+        this._nextHandle = this.START_HANDLE;
+        this._handleMap = /* @__PURE__ */ new Map();
+      }
+      create(value) {
+        var handle = this._nextHandle++;
+        this._handleMap.set(handle, value);
+        return handle;
+      }
+      get(handle, dflt) {
+        return this._handleMap.get(handle) || dflt;
+      }
+    };
+    exports.Handles = Handles;
+  }
+});
+
+// node_modules/@vscode/debugadapter/lib/main.js
+var require_main5 = __commonJS({
+  "node_modules/@vscode/debugadapter/lib/main.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Handles = exports.Response = exports.Event = exports.ErrorDestination = exports.CompletionItem = exports.Module = exports.Source = exports.Breakpoint = exports.Variable = exports.Scope = exports.StackFrame = exports.Thread = exports.MemoryEvent = exports.InvalidatedEvent = exports.ProgressEndEvent = exports.ProgressUpdateEvent = exports.ProgressStartEvent = exports.CapabilitiesEvent = exports.LoadedSourceEvent = exports.ModuleEvent = exports.BreakpointEvent = exports.ThreadEvent = exports.OutputEvent = exports.ContinuedEvent = exports.StoppedEvent = exports.ExitedEvent = exports.TerminatedEvent = exports.InitializedEvent = exports.logger = exports.Logger = exports.LoggingDebugSession = exports.DebugSession = void 0;
+    var debugSession_1 = require_debugSession();
+    Object.defineProperty(exports, "DebugSession", { enumerable: true, get: function() {
+      return debugSession_1.DebugSession;
+    } });
+    Object.defineProperty(exports, "InitializedEvent", { enumerable: true, get: function() {
+      return debugSession_1.InitializedEvent;
+    } });
+    Object.defineProperty(exports, "TerminatedEvent", { enumerable: true, get: function() {
+      return debugSession_1.TerminatedEvent;
+    } });
+    Object.defineProperty(exports, "ExitedEvent", { enumerable: true, get: function() {
+      return debugSession_1.ExitedEvent;
+    } });
+    Object.defineProperty(exports, "StoppedEvent", { enumerable: true, get: function() {
+      return debugSession_1.StoppedEvent;
+    } });
+    Object.defineProperty(exports, "ContinuedEvent", { enumerable: true, get: function() {
+      return debugSession_1.ContinuedEvent;
+    } });
+    Object.defineProperty(exports, "OutputEvent", { enumerable: true, get: function() {
+      return debugSession_1.OutputEvent;
+    } });
+    Object.defineProperty(exports, "ThreadEvent", { enumerable: true, get: function() {
+      return debugSession_1.ThreadEvent;
+    } });
+    Object.defineProperty(exports, "BreakpointEvent", { enumerable: true, get: function() {
+      return debugSession_1.BreakpointEvent;
+    } });
+    Object.defineProperty(exports, "ModuleEvent", { enumerable: true, get: function() {
+      return debugSession_1.ModuleEvent;
+    } });
+    Object.defineProperty(exports, "LoadedSourceEvent", { enumerable: true, get: function() {
+      return debugSession_1.LoadedSourceEvent;
+    } });
+    Object.defineProperty(exports, "CapabilitiesEvent", { enumerable: true, get: function() {
+      return debugSession_1.CapabilitiesEvent;
+    } });
+    Object.defineProperty(exports, "ProgressStartEvent", { enumerable: true, get: function() {
+      return debugSession_1.ProgressStartEvent;
+    } });
+    Object.defineProperty(exports, "ProgressUpdateEvent", { enumerable: true, get: function() {
+      return debugSession_1.ProgressUpdateEvent;
+    } });
+    Object.defineProperty(exports, "ProgressEndEvent", { enumerable: true, get: function() {
+      return debugSession_1.ProgressEndEvent;
+    } });
+    Object.defineProperty(exports, "InvalidatedEvent", { enumerable: true, get: function() {
+      return debugSession_1.InvalidatedEvent;
+    } });
+    Object.defineProperty(exports, "MemoryEvent", { enumerable: true, get: function() {
+      return debugSession_1.MemoryEvent;
+    } });
+    Object.defineProperty(exports, "Thread", { enumerable: true, get: function() {
+      return debugSession_1.Thread;
+    } });
+    Object.defineProperty(exports, "StackFrame", { enumerable: true, get: function() {
+      return debugSession_1.StackFrame;
+    } });
+    Object.defineProperty(exports, "Scope", { enumerable: true, get: function() {
+      return debugSession_1.Scope;
+    } });
+    Object.defineProperty(exports, "Variable", { enumerable: true, get: function() {
+      return debugSession_1.Variable;
+    } });
+    Object.defineProperty(exports, "Breakpoint", { enumerable: true, get: function() {
+      return debugSession_1.Breakpoint;
+    } });
+    Object.defineProperty(exports, "Source", { enumerable: true, get: function() {
+      return debugSession_1.Source;
+    } });
+    Object.defineProperty(exports, "Module", { enumerable: true, get: function() {
+      return debugSession_1.Module;
+    } });
+    Object.defineProperty(exports, "CompletionItem", { enumerable: true, get: function() {
+      return debugSession_1.CompletionItem;
+    } });
+    Object.defineProperty(exports, "ErrorDestination", { enumerable: true, get: function() {
+      return debugSession_1.ErrorDestination;
+    } });
+    var loggingDebugSession_1 = require_loggingDebugSession();
+    Object.defineProperty(exports, "LoggingDebugSession", { enumerable: true, get: function() {
+      return loggingDebugSession_1.LoggingDebugSession;
+    } });
+    var Logger = require_logger();
+    exports.Logger = Logger;
+    var messages_1 = require_messages3();
+    Object.defineProperty(exports, "Event", { enumerable: true, get: function() {
+      return messages_1.Event;
+    } });
+    Object.defineProperty(exports, "Response", { enumerable: true, get: function() {
+      return messages_1.Response;
+    } });
+    var handles_1 = require_handles();
+    Object.defineProperty(exports, "Handles", { enumerable: true, get: function() {
+      return handles_1.Handles;
+    } });
+    var logger = Logger.logger;
+    exports.logger = logger;
+  }
+});
+
 // src/extension.ts
 var extension_exports = {};
 __export(extension_exports, {
@@ -17995,7 +19352,7 @@ __export(extension_exports, {
   languageClient: () => languageClient
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode3 = __toESM(require("vscode"));
+var vscode5 = __toESM(require("vscode"));
 var child_process = __toESM(require("child_process"));
 var os = __toESM(require("os"));
 
@@ -18009,9 +19366,9 @@ var import_vscode = require("vscode");
 function getWorkspaceFolderByName(workspaceName) {
   const ws = import_vscode.workspace.workspaceFolders;
   if (ws) {
-    let workspace5 = ws.find((w) => w.name === workspaceName);
-    if (workspace5) {
-      return workspace5.uri.fsPath;
+    let workspace8 = ws.find((w) => w.name === workspaceName);
+    if (workspace8) {
+      return workspace8.uri.fsPath;
     } else {
       return ws[0].uri.fsPath;
     }
@@ -18023,9 +19380,9 @@ function substituteFolder(oriPath) {
   let pattern = /(?:\$\{workspaceFolder(?:\:([^\.]+))?\})/;
   let innerMatch = pattern.exec(oriPath);
   if (innerMatch !== null) {
-    let path4 = getWorkspaceFolderByName(innerMatch[1]);
-    if (path4) {
-      ret = oriPath.replace(pattern, path4);
+    let path6 = getWorkspaceFolderByName(innerMatch[1]);
+    if (path6) {
+      ret = oriPath.replace(pattern, path6);
     }
   }
   ret = path.resolve(ret);
@@ -18192,8 +19549,379 @@ var ClxLanguageConfiguration = class {
   }
 };
 
-// src/extension.ts
+// src/debugger/activeDebug.ts
+var vscode4 = __toESM(require("vscode"));
+
+// src/debugger/ClxDebugSession.ts
+var net = __toESM(require("net"));
+var import_debugadapter = __toESM(require_main5());
+
+// src/debugger/FileUtil.ts
+var import_vscode3 = require("vscode");
+var import_util = require("util");
+var FileUtil = class {
+  static async createDebugFile(fileName, content) {
+    let folderUri = import_vscode3.workspace.workspaceFolders[0].uri;
+    let fileUri = import_vscode3.Uri.joinPath(folderUri, fileName);
+    try {
+      const encoder = new import_util.TextEncoder();
+      await import_vscode3.workspace.fs.writeFile(fileUri, encoder.encode(content));
+      return fileUri;
+    } catch (error) {
+      import_vscode3.window.showErrorMessage(`Failed to create the file ${fileName}. Error message: ${error}`);
+      return void 0;
+    }
+  }
+};
+
+// src/debugger/ClxDebugSession.ts
+var import_vscode4 = require("vscode");
+var import_path = require("path");
+var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
+  constructor() {
+    super("clx.debug.txt");
+    this.ext = [".clx"];
+    this.msgHooks = [];
+    this.breakPointId = 0;
+  }
+  initializeRequest(response, args) {
+    console.log("initializeRequest");
+    response.body = {};
+    this.sendResponse(response);
+  }
+  customRequest(command, response, args, request) {
+    super.customRequest(command, response, args);
+  }
+  launchRequest(response, args, request) {
+    console.log("launchRequest!!!");
+    const client = net.connect(3563, "127.0.0.1").on("connect", () => {
+      this.sendResponse(response);
+      this.onConnect(client);
+    }).on("error", (err) => {
+      response.success = false;
+      response.message = `${err}`;
+      this.sendResponse(response);
+      this.onSocketClose();
+    }).on("close", (hadErr) => this.onSocketClose()).on("data", (data) => this.onReceiveData(data));
+  }
+  onConnect(client) {
+    console.log("onConnect!!!");
+    this.sendEvent(new import_debugadapter.OutputEvent(`Connected.
+`));
+    this.client = client;
+    this.setupStepHook();
+    this.doCmd("source");
+  }
+  setupStepHook() {
+    let session = this;
+    this.hookMsg(this.getFilterMsgHook("@", function(stat, info) {
+      if (stat == 2) {
+        if (info.length > 0) {
+          let pattern = /(.+) at (.+):(?<line>\d+)/;
+          let match = pattern.exec(info[0]);
+          if (match?.groups?.line) {
+            session.breakLineNumber = Number.parseInt(match?.groups?.line);
+            console.log(`breakLineNumber: ${session.breakLineNumber}`);
+            session.sendEvent(new import_debugadapter.StoppedEvent("breakpoint", 1));
+          }
+        }
+      }
+    }, true, true));
+  }
+  doCmd(cmd) {
+    let session = this;
+    if (cmd == "source") {
+      this.hookMsg(this.getFilterMsgHook("src", async function(stat, info) {
+        if (stat == 2) {
+          if (info.length > 0) {
+            let pattern = /(__lua__):(\d+)/;
+            let match = pattern.exec(info[0]);
+            if (match) {
+              info.shift();
+            }
+            session.sourceUri = await FileUtil.createDebugFile("debug_temp.clx", info.join("\n"));
+            if (session.sourceUri) {
+              session.sendEvent(new import_debugadapter.InitializedEvent());
+            } else {
+              import_vscode4.window.showErrorMessage("Create source code file failed");
+            }
+          }
+        }
+      }, false, false));
+      this.sendMessage("src __lua__");
+    }
+  }
+  sendMessage(msg) {
+    if (this.client) {
+      this.client.write(`${msg}
+`);
+    }
+  }
+  onReceiveData(data) {
+    const chunk = data.toString();
+    console.log(`onReceiveData: ${chunk}`);
+    const lines = chunk.split("\n");
+    if (lines.length > 0) {
+      this.hookData(lines);
+    }
+  }
+  hookData(lines) {
+    if (this.msgHooks.length > 0) {
+      for (let i = 0; i < lines.length; i++) {
+        let data = lines[i];
+        let idx = 0;
+        let hf = this.msgHooks[idx];
+        while (hf) {
+          let ret = hf(data);
+          let line = ret.line;
+          if (ret.isEnd) {
+            this.msgHooks.splice(idx, 1);
+            idx -= 1;
+          }
+          if (line == null) {
+            break;
+          }
+          idx += 1;
+          hf = this.msgHooks[idx];
+        }
+      }
+    }
+  }
+  onSocketClose() {
+    if (this.client) {
+      this.client.removeAllListeners();
+    }
+    this.sendEvent(new import_debugadapter.OutputEvent("Disconnected.\n"));
+  }
+  hookMsg(hook) {
+    this.msgHooks.push(hook);
+  }
+  getFilterMsgHook(token, cb, noDel, noEnd) {
+    let stat = 0;
+    let info = [];
+    let cmp = `>->${token}`;
+    let cmpend = `<-<${token}`;
+    function f(line) {
+      if (stat == 0) {
+        if (line == cmp) {
+          stat = 1;
+          if (noDel) {
+            return { line, isEnd: false };
+          } else {
+            return { line: null, isEnd: false };
+          }
+        }
+        return { line, isEnd: false };
+      }
+      if (stat == 1) {
+        if (line == cmpend) {
+          stat = 2;
+        } else {
+          info.push(line);
+        }
+      }
+      if (cb) {
+        cb(stat, info);
+      }
+      if (noEnd) {
+        if (stat == 2) {
+          info = [];
+          stat = 0;
+        }
+      }
+      if (noDel) {
+        return { line, isEnd: stat == 2 };
+      } else {
+        return { line: null, isEnd: stat == 2 };
+      }
+    }
+    return f;
+  }
+  async setBreakPointsRequest(response, args) {
+    const path6 = args.source.path;
+    if (path6 == this.sourceUri?.path) {
+      this.sendMessage("d");
+      const clientLines = args.lines || [];
+      console.log(`setBreakPointsRequest: ${clientLines.length}`);
+      const actualBreakpoints0 = clientLines.map(async (line) => {
+        this.sendMessage(`b __lua__:${line}`);
+        const bp = new import_debugadapter.Breakpoint(true, line);
+        bp.id = this.breakPointId++;
+        return bp;
+      });
+      const actualBreakpoints = await Promise.all(actualBreakpoints0);
+      response.body = {
+        breakpoints: actualBreakpoints
+      };
+      this.sendResponse(response);
+    }
+  }
+  threadsRequest(response) {
+    response.body = {
+      threads: [
+        new import_debugadapter.Thread(1, "thread 1")
+      ]
+    };
+    this.sendResponse(response);
+  }
+  nextRequest(response, args, request) {
+    console.log("nextRequest");
+    this.sendDebugAction(response, "n");
+  }
+  continueRequest(response, args) {
+    console.log("continueRequest");
+    this.sendDebugAction(response, "c");
+  }
+  stepInRequest(response, args, request) {
+    console.log("stepInRequest");
+    this.sendDebugAction(response, "s");
+  }
+  stepOutRequest(response, args) {
+    console.log("stepOutRequest");
+    this.sendDebugAction(response, "fin");
+  }
+  stackTraceRequest(response, args, request) {
+    console.log("stackTraceRequest");
+    if (this.breakLineNumber && this.sourceUri) {
+      const stackFrames = [];
+      let path6 = this.sourceUri.path;
+      let source = new import_debugadapter.Source((0, import_path.basename)(path6), path6);
+      stackFrames.push(new import_debugadapter.StackFrame(0, "step", source, this.breakLineNumber));
+      response.body = {
+        stackFrames,
+        totalFrames: stackFrames.length
+      };
+    }
+    this.sendResponse(response);
+  }
+  scopesRequest(response, args, request) {
+    console.log("scopesRequest");
+  }
+  variablesRequest(response, args, request) {
+    console.log("variablesRequest");
+  }
+  disconnectRequest(response, args, request) {
+    console.log("disconnectRequest");
+    if (this.sourceUri) {
+      import_vscode4.workspace.fs.delete(this.sourceUri);
+    }
+    super.disconnectRequest(response, args, request);
+  }
+  sendDebugAction(response, action) {
+    this.sendMessage(action);
+    this.sendResponse(response);
+  }
+};
+
+// src/debugger/ClxDebugProvider.ts
+var vscode3 = __toESM(require("vscode"));
 var path3 = require("path");
+var ClxDebugConfigurationProvider = class {
+  constructor(type, context) {
+    this.type = type;
+    this.context = context;
+    this.showWaitConnectionToken = new vscode3.CancellationTokenSource();
+    context.subscriptions.push(vscode3.debug.onDidReceiveDebugSessionCustomEvent((e) => {
+      if (e.session.type === this.type) {
+        this.onDebugCustomEvent(e);
+      }
+    }));
+    context.subscriptions.push(vscode3.debug.onDidTerminateDebugSession((e) => this.onTerminateDebugSession(e)));
+  }
+  async onDebugCustomEvent(e) {
+    if (e.event === "showWaitConnection") {
+      this.showWaitConnectionToken.cancel();
+      this.showWaitConnectionToken = new vscode3.CancellationTokenSource();
+      this.showWaitConnection(e.session, this.showWaitConnectionToken.token);
+    } else if (e.event === "onNewConnection") {
+      this.showWaitConnectionToken.cancel();
+    }
+  }
+  async showWaitConnection(session, token) {
+    return vscode3.window.withProgress(
+      {
+        location: vscode3.ProgressLocation.Notification,
+        title: "Wait for connection.",
+        cancellable: true
+      },
+      async (progress, userCancelToken) => {
+        userCancelToken.onCancellationRequested((e) => {
+          session.customRequest("stopWaitConnection");
+        });
+        await new Promise((r, e) => token.onCancellationRequested(r));
+      }
+    );
+  }
+  onTerminateDebugSession(session) {
+    this.showWaitConnectionToken.cancel();
+  }
+  isNullOrEmpty(s) {
+    return !s || s.trim().length === 0;
+  }
+  getSourceRoots() {
+    const workspaceFolders = vscode3.workspace.workspaceFolders || [];
+    const list = workspaceFolders.map((f) => {
+      return f.uri.fsPath;
+    });
+    const config = vscode3.workspace.getConfiguration("emmylua").get("source.roots") || [];
+    return list.concat(config.map((item) => {
+      return path3.normalize(item);
+    }));
+  }
+  resolveDebugConfiguration(folder, debugConfiguration, token) {
+    console.log("resolveDebugConfiguration!!!");
+    debugConfiguration.extensionPath = this.context.extensionPath;
+    debugConfiguration.sourcePaths = this.getSourceRoots();
+    if (!debugConfiguration.request) {
+      debugConfiguration.request = "launch";
+      debugConfiguration.type = "clx_debug";
+      debugConfiguration.host = "localhost";
+      debugConfiguration.port = 3563;
+    }
+    return debugConfiguration;
+  }
+  dispose() {
+  }
+};
+
+// src/debugger/activeDebug.ts
+var path4 = require("path");
+function activateDebug(context) {
+  context.subscriptions.push(vscode4.debug.registerDebugConfigurationProvider("clx_debug", new ClxDebugConfigurationProvider("clx_debug", context)));
+  context.subscriptions.push(vscode4.debug.registerDebugAdapterDescriptorFactory("clx_debug", new InlineDebugAdapterFactory()));
+  let clxInlineValueProvider = new ClxInlineValuesProvider();
+  context.subscriptions.push(vscode4.languages.registerInlineValuesProvider("clx_debug", clxInlineValueProvider));
+}
+var InlineDebugAdapterFactory = class {
+  createDebugAdapterDescriptor(_session, executable) {
+    return new vscode4.DebugAdapterInlineImplementation(new ClxDebugSession());
+  }
+};
+var ClxInlineValuesProvider = class {
+  provideInlineValues(document, viewport, context) {
+    const allValues = [];
+    const regExps = [
+      /(?<=local\s+)[^\s,\<]+/,
+      /(?<=---@param\s+)\S+/
+    ];
+    for (let l = viewport.start.line; l <= context.stoppedLocation.end.line; l++) {
+      const line = document.lineAt(l);
+      for (const regExp of regExps) {
+        const match = regExp.exec(line.text);
+        if (match) {
+          const varName = match[0];
+          const varRange = new vscode4.Range(l, match.index, l, match.index + varName.length);
+          allValues.push(new vscode4.InlineValueVariableLookup(varRange, varName, false));
+          break;
+        }
+      }
+    }
+    return allValues;
+  }
+};
+
+// src/extension.ts
+var path5 = require("path");
 var extensionContext;
 var languageClient;
 var javaExecutablePath;
@@ -18202,21 +19930,18 @@ var activeEditor;
 function activate(context) {
   extensionContext = context;
   javaExecutablePath = findJava_default();
-  context.subscriptions.push(vscode3.workspace.onDidChangeConfiguration(onDidChangeConfiguration2, null, context.subscriptions));
-  context.subscriptions.push(vscode3.workspace.onDidChangeTextDocument(onDidChangeTextDocument, null, context.subscriptions));
-  context.subscriptions.push(vscode3.window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor, null, context.subscriptions));
-  context.subscriptions.push(vscode3.languages.setLanguageConfiguration("clx", new ClxLanguageConfiguration()));
+  context.subscriptions.push(vscode5.workspace.onDidChangeConfiguration(onDidChangeConfiguration2, null, context.subscriptions));
+  context.subscriptions.push(vscode5.workspace.onDidChangeTextDocument(onDidChangeTextDocument, null, context.subscriptions));
+  context.subscriptions.push(vscode5.window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor, null, context.subscriptions));
+  context.subscriptions.push(vscode5.languages.setLanguageConfiguration("clx", new ClxLanguageConfiguration()));
   context.subscriptions.push(
-    vscode3.commands.registerCommand("extension.clx-language.run", (resource) => {
+    vscode5.commands.registerCommand("extension.clx-language.run", (resource) => {
       cmdRun(context, resource);
     }),
-    vscode3.commands.registerCommand("extension.clx-language.debug", (resource) => {
-      cmdRun(context, resource);
-    }),
-    vscode3.commands.registerCommand("extension.clx-language.restartServer", restartServer)
+    vscode5.commands.registerCommand("extension.clx-language.restartServer", restartServer)
   );
-  context.subscriptions.push(vscode3.debug.registerDebugAdapterDescriptorFactory("clx", new DebugAdapterExecutableFactory()));
   startServer();
+  activateDebug(context);
   return {
     reportAPIDoc: (classDoc) => {
       languageClient?.sendRequest("emmy/reportAPI", classDoc);
@@ -18225,26 +19950,26 @@ function activate(context) {
 }
 function cmdRun(context, resource) {
   let targetResource = resource;
-  if (!targetResource && vscode3.window.activeTextEditor) {
-    targetResource = vscode3.window.activeTextEditor.document.uri;
+  if (!targetResource && vscode5.window.activeTextEditor) {
+    targetResource = vscode5.window.activeTextEditor.document.uri;
   }
   if (targetResource) {
     let extensionPath = context.extensionPath;
     let platform2 = os.platform();
     let coloxToolPath = "";
     if (platform2 == "darwin") {
-      coloxToolPath = path3.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
+      coloxToolPath = path5.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
     } else if (platform2 == "win32") {
-      coloxToolPath = path3.resolve(extensionPath, "debugger", "win32", "coloXtool.exe");
+      coloxToolPath = path5.resolve(extensionPath, "debugger", "win32", "coloXtool.exe");
     } else {
       console.log("not support platform: ", platform2);
       return;
     }
-    let dir = path3.dirname(targetResource.fsPath);
-    let fileName = path3.basename(targetResource.fsPath);
-    let cmdStr = `${coloxToolPath} -d ` + dir + path3.sep + " -r " + fileName;
+    let dir = path5.dirname(targetResource.fsPath);
+    let fileName = path5.basename(targetResource.fsPath);
+    let cmdStr = `${coloxToolPath} -d ` + dir + path5.sep + " -r " + fileName;
     try {
-      child_process.execSync(cmdStr);
+      child_process.exec(cmdStr);
     } catch (e) {
       console.log("run coloXtool exception: ", e);
     }
@@ -18291,7 +20016,7 @@ async function startServer() {
     return;
   }
   doStartServer().then(() => {
-    onDidChangeActiveTextEditor(vscode3.window.activeTextEditor);
+    onDidChangeActiveTextEditor(vscode5.window.activeTextEditor);
   }).catch((reason) => {
     console.log(`Failed to start clx language server!
 ${reason}`);
@@ -18303,11 +20028,11 @@ async function doStartServer() {
     synchronize: {
       configurationSection: ["clx", "files.associations"],
       fileEvents: [
-        vscode3.workspace.createFileSystemWatcher("**/*.clx")
+        vscode5.workspace.createFileSystemWatcher("**/*.clx")
       ]
     },
     initializationOptions: {
-      stdFolder: vscode3.Uri.file(path3.resolve(extensionContext.extensionPath, "res/std")).toString(),
+      stdFolder: vscode5.Uri.file(path5.resolve(extensionContext.extensionPath, "res/std")).toString(),
       apiFolders: [],
       client: "vsc"
     }
@@ -18329,7 +20054,7 @@ async function doStartServer() {
       return Promise.resolve(result);
     };
   } else {
-    const cp = path3.resolve(extensionContext.extensionPath, "server", "*");
+    const cp = path5.resolve(extensionContext.extensionPath, "server", "*");
     const exePath = javaExecutablePath || "java";
     serverOptions = {
       command: exePath,
@@ -18366,23 +20091,6 @@ function onDidChangeConfiguration2(event) {
     restartServer();
   }
 }
-var DebugAdapterExecutableFactory = class {
-  createDebugAdapterDescriptor(_session, executable) {
-    if (!executable) {
-      const command = "absolute path to my DA executable";
-      const args = [
-        "some args",
-        "another arg"
-      ];
-      const options = {
-        cwd: "working directory for executable",
-        env: { "envVariable": "some value" }
-      };
-      executable = new vscode3.DebugAdapterExecutable(command, args, options);
-    }
-    return executable;
-  }
-};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   LANGUAGE_ID,
