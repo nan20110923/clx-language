@@ -25,16 +25,16 @@ import * as Annotator from "./annotator";
 import { LanguageClientOptions, LanguageClient, ServerOptions, StreamInfo } from 'vscode-languageclient/node';
 import { ClxLanguageConfiguration } from './languageConfiguration';
 import { activateDebug } from './debugger/activeDebug';
-import exp = require('constants');
 
 
 export let extensionContext: vscode.ExtensionContext;
 export let languageClient: LanguageClient;
-let javaExecutablePath: string | null;
 export const LANGUAGE_ID: string = "clx";
+export let coloxProcess: child_process.ChildProcess | undefined;
 
+let javaExecutablePath: string | null;
 let activeEditor: vscode.TextEditor;
-let coloxProcess: child_process.ChildProcess | undefined;
+
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('extension.clx-language.run', (resource: vscode.Uri) => {
 			if (!isColoXToolRunning()) {
-				cmdRun(resource)
+				runColoXTool(resource)
 			}
 		}),
 		// vscode.commands.registerCommand('extension.clx-language.debug', (resource: vscode.Uri) => {
@@ -76,7 +76,13 @@ export function isColoXToolRunning() {
 	return coloxProcess && coloxProcess.exitCode == null
 }
 
-export function cmdRun(resource: vscode.Uri | null) {
+export function terminateColoXTool() {
+	if (isColoXToolRunning()) {
+		coloxProcess?.kill()
+	}
+}
+
+export function runColoXTool(resource: vscode.Uri | null) {
 	let targetResource = resource;
 	if (!targetResource && vscode.window.activeTextEditor) {
 		targetResource = vscode.window.activeTextEditor.document.uri;

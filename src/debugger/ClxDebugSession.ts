@@ -5,7 +5,7 @@ import { FileUtil } from './FileUtil';
 import { Uri, ViewColumn, commands, window, workspace } from "vscode";
 import { basename } from "path";
 import * as readline from "readline";
-import { cmdRun, isColoXToolRunning } from "../extension";
+import { runColoXTool, coloxProcess, isColoXToolRunning, terminateColoXTool } from "../extension";
 import { delay } from "../util";
 
 type MsgHook = (line: string) => { line: string | null, isEnd: boolean };
@@ -39,9 +39,11 @@ export class ClxDebugSession extends LoggingDebugSession {
         console.log(`launchRequest args: ${args}`)
 
         if (!isColoXToolRunning()) {
-            cmdRun(null)
+            runColoXTool(null)
             await delay(1000)
         }
+
+        coloxProcess?.stdout?.on('data', (data) => this.sendEvent(new OutputEvent(`${data}\n`)))
 
         const client = net.connect({
             port: 3563,
@@ -225,7 +227,7 @@ export class ClxDebugSession extends LoggingDebugSession {
         return f
     }
 
-    protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): Promise<void> {        
+    protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): Promise<void> {
         const path = args.source.path as string;
         if (path == this.sourceUri?.path) {
             // delete all breakpoint
@@ -316,6 +318,7 @@ export class ClxDebugSession extends LoggingDebugSession {
             }
             this.sourceUri = undefined
         }
+        terminateColoXTool()
         super.disconnectRequest(response, args, request)
     }
 

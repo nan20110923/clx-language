@@ -19346,11 +19346,13 @@ var extension_exports = {};
 __export(extension_exports, {
   LANGUAGE_ID: () => LANGUAGE_ID,
   activate: () => activate,
-  cmdRun: () => cmdRun,
+  coloxProcess: () => coloxProcess,
   deactivate: () => deactivate,
   extensionContext: () => extensionContext,
   isColoXToolRunning: () => isColoXToolRunning,
-  languageClient: () => languageClient
+  languageClient: () => languageClient,
+  runColoXTool: () => runColoXTool,
+  terminateColoXTool: () => terminateColoXTool
 });
 module.exports = __toCommonJS(extension_exports);
 var vscode5 = __toESM(require("vscode"));
@@ -19606,9 +19608,11 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
   async launchRequest(response, args, request) {
     console.log(`launchRequest args: ${args}`);
     if (!isColoXToolRunning()) {
-      cmdRun(null);
+      runColoXTool(null);
       await delay(1e3);
     }
+    coloxProcess?.stdout?.on("data", (data) => this.sendEvent(new import_debugadapter.OutputEvent(`${data}
+`)));
     const client = net.connect({
       port: 3563,
       host: "127.0.0.1"
@@ -19833,6 +19837,7 @@ var ClxDebugSession = class extends import_debugadapter.LoggingDebugSession {
       }
       this.sourceUri = void 0;
     }
+    terminateColoXTool();
     super.disconnectRequest(response, args, request);
   }
   sendDebugAction(response, action) {
@@ -19948,13 +19953,12 @@ var ClxInlineValuesProvider = class {
 
 // src/extension.ts
 var path4 = require("path");
-var exp = require("constants");
 var extensionContext;
 var languageClient;
-var javaExecutablePath;
 var LANGUAGE_ID = "clx";
-var activeEditor;
 var coloxProcess;
+var javaExecutablePath;
+var activeEditor;
 function activate(context) {
   extensionContext = context;
   javaExecutablePath = findJava_default();
@@ -19965,7 +19969,7 @@ function activate(context) {
   context.subscriptions.push(
     vscode5.commands.registerCommand("extension.clx-language.run", (resource) => {
       if (!isColoXToolRunning()) {
-        cmdRun(resource);
+        runColoXTool(resource);
       }
     }),
     vscode5.commands.registerCommand("extension.clx-language.restartServer", restartServer)
@@ -19981,7 +19985,12 @@ function activate(context) {
 function isColoXToolRunning() {
   return coloxProcess && coloxProcess.exitCode == null;
 }
-function cmdRun(resource) {
+function terminateColoXTool() {
+  if (isColoXToolRunning()) {
+    coloxProcess?.kill();
+  }
+}
+function runColoXTool(resource) {
   let targetResource = resource;
   if (!targetResource && vscode5.window.activeTextEditor) {
     targetResource = vscode5.window.activeTextEditor.document.uri;
@@ -20131,10 +20140,12 @@ function onDidChangeConfiguration2(event) {
 0 && (module.exports = {
   LANGUAGE_ID,
   activate,
-  cmdRun,
+  coloxProcess,
   deactivate,
   extensionContext,
   isColoXToolRunning,
-  languageClient
+  languageClient,
+  runColoXTool,
+  terminateColoXTool
 });
 //# sourceMappingURL=extension.js.map
