@@ -247,9 +247,7 @@ function onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
 }
 
 function onDidChangeActiveTextEditor(editor: vscode.TextEditor | undefined) {
-	if (editor
-	&& editor.document.languageId === LANGUAGE_ID
-	&& languageClient != undefined) {
+	if (editor && editor.document.languageId === LANGUAGE_ID && languageClient != undefined) {
 		activeEditor = editor as vscode.TextEditor;
 		Annotator.requestAnnotators(activeEditor, languageClient);
 	}
