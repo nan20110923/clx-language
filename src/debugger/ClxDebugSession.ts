@@ -20,8 +20,9 @@ export class ClxDebugSession extends LoggingDebugSession {
     protected ext: string[] = ['.clx'];
     private msgHooks: MsgHook[] = [];
     private sourceUri?: Uri;
-    private breakPointId = 0;
-    private breakLineNumber?: number;
+    private bpId = 0;
+    private curBpLineNumber?: number;
+    private bpLines: number[] = [];
 
     protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
         console.log('initializeRequest')
@@ -39,7 +40,7 @@ export class ClxDebugSession extends LoggingDebugSession {
         console.log(`launchRequest args: ${args}`)
 
         if (!isColoXToolRunning()) {
-            runColoXTool(null)
+            runColoXTool(null, true)
             await delay(1000)
         }
 
@@ -91,7 +92,7 @@ export class ClxDebugSession extends LoggingDebugSession {
                     let pattern = /(.+) at (.+):(?<line>\d+)/
                     let match = pattern.exec(info[0])
                     if (match?.groups?.line) {
-                        session.breakLineNumber = Number.parseInt(match?.groups?.line);
+                        session.curBpLineNumber = Number.parseInt(match?.groups?.line);
                         // console.log(`breakLineNumber: ${session.breakLineNumber}`)
                         session.sendEvent(new StoppedEvent("breakpoint", 1));
                     }
@@ -134,6 +135,8 @@ export class ClxDebugSession extends LoggingDebugSession {
                 }
             }, false, false))
             this.sendMessage('src __lua__')
+        } else {
+            this.sendMessage(cmd)
         }
     }
 
@@ -233,11 +236,11 @@ export class ClxDebugSession extends LoggingDebugSession {
             // delete all breakpoint
             this.sendMessage('d');
 
-            const clientLines = args.lines || [];
-            const actualBreakpoints0 = clientLines.map(async line => {
+            this.bpLines = args.lines || [];
+            const actualBreakpoints0 = this.bpLines.map(async line => {
                 this.sendMessage(`b __lua__:${line}`)
                 const bp = new Breakpoint(true, line) as DebugProtocol.Breakpoint;
-                bp.id = this.breakPointId++;
+                bp.id = this.bpId++;
                 return bp;
             });
             const actualBreakpoints = await Promise.all<DebugProtocol.Breakpoint>(actualBreakpoints0);
@@ -246,6 +249,12 @@ export class ClxDebugSession extends LoggingDebugSession {
             response.body = {
                 breakpoints: actualBreakpoints
             };
+
+            if (this.bpLines.length > 0) {
+                // pause running program
+                this.sendMessage('pause');
+            }
+
             this.sendResponse(response);
         }
     }
@@ -288,11 +297,11 @@ export class ClxDebugSession extends LoggingDebugSession {
 
     protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments, request?: DebugProtocol.Request | undefined): void {
         // console.log('stackTraceRequest')
-        if (this.breakLineNumber && this.sourceUri) {
+        if (this.curBpLineNumber && this.sourceUri) {
             const stackFrames: StackFrame[] = [];
             let path = this.sourceUri.path
             let source = new Source(basename(path), path);
-            stackFrames.push(new StackFrame(0, 'step', source, this.breakLineNumber));
+            stackFrames.push(new StackFrame(0, 'step', source, this.curBpLineNumber));
             response.body = {
                 stackFrames: stackFrames,
                 totalFrames: stackFrames.length

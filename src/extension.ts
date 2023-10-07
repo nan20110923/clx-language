@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('extension.clx-language.run', (resource: vscode.Uri) => {
 			if (!isColoXToolRunning()) {
-				runColoXTool(resource)
+				runColoXTool(resource, false)
 			}
 		}),
 		// vscode.commands.registerCommand('extension.clx-language.debug', (resource: vscode.Uri) => {
@@ -82,7 +82,7 @@ export function terminateColoXTool() {
 	}
 }
 
-export function runColoXTool(resource: vscode.Uri | null) {
+export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 	let targetResource = resource;
 	if (!targetResource && vscode.window.activeTextEditor) {
 		targetResource = vscode.window.activeTextEditor.document.uri;
@@ -104,6 +104,9 @@ export function runColoXTool(resource: vscode.Uri | null) {
 		let dir = path.dirname(targetResource.fsPath);
 		let fileName = path.basename(targetResource.fsPath);
 		let cmdStr = `${coloxToolPath} -d ` + dir + path.sep + " -r " + fileName;
+		if (debug) {
+			cmdStr += " -x"
+		}
 		try {
 			coloxProcess = child_process.exec(cmdStr);
 			coloxProcess.addListener("exit", () => {
