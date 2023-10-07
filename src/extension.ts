@@ -133,16 +133,17 @@ async function validateJava(): Promise<void> {
 				if (match) {
 					let major = parseInt(match[2]) || 0;
 					let minor = parseInt(match[4]) || 0;
-					// java 1.8+
-					if (major > 1 || (major === 1 && minor >= 8)) {
+					console.log(`major: ${major} minor: ${minor}`)
+					// java 11+
+					if (major >= 11) {
 						resolve();
 						return;
 					}
-					reject(`Unsupported Java version: ${match[1]}, please install Java 1.8 or above.`);
+					reject(`Unsupported Java version: ${match[1]}, please install Java 11 or above.`);
 					return;
 				}
 			}
-			reject("Can't find Java! Please install Java 1.8 or above and set JAVA_HOME environment variable.");
+			reject("Can't find Java! Please install Java 11 or above and set JAVA_HOME environment variable.");
 		});
 	});
 }
@@ -159,7 +160,7 @@ async function startServer() {
 	try {
 		await validateJava();
 	} catch (e) {
-		console.log("JAVA NOT FOUND");
+		vscode.window.showErrorMessage("Please install Java 11 or above.");
 		return;
 	}
 

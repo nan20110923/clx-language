@@ -4,26 +4,26 @@ import {substituteFolder} from "./substitution";
 
 function validateJava(javaPath: string): boolean {
 	//TODO check java path
-    return false;
+	return false;
 }
 
 export default function(): string|null {
 	var executableFile: string = "java";
 	if(process["platform"] === "win32") {
 		executableFile += ".exe";
-    }
-    
-    var settingsPath = vscode.workspace.getConfiguration("emmylua").get("java.home");
-    if (settingsPath) {
-        let fullPath = substituteFolder(<string>settingsPath);
-        let javaPath = path.join(fullPath, "bin", executableFile);
-        return javaPath;
-    }
+	}
+
+	var settingsPath = vscode.workspace.getConfiguration("clx-language").get("JAVA_HOME");
+	if (settingsPath) {
+		let fullPath = substituteFolder(<string>settingsPath);
+		let javaPath = path.join(fullPath, "bin", executableFile);
+		return javaPath;
+	}
 
 	if("JAVA_HOME" in process.env) {
 		let javaHome = <string> process.env.JAVA_HOME;
-        let javaPath = path.join(javaHome, "bin", executableFile);
-        return javaPath;
+		let javaPath = path.join(javaHome, "bin", executableFile);
+		return javaPath;
 	}
 
 	if("PATH" in process.env) {
@@ -37,6 +37,6 @@ export default function(): string|null {
 			}
 		}
 	}
-     
+		
 	return null;
 }
