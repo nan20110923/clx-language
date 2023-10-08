@@ -32,14 +32,14 @@ AnimEaseOutBounce=30
 AnimEaseInOutBounce=31
 
 ---
---- 根据当前x，返回按照指定的effect动画类型函数计算的数值。x通常采用[0,1.0]
+--- Returns the value calculated by the specified effect animation type function based on the current x. x is usually [0,1.0].
 ---@param effect number
 ---@param x number
 function anim_effect(effect, x) end
 
 
 ---
---- 根据curtick，计算动画位置。返回curtick对应的pos
+--- Calculates the animation position based on curtick. Returns the pos corresponding to curtick
 ---@param effect number
 ---@param apos number
 ---@param zpos number

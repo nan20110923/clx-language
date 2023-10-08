@@ -1,35 +1,35 @@
 ---
---- 在表里面index位置添加元素val，index不传表示追加到最后。
+--- Adds the element val at index position inside the table, index is not passed to indicate that it is appended to the end.
 ---@param tbl table
 ---@param val any
 ---@param index number
 function add(tbl, val, index) end
 
 ---
---- 查找并删除表里面的和val相等的元素(只删第一个找到的)。
+--- Finds and deletes elements inside the table that are equal to val (only the first one found).
 ---@param tbl table
 ---@param val any
 function del(tbl, val) end
 
 ---
---- 删除表里面第index位置的元素，如果index不传，表示删除最后一个。
+--- Removes the element at index position in the table, if index is not passed, it means the last one is removed.
 ---@param tbl table
 ---@param index number
 function deli(tbl, index) end
 
 ---
---- 返回表的长度(#tbl)，如果val提供了，那么返回表里面等于val的元素的个数。
+--- Returns the length of the table (#tbl), or the number of elements inside the table equal to val, if val is supplied.
 ---@param tbl table
 ---@param val any
 function count(tbl, val) end
 
 ---
---- 返回表的迭代函数，用在for循环，迭代非nil的数组数据。
+--- An iterator function that returns a table, used in a for loop to iterate over non-nil array data.
 ---@param tbl table
 function all(tbl) end
 
 ---
---- 迭代表的数组，对每个非nil元素调用fun。
+--- An iterative array, calling fun on each non-nil element.
 ---@param tbl table
 ---@param fun function
 function foreach(tbl, fun) end

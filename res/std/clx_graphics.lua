@@ -93,88 +93,10 @@ __vm_HWSTAT = 0x0
 
 
 -- --[[ api ]]--
--- ---
--- --- Set the clipping rectangle in pixels. All drawing operations will be clipped to a rectangle at x,y and width w,h.
--- --- clip() to reset.
--- --- When CLIP_PREVIOUS is true, clip the new clipping region with the old clipping region.
--- ---@param X number
--- ---@param Y number
--- ---@param W number
--- ---@param H number
--- ---@param CLIP_PREVIOUS boolean
--- function clip(X, Y, W, H, CLIP_PREVIOUS) end
-
--- ---
--- --- Set the pixel at x, y to a specific color.
--- --- If COL is not specified, the current drawing color is used.
--- ---@param X number
--- ---@param Y number
--- ---@param COL number
--- function pset(X, Y, COL) end
-
--- ---
--- --- Get the color of the pixel at (X, Y) on the screen.
--- --- PS: pget returns 0 when X and Y are out of range.
--- ---@param X number
--- ---@param Y number
--- function pget(X, Y) end
-
--- ---
--- --- Set the color (COL) of a sprite sheet pixel.
--- ---@param X number
--- ---@param Y number
--- ---@param COL number
--- function sset(X, Y, COL) end
-
--- ---
--- --- Get the color (COL) of a sprite sheet pixel.
--- --- PS: sget returns 0 when X and Y are out of range.
--- ---@param X number
--- ---@param Y number
--- function sget(X, Y) end
-
-
--- ---
--- --- Set the value (VAL) of the flag F of sprite N.
--- --- F is the flag index 0..7.
--- --- VAL is TRUE or FALSE.
--- --- The initial state of flags 0..7 can be set in the sprite editor and thus can be used to create custom sprite properties.
--- --- It is also possible to draw only a subset of map tiles by providing a mask in MAP().
--- --- When F is omitted, all flags are retrieved/set as a single bitfield.
--- ---@param N number
--- ---@param F number
--- ---@param VAL boolean
--- function fset(N, F, VAL) end
-
--- ---
--- --- Get the value (VAL) of the flag F of sprite N.
--- --- F is the flag index 0..7.
--- --- VAL is TRUE or FALSE.
--- --- The initial state of flags 0..7 can be set in the sprite editor and thus can be used to create custom sprite properties.
--- --- It is also possible to draw only a subset of map tiles by providing a mask in MAP().
--- --- When F is omitted, all flags are retrieved/set as a single bitfield.
--- ---@param N number
--- ---@param F number
--- function fget(X, Y) end
-
--- ---
--- --- Convert codepage from gb2312 to utf8 print/drawTxt_h only support utf8
--- ---@param gb2312 string
--- ---@return string
--- function gb2312_to_utf8(gb2312) end
-
-
--- ---
--- --- Convert codepage from gb2312 to utf8 print/drawTxt_h only support utf8
--- ---@param gb2312 string
--- ---@return string
--- function gb2312_to_utf8(gb2312) end
-
-
 ---
---- 以像素为单位设置剪切矩形。 所有绘图操作将被裁剪到 x, y 处宽度和高度为 w,h 的矩形。
---- clip() 进行重置。
---- 当 CLIP_PREVIOUS 为 true 时，用旧的裁剪区域裁剪新的裁剪区域。
+--- Set the clipping rectangle in pixels. All drawing operations will be clipped to a rectangle with width and height w,h at x, y. --- Clip() to reset.
+--- clip() performs a reset.
+--- When CLIP_PREVIOUS is true, the new clipping area is clipped with the old clipping area.
 ---@param Y number
 ---@param X number
 ---@param W number
@@ -184,59 +106,59 @@ function clip(X, Y, W, H, CLIP_PREVIOUS) end
 
 
 ---
---- 将屏幕上 (X, Y) 处的像素设置为特定颜色。
---- 如果未指定 COL，则使用当前绘制颜色。
+--- Sets pixels at (X, Y) on the screen to a specific color.
+--- If COL is not specified, the current drawing color is used.
 ---@param X number
 ---@param Y number
 ---@param COL number
 function pset(X, Y, COL) end
 
 ---
---- 返回屏幕上 (X, Y) 处像素的颜色。
---- 当 X 和 Y 超出范围时，pget 返回 0。
+--- Returns the color of pixels at (X, Y) on the screen.
+--- pget returns 0 when X and Y are out of range.
 ---@param X number
 ---@param Y number
 function pget(X, Y) end
 
 ---
---- 设置精灵表像素的颜色 (COL)。
+--- Sets the color (COL) of the sprite table pixels.
 ---@param X number
 ---@param Y number
 ---@param COL number
 function sset(X, Y, COL) end
 
 ---
---- 获取精灵表像素的颜色 (COL)。
---- 当 X 和 Y 超出范围时，sget 返回 0。
+--- Gets the color (COL) of the pixels of the sprite table.
+--- sget returns 0 when X and Y are out of range.
 ---@param X number
 ---@param Y number
 function sget(X, Y) end
 
 
 ---
---- 设置精灵 N 的标志 F 的值（VAL）。
---- F 是标志索引 0..7。
---- VAL 为 TRUE 或者 FALSE。
---- 标志 0..7 的初始状态可在精灵编辑器中设置，因此可用于创建自定义精灵属性。 也可以通过在 MAP() 中提供掩码来仅绘制地图图块的子集。
+--- Sets the value of flag F (VAL) for sprite N.
+--- F is the flag index 0..7.
+--- VAL is TRUE or FALSE.
+--- The initial state of flags 0..7 can be set in the sprite editor, and can therefore be used to create custom sprite properties. It is also possible to draw only a subset of the map plots by providing a mask in MAP().
 --- It is also possible to draw only a subset of map tiles by providing a mask in MAP().
---- 当省略 F 时，所有标志都被设置为单个位域。
+--- When F is omitted, all flags are set to a single bit field.
 ---@param N number
 ---@param F number
 ---@param VAL boolean
 function fset(N, F, VAL) end
 
 ---
---- 获取精灵 N 的标志 F 的值（VAL）。
---- F 是标志索引 0..7。
---- 标志 0..7 的初始状态可在精灵编辑器中设置，因此可用于创建自定义精灵属性。 也可以通过在 MAP() 中提供掩码来仅绘制地图图块的子集。
+--- Get the value (VAL) of flag F of sprite N.
+--- F is the flag index 0..7.
+--- The initial state of flags 0..7 can be set in the sprite editor, so it can be used to create custom sprite properties. It is also possible to draw only a subset of the map plots by providing a mask in MAP().
 --- It is also possible to draw only a subset of map tiles by providing a mask in MAP().
---- 当省略 F 时，所有标志都被检索为单个位域。
+--- When F is omitted, all flags are retrieved as a single bit field.
 ---@param N number
 ---@param F number
 function fget(N, F) end
 
 ---
---- 把gb2312编码的字符串转换为utf8编码
+--- Convert gb2312 encoded strings to utf8 encoding
 ---@param gb2312 string
 ---@return string
 function gb2312_to_utf8(gb2312) end
@@ -244,15 +166,15 @@ function gb2312_to_utf8(gb2312) end
 
 
 ---
---- print 是设备无关的打印接口。
---- print 支持STR内部的特殊转义，只支持utf8编码
---- OPT 是打印选项：
----   bit0:    坐标下对齐
----   bit1-2:  对齐方式，1表示右对齐，2表示做中对齐，3表示不绘制(返回宽度) ，注意print不支持，drawTxt_h生效
----   bit7:    打印后不换行
----   bit8-15: 字间距
---- SIZE 是字体大小，如果是不支持的size，就会使用默认大小。
---- FONT 是字体名，如果不支持会使用默认。
+--- print is a device-independent printing interface.
+--- print supports special escaping within STR, only utf8 encoding is supported
+--- OPT is the print option:
+---   bit0: under-coordinate alignment
+---   bit1-2: alignment mode, 1 means right-aligned, 2 means center-aligned, 3 means no draw (return width), note that print does not support this, drawTxt_h takes effect.
+---   bit7: print without line breaks
+---   bit8-15: word spacing
+--- SIZE is the font size, if it is an unsupported size, the default size will be used.
+--- FONT is the font name, if it is an unsupported size the default will be used.
 ---@param STR string
 ---@param X number
 ---@param Y number
@@ -263,21 +185,21 @@ function print(STR, X, Y, COL, OPT, SIZE, FONT) end
 
 
 ---
---- drawTxt_h 是依赖主机类型的打印接口，不同的主机上效果不同。
---- OPT 是打印选项：
----   bit0:    坐标下对齐
----   bit1-2:  对齐方式，1表示右对齐，2表示做中对齐，3表示不绘制(返回宽度) ，注意print不支持，drawTxt_h生效
----   bit7:    打印后不换行
----   bit8-15: 字间距
---- SIZE 是字体大小，如果是不支持的size，就会使用默认大小。
---- FONT 是字体名，如果不支持会使用默认。
+--- drawTxt_h is the host type-dependent print interface, which works differently on different hosts.
+--- OPT is the print option:
+---   bit0: under-coordinate alignment
+---   bit1-2: alignment mode, 1 means right-aligned, 2 means center-aligned, 3 means no draw (return width), note that print does not support this, drawTxt_h takes effect.
+---   bit7: print without line breaks
+---   bit8-15: word spacing
+--- SIZE is the font size, if it is an unsupported size, the default size will be used.
+--- FONT is the font name, if it is an unsupported size the default will be used.
 ---@param STR string
 function drawTxt_h(STR) end
 
 
 ---
---- 设置光标位置。
---- 如果指定了 COL，还要设置当前颜色。
+--- Set the cursor position.
+--- If COL is specified, also sets the current color.
 ---@param X number
 ---@param Y number
 ---@param COL number
@@ -285,28 +207,29 @@ function cursor(X, Y, COL) end
 
 
 ---
---- 设置绘图函数使用的当前颜色。
---- 如果未指定 COL，则当前颜色设置为 light_gray(rgb=#c2c3c7)。
+--- Sets the current color used by the plotting function.
+--- If COL is not specified, the current color is set to light_gray(rgb=#c2c3c7).
 ---@param COL number
 function color(COL) end
 
 
 ---
---- 清除屏幕并重置剪辑矩形和打印状态。
---- COL 默认为 0（黑色）。
+--- Clears the screen and resets the clip rectangle and print status.
+--- COL defaults to 0 (black).
 ---@param COL number
 function cls(COL) end
 
 
 ---
---- 为所有绘图操作设置 -x, -y 的屏幕偏移。
---- camera() 恢复默认状态。
+--- Set -x, -y screen offsets for all drawing operations.
+--- camera() restores the default state.
 ---@param X number
 ---@param Y number
 function camera(X, Y) end
 
 ---
---- 画圆弧, 逆时针从angle1画到angle2 angle 需要在范围内[-180,180], 0 是点[R,0], 90是点[0,-R]
+--- Draw an arc, counterclockwise from angle1 to angle2 angle needs to be in the range [-180,180],
+--- 0 is point [R,0], 90 is point [0,-R].
 ---@param X number
 ---@param Y number
 ---@param R number
@@ -316,8 +239,8 @@ function camera(X, Y) end
 function arc(X, Y, R, ANGLE1, ANGLE2, COL) end
 
 ---
---- 以 (X，Y) 为中心点 绘制一个半径为 R 的圆。
---- 如果 R 为负，则不绘制圆。
+--- Draws a circle with radius R centered at (X, Y).
+--- If R is negative, no circle is drawn.
 ---@param X number
 ---@param Y number
 ---@param R number
@@ -326,8 +249,8 @@ function circ(X, Y, R, COL) end
 
 
 ---
---- 以 (X，Y) 为中心点 绘制一个半径为 R 的实心圆。
---- 如果 R 为负，则不绘制圆。
+--- Draws a solid circle with radius R centered at (X, Y).
+--- If R is negative, no circle is drawn.
 ---@param X number
 ---@param Y number
 ---@param R number
@@ -336,7 +259,7 @@ function circfill(X, Y, R, COL) end
 
 
 ---
---- 使用给定的边界矩形绘制一个在 x 和 y 上对称的椭圆。
+--- Draws an ellipse symmetric in x and y using the given bounding rectangle.
 ---@param X0 number
 ---@param Y0 number
 ---@param X1 number
@@ -346,7 +269,7 @@ function oval(X0, Y0, X1, Y1, COL) end
 
 
 ---
---- 使用给定的边界矩形绘制一个在 x 和 y 上对称的实心椭圆。
+--- Draws a solid ellipse symmetric in x and y using the given bounding rectangle.
 ---@param X0 number
 ---@param Y0 number
 ---@param X1 number
@@ -355,9 +278,9 @@ function oval(X0, Y0, X1, Y1, COL) end
 function ovalfill(X0, Y0, X1, Y1, COL) end
 
 ---
---- 从 (X0, Y0) 到 (X1, Y1) 画一条线。
---- 如果未给出 (X1, Y1)，则使用最后绘制的线的末端。
---- 没有参数的 line() 意味着下一次调用 line(X1, Y1) 将只设置终点而不绘制。
+--- Draws a line from (X0, Y0) to (X1, Y1).
+--- If (X1, Y1) is not given, the end of the last drawn line is used.
+--- line() without an argument means that the next call to line(X1, Y1) will just set the end point and not draw it.
 ---@param X0 number
 ---@param Y0 number
 ---@param X1 number
@@ -367,8 +290,8 @@ function line(X0, Y0, X1, Y1, COL) end
 
 
 ---
---- 根据表里面的坐标，画线段。
---- CLOSE表示封闭线段(会连线到x0,y0)。
+--- Draw line segments based on the coordinates inside the table.
+--- CLOSE means closed line segment (will be connected to x0,y0).
 --- lineTbl: {x0, y0, x1, y1, ...}
 ---@param lineTbl table
 ---@param COL number
@@ -376,7 +299,7 @@ function line(X0, Y0, X1, Y1, COL) end
 function lines(lineTbl, COL, CLOSE) end
 
 ---
---- 在 (X0, Y0), (X1, Y1) 处绘制一个矩形
+--- Draw a rectangle at (X0, Y0), (X1, Y1).
 ---@param X0 number
 ---@param Y0 number
 ---@param X1 number
@@ -385,7 +308,7 @@ function lines(lineTbl, COL, CLOSE) end
 function rect(X0, Y0, X1, Y1, COL) end
 
 ---
---- 在 (X0, Y0), (X1, Y1) 处绘制一个填充矩形
+--- Draw a filled rectangle at (X0, Y0), (X1, Y1).
 ---@param X0 number
 ---@param Y0 number
 ---@param X1 number
@@ -394,7 +317,7 @@ function rect(X0, Y0, X1, Y1, COL) end
 function rectfill(X0, Y0, X1, Y1, COL) end
 
 ---
---- 根据表里面的坐标，进行多边形填充，注意表里面至少需要3组点，最多64组点。
+--- Polygon fill based on the coordinates inside the table, note that you need at least 3 sets of points inside the table, and up to 64 sets of points.
 --- polygon: {x0, y0, x1, y1, ...}
 ---@param polygon table
 ---@param COL number
@@ -402,7 +325,7 @@ function polygonfill(polygon, COL) end
 
 
 ---
---- 三角形填充。
+--- Triangle fill.
 ---@param X0 number
 ---@param Y0 number
 ---@param X1 number
@@ -414,10 +337,10 @@ function trifill(X0,Y0,X1,Y1,X2,Y2,COL) end
 
 
 ---
---- 将颜色 C0 替换为 C1，用于三个调色板重新映射之一（P 默认为 0）：
---- 0：绘制调色板
---- 1：显示调色板
---- 2：二级调色板
+--- Replaces color C0 with C1 for one of the three palette remaps (P defaults to 0):
+---   0: draws the color palette
+---   1: Display palette
+---   2: Secondary palette
 ---@param C0 number
 ---@param C1 number
 ---@param P number
@@ -425,20 +348,20 @@ function pal(C0, C1, P) end
 
 
 ---
---- 将颜色索引的透明度设置为 T（布尔值） 通过 spr()、sspr()、map() 和 tline() 实现绘制透明：
---- palt() 重置为默认值：除了颜色 0 之外的所有颜色都是不透明的
---- 当 C 是唯一的参数时，它被视为用于设置所有 16 个值的位域。 例如：将颜色 0 和 1 设置为透明：
+--- Set color index transparency to T (boolean) Draw transparency via spr(), sspr(), map(), and tline():
+--- palt() reset to default: all colors except color 0 are opaque
+--- When C is the only argument, it is treated as a bitfield for setting all 16 values. Example: set colors 0 and 1 to transparent:
 ---@param C number
 ---@param T boolean
 function palt(C, T) end
 
 
 ---
---- 在位置 X,Y 绘制精灵 N (0..n)。
---- W（width）和H（height）都是1，默认为1，表示多少个精灵块。
---- 颜色 0 默认绘制为透明（请参阅 palt() ）。
---- 当 FLIP_X 为 true 时，水平翻转。
---- 当 FLIP_Y 为 true 时，垂直翻转。
+--- Draw sprites N (0..n) at position X,Y.
+--- W (width) and H (height) are both 1 by default, indicating how many sprite blocks.
+--- Color 0 is drawn transparent by default (see palt()).
+--- Flip horizontally when FLIP_X is true.
+--- Flips vertically when FLIP_Y is true.
 ---@param N number
 ---@param X number
 ---@param Y number
@@ -449,12 +372,12 @@ function palt(C, T) end
 function spr(N, X, Y, W, H, FLIP_X, FLIP_Y) end
 
 ---
---- 将精灵图像的矩形 (sx, sy, sw, sh) 拉伸到屏幕上的目标矩形 (sx, sy, dw, dh)。
---- 在这两种情况下，x 和 y 值都是矩形左上角的坐标（以像素为单位），宽度为 w、h。
---- 颜色 0 默认绘制为透明，参见 palt()。
---- dw、dh默认为sw、sh。
---- 当 FLIP_X 为 true 时，水平翻转。
---- 当 FLIP_Y 为 true 时，垂直翻转。
+--- Stretches the rectangle (sx, sy, sw, sh) of the sprite image to the target rectangle (sx, sy, dw, dh) on the screen.
+--- In both cases, the x and y values are the coordinates (in pixels) of the upper-left corner of the rectangle, and the widths are w, h.
+--- Color 0 is drawn transparent by default, see palt().
+--- dw, dh defaults to sw, sh.
+--- When FLIP_X is true, flip horizontally.
+--- Flip vertically when FLIP_Y is true.
 ---@param SX number
 ---@param SY number
 ---@param SW number
@@ -468,10 +391,10 @@ function spr(N, X, Y, W, H, FLIP_X, FLIP_Y) end
 function sspr(SX, SY, SW, SH, DX, DY, DW, DH, FLIP_X, FLIP_Y) end
 
 ---
---- 从(X0,Y0)到(X1,Y1)画一条纹理线，纹理数据从map的MX,MY获取
---- MDX: 纹理数据X方向的增量,默认1/8
---- MDY: 纹理数据Y方向的增量,默认0
---- statctl(tlmw/tlmh/tlmx/tlmy) 可以控制纹理映射方式
+--- Draw a texture line from (X0,Y0) to (X1,Y1), get texture data from MX,MY of map.
+--- MDX: the increment of texture data in X direction, default is 1/8.
+--- MDY: the increment of texture data in Y direction, default is 0.
+--- statctl(tlmw/tlmh/tlmx/tlmy) can control the texture mapping method.
 ---@param X0 number
 ---@param Y0 number
 ---@param X1 number
@@ -484,10 +407,10 @@ function tline(X0, Y0, X1, Y1, MX, MY, MDX, MDY) end
 
 
 ---
---- 从(X0,Y0)到(X1,Y1)画一条纹理线，纹理数据从Sprite的SPRX,SPRY获取。
---- SPRDX: 纹理数据X方向的增量，默认1/8
---- SPRDY: 纹理数据Y方向的增量，默认0
---- statctl(tlmw/tlmh) 可以控制纹理映射方式
+--- Draw a texture line from (X0,Y0) to (X1,Y1), the texture data is obtained from SPRX,SPRY of Sprite.
+--- SPRDX: the increment of texture data in X direction, default 1/8.
+--- SPRDY: the increment of texture data in Y direction, default is 0.
+--- statctl(tlmw/tlmh) can control the texture mapping method.
 ---@param X0 number
 ---@param Y0 number
 ---@param X1 number
@@ -499,29 +422,29 @@ function tline(X0, Y0, X1, Y1, MX, MY, MDX, MDY) end
 function tspr(X0, Y0, X1, Y1, SPRX, SPRY, SPRDX, SPRDY) end
 
 ---
---- 程序填充图案是一个 4x4 2 色平铺图案，影响以下的绘图函数：
+--- The program fill pattern is a 4x4 2-color tiled pattern that affects the following plotting functions:
 --- circ, circfill, rect, rectfill, polygonfill, trifill, oval, ovalFill, pset, line, lines
---- P 是从最高位开始读取顺序的位域。 要计算所需模式的 P 值，请将位值加在一起
+--- P is the bit field in which the order of reading starts from the highest bit. To calculate the P value for a desired pattern, add the bit values together
 ---@param P number
 function fillp(P) end
 
 ---
---- 绘制图像数据块
---- x,y 绘制的左上角坐标
---- opflag 绘制策略:
----   bit0 1 表示alpha混合绘制(只有32位颜色模式有效)
----   bit1-2 表示x方向的锚点 0:左,1:右,2:中间
----   bit3-4 表示y方向的锚点 0:上,1:下,2:中间
---- data 图像数据，data可以是特殊数据,此时linebytes,w,h,bpp忽略::
----   "SPR" 表示直接使用sfx图像
----   "SCR" 表示直接使用屏幕
---- linebytes 每行数据长度
---- w,h,bpp 图像宽高和每像素位数
---- flag 图像数据属性：
----   bit0 premul数据(32位颜色，预乘alpha)
----   bit1 swap_br (需要交换blue/red数据)
----   bit2 OPAQUE(不透明，禁用alpha)
---- sx,sy,sw,sh 选取要绘制的图像矩形
+--- Drawing of the image data block
+--- x,y coordinates of the upper-left corner of the drawing.
+--- opflag drawing strategy.
+---   bit0 1 for alpha blend drawing (only valid for 32 bit color mode)
+---   bit1-2 for x-direction anchor 0:left,1:right,2:center
+---   bit3-4 for y-direction anchor 0:top,1:bottom,2:center
+--- data image data, data can be special data, at this time linebytes,w,h,bpp ignore::.
+---   "SPR" means use sfx image directly.
+---   "SCR" means use screen directly.
+--- linebytes Length of each line of data
+--- w,h,bpp image width and height and bits per pixel
+--- flag Image data attributes:
+---   bit0 premul data (32-bit color, premultiplied alpha)
+---   bit1 swap_br (need to swap blue/red data)
+---   bit2 OPAQUE (opaque, alpha disabled)
+--- sx,sy,sw,sh selects the image rectangle to be plotted
 ---@param x number
 ---@param y number
 ---@param opflag number
@@ -539,7 +462,7 @@ function blit(x,y,opflag,data,linebytes,w,h,bpp,flag,sx,sy,sw,sh) end
 
 
 ---
---- 类似sspr，但是支持旋转角度和缩放。
+--- Similar to sspr, but with support for rotation angles and scaling.
 ---@param SX number
 ---@param SY number
 ---@param SW number
@@ -554,7 +477,7 @@ function rotspr(SX, SY, SW, SH, DX, DY, ANGLE, ZOOMX, ZOOMY) end
 
 
 ---
---- 设置调色板颜色，并返回颜色值(此颜色值可以用来作为COL给其他绘图函数使用)。
+--- Sets the palette color and returns the color value (this color value can be used as a COL for other plotting functions).
 ---@param idx number
 ---@param r number
 ---@param g number
@@ -563,8 +486,8 @@ function rotspr(SX, SY, SW, SH, DX, DY, ANGLE, ZOOMX, ZOOMY) end
 function palrgb(idx,r,g,b,a) end
 
 ---
---- 返回可用于绘图函数的颜色值。
---- 注意，对于调色板模式，会查找最相近的调色板颜色。
+--- Returns color values that can be used in plotting functions.
+--- Note that for palette mode, the closest palette color is looked for.
 ---@param r number
 ---@param g number
 ---@param b number
@@ -573,13 +496,14 @@ function palrgb(idx,r,g,b,a) end
 function getcolor(r,g,b,a) end
 
 
---- 加载图片数据(png/jpg格式)，如果提供了bpp参数，会转换为对应的图像格式，否则安装系统规格转换。
---- 支持加载gif图片(version>=6)
----   默认只加载首帧
----   通过参数gifall可以加载所有帧:gif=img_gif_load(gifdata,nil,nil,true)
----   多帧会按照Y方向拼接为一个图像
----   注意加载所有帧图片会大量消耗内存,尽量避免,计算好内存用量
---- 返回图像对象img。
+---
+--- Load image data (png/jpg format), if the bpp parameter is provided, it will be converted to the corresponding image format, otherwise the installation system specification is converted.
+--- Support load gif image(version>=6).
+---   load only first frame by default
+---   All frames can be loaded by parameter gifall:gif=img_gif_load(gifdata,nil,nil,true)
+---   Multiple frames will be stitched together into one image in Y direction.
+---   Note that loading all frames will consume a lot of memory, try to avoid it, calculate the memory usage.
+--- Return the image object img.
 ---@param picdata string
 ---@param bpp number
 ---@param flag number
@@ -589,21 +513,21 @@ function img_load(picdata,bpp,flag,gifall) end
 
 
 ---
---- 立即释放img资源。
+--- Immediate release of img resources.
 ---@param img table
 function img_close(img) end
 
 
 ---
---- 返回图像的w,h,bpp,flag。
---- 如果是gif,返回 w,h,bpp,flag,frame_h,delays
----   frame_h: 帧高度
----   delays: 数组,存放每帧演示时间(ms)
+--- Return w,h,bpp,flag of the image.
+--- if gif, return w,h,bpp,flag,frame_h,delays
+---   frame_h: frame height
+---   delays: an array holding the presentation time (ms) per frame.
 ---@param img table
 function img_info(img) end
 
 ---
---- 粘贴图像到x,y位置，flag参考blit的参数。
+--- Paste the image to the x,y position, flag refers to the parameters of blit.
 ---@param img table
 ---@param x number
 ---@param y number
@@ -612,7 +536,7 @@ function img_draw(img,x,y,flag) end
 
 
 ---
---- 粘贴图像的特定区域到x,y位置，flag参考blit的参数。
+--- Paste a specific area of the image to the x,y position, flag refers to the parameters of blit.
 ---@param img table
 ---@param x number
 ---@param y number
@@ -625,7 +549,8 @@ function img_drawex(img,x,y,flag,sx,sy,sw,sh) end
 
 
 ---
---- 粘贴gif图像帧的特定区域到x,y位置，flag参考blit的参数。 返回: 当前帧号,需要的延时时间
+--- Paste a specific region of a gif image frame to x,y position, flag refer to blit's parameter.
+--- Return: current frame number, delay time needed.
 ---@param img table
 ---@param frameidx number
 ---@param x number
@@ -639,9 +564,9 @@ function img_drawgif(img,frameidx,x,y,flag,sx,sy,sw,sh) end
 
 
 ---
---- 加载gif图片数据，如果提供了bpp参数，会转换为对应的图像格式，否则安装系统规格转换。
---- 函数会动态渲染需要的帧, 节省内存
---- 返回图像对象img。
+--- Load gif image data, if bpp parameter is provided, it will be converted to corresponding image format, otherwise install system specification conversion.
+--- Functions will dynamically render the required frames, saving memory.
+--- Returns the image object.
 ---@param picdata string
 ---@param bpp number
 ---@return table
@@ -649,24 +574,25 @@ function img_gif_load(picdata,bpp) end
 
 
 ---
---- 加载gif文件，如果提供了bpp参数，会转换为对应的图像格式，否则安装系统规格转换。
---- 函数会动态渲染需要的帧, 节省内存
---- 返回图像对象img。
+--- Load gif file, if bpp parameter is provided, it will be converted to corresponding image format, otherwise install system specification conversion.
+--- Functions will dynamically render the required frames, saving memory.
+--- Returns the image object.
 ---@param filename string
 ---@param bpp number
 ---@return table
 function img_gif_file(filename,bpp) end
 
 ---
---- 根据需要更新帧图像
---- 返回nil表示没有更新 返回整数0表示gif动画结束,1表示更新图像了
+--- Update frames as needed
+--- return nil means no update return integer 0 means the gif animation is over, 1 means the image has been updated
 ---@param img table
 ---@return any
 function img_gif_next(img) end
 
 
 ---
---- 加载rlottie动画数据，key是id(相同id的cont必须相同)，w/h是渲染大小，返回动画对象ani。
+--- Load rlottie animation data, key is id (cont must be the same for the same id), w/h is render size,
+--- return animation object.
 ---@param key any
 ---@param cont any
 ---@param w number
@@ -675,19 +601,19 @@ function img_gif_next(img) end
 function rlottie_load(key,cont,w,h) end
 
 ---
---- 立即释放ani资源。
+--- Immediate release of animation resources.
 ---@param ani table
 function rlottie_close(ani) end
 
 ---
---- 获取rlottie对象信息
---- 返回 当前帧，总帧数，动画帧速，图像宽，图像高。
+--- Get rlottie object information
+--- Returns current frame, total frames, animation frame rate, image width, image height.
 ---@param ani table
 ---@return number, number, number, number, number
 function rlottie_info(ani) end
 
 ---
---- 绘制动画的特定帧到x,y位置。
+--- Draws a specific frame of the animation to the x,y position.
 ---@param ani table
 ---@param frameidx number
 ---@param x number
@@ -696,7 +622,7 @@ function rlottie_draw(ani,frameidx,x,y) end
 
 
 ---
---- 设定动画路径上的属性参数。
+--- Sets property parameters on the animation path.
 ---@param ani table
 ---@param proptype any
 ---@param keypath any
@@ -707,7 +633,7 @@ function rlottie_prop(ani,proptype,keypath,v1,v2,v3) end
 
 
 ---
---- 以表格方式返回动画区段 {{name,frm_begin,frm_end},...}
+--- Returns animated zones as a table {{name,frm_begin,frm_end},...}
 ---@param ani table
 function rlottie_mark(ani) end
 

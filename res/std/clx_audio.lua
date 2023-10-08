@@ -1,10 +1,10 @@
 ---
---- 播放音乐Play music starting from pattern N (0..63)
---- N = 0-63 从音乐模版N开始播放
---- N = -1 停止
---- FADE_LEN：过渡时间(ms) (default: 0)
---- CHANNEL_MASK：定义保留给音乐的通道(bit位方式)
---- 如果播放音效的命令指明了使用的通道,那么音效就忽略保留选项, 如果不指明通道,那么不会使用保留的通道。
+--- Play music Play music starting from pattern N (0..63)
+--- N = 0-63 Play music starting from pattern N
+--- N = -1 stop
+--- FADE_LEN: transition time (ms) (default: 0)
+--- CHANNEL_MASK: defines the channel reserved for music (bit-bit mode)
+--- If the command to play the sound effect specifies the channel to be used then the sound effect ignores the reserved option, if no channel is specified then the reserved channel will not be used.
 ---@param N number
 ---@param FADE_LEN number
 ---@param CHANNEL_MASK number
@@ -12,9 +12,9 @@ function music(N, FADE_LEN, CHANNEL_MASK) end
 
 
 ---
---- 在指定的通道(CHANNEL)上播放音效N，OFFSET是音效的数据偏移点，LENGTH是数据长度。
---- CHANNEL 特殊值: 1: (缺省值) 自动选择一个没有被使用的通道；2: 暂停所有音效
---- N 特殊值: 1: 停止指定通道的音效；2: 停止指定通道的音效循环
+--- Play the sound effect N on the specified channel (CHANNEL), OFFSET is the data offset point of the sound effect, LENGTH is the data length.
+--- CHANNEL Special values: 1: (default) automatically selects a channel that is not being used; 2: pauses all sound effects
+--- N Special values: 1: stops the sound effect for the specified channel; 2: stops the sound effect loop for the specified channel
 ---@param N number
 ---@param CHANNEL number
 ---@param OFFSET number
@@ -23,14 +23,14 @@ function sfx(N, CHANNEL, OFFSET, LENGTH) end
 
 
 ---
---- 直接播放pcm音频数据，音频需要符合设备规格22050hz, 16bit little格式。
---- data 为特殊值时有特殊意义:
---- wave('I') -- 初始化(申请内部资源)
---- wave('R') -- 重置数据缓冲区
---- wave('D') -- 释放资源
---- wave('L') -- 返回剩余缓冲区大小
---- wave()    -- 返回剩余缓冲区大小
---- audiotype 表示音频类型, 默认PCM: 1: adpcm; 2: G711a
+--- Direct playback of pcm audio data, audio needs to meet device specification 22050hz, 16bit little format.
+--- data has a special meaning when it is a special value.
+--- wave('I') --- Initialize (request internal resources).
+--- wave('R') -- reset data buffer.
+--- wave('D') -- release resources
+--- wave('L') -- return remaining buffer size
+--- wave() -- Returns the remaining buffer size.
+--- audiotype indicates audio type, default PCM: 1: adpcm; 2: G711a
 ---@param data string
 ---@param from number
 ---@param to number

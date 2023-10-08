@@ -1,135 +1,135 @@
 ---
---- 返回X,Y中较大的值。
+--- Returns the larger of X,Y.
 ---@param X number
 ---@param Y number
 function max(X, Y) end
 
 
 ---
---- 返回X,Y中较小的值。
+--- Returns the smaller of X,Y.
 ---@param X number
 ---@param Y number
 function min(X, Y) end
 
 ---
---- 返回X,Y,Z大小排列后中间的值。
+--- Returns the middle value of X,Y,Z.
 ---@param X number
 ---@param Y number
 ---@param Z number
 function mid(X, Y, Z) end
 
 ---
---- 向上取整。
+--- Ceil
 ---@param X number
 function ceil(X) end
 
 ---
---- 向下取整。
+--- Floor
 ---@param X number
 function flr(X) end
 
 ---
---- 返回x的正弦值。
---- 注意：和math.sin/math.cos不同，这里根据屏幕坐标方向，y是反向的。
---- x是角度，对应屏幕上逆时针方向，整圆对应0..1。
---- 例如最右边(0度)是0，最左边(180度)是0.5。
+--- Returns the sine of x.
+--- Note: Unlike math.sin/math.cos, here y is reversed depending on the direction of the screen coordinates.
+--- x is the angle, which corresponds to the counterclockwise direction on the screen, and the whole circle corresponds to 0..1.
+--- For example, the rightmost (0 degrees) is 0, and the leftmost (180 degrees) is 0.5.
 ---@param X number
 function sin(X) end
 
 
 ---
---- 返回x的余弦值。
---- 注意：和math.sin/math.cos不同，这里根据屏幕坐标方向，y是反向的。
---- x是角度，对应屏幕上逆时针方向，整圆对应0..1。
---- 例如最右边(0度)是0，最左边(180度)是0.5。
+--- Returns the cosine of x.
+--- Note: Unlike math.sin/math.cos, here y is reversed depending on the direction of the screen coordinates.
+--- x is the angle, which corresponds to the counterclockwise direction on the screen, and the whole circle corresponds to 0..1.
+--- For example, the rightmost (0 degrees) is 0, and the leftmost (180 degrees) is 0.5.
 ---@param X number
 function cos(X) end
 
 ---
---- 根据dx,dy转换到一个角度(0..1)。
---- 角度是对应屏幕逆时针方向。
+--- Converts to an angle (0..1) based on dx,dy.
+--- The angle corresponds to the counterclockwise direction of the screen.
 ---@param dx number
 ---@param dy number
 function atan2(dx, dy) end
 
 ---
---- 对x开根号，如果x<0，返回0。
+--- Sqrt x and returns 0 if x < 0.
 ---@param x number
 function sqrt(x) end
 
 
 ---
---- 返回x的绝对值。
+--- Returns the absolute value of x.
 ---@param x number
 function abs(x) end
 
 ---
---- 返回x的符号，x<0返回-1，x>=0返回1。
+--- Returns positive or negative. x<0 returns -1, x>=0 returns 1.
 ---@param x number
 function sgn(x) end
 
 ---
---- 与运算
+--- Bit and
 ---@param x number
 ---@param y number
 function band(x, y) end
 
 ---
---- 或运算
+--- Bit or
 ---@param x number
 ---@param y number
 function bor(x, y) end
 
 ---
---- 异或运算
+--- Bit xor
 ---@param x number
 ---@param y number
 function bxor(x, y) end
 
 ---
---- 非运算
+--- Bit not
 ---@param x number
 function bnot(x) end
 
 ---
---- 算数左移
+--- Arithmetic shift left (math.)
 ---@param x number
 ---@param N number
 function shl(x, N) end
 
 ---
---- 算数右移
+--- Arithmetic shift right (math.)
 ---@param x number
 ---@param N number
 function shr(x, N) end
 
 ---
---- 逻辑右移
+--- Logical right shift
 ---@param x number
 ---@param N number
 function lshr(x, N) end
 
 ---
---- 循环左移
+--- Cyclic left shift
 ---@param x number
 ---@param N number
 function rotl(x, N) end
 
 ---
---- 循环右移
+--- Cyclic right shift
 ---@param x number
 ---@param N number
 function rotr(x, N) end
 
 ---
---- 返回一个随机数n，0 <= n < x。
---- 注意，返回值不是整数，如果需要整数，使用flr(rnd(x))。
---- 如果x是个数组，那么随机返回table[1]到table[#table]中的一个元素值。
+--- Returns a random number n, 0 <= n < x.
+--- Note that the return value is not an integer; if an integer is required, use flr(rnd(x)).
+--- If x is an array, then randomly return the value of an element in table[1] through table[#table].
 ---@param x number
 function rnd(x) end
 
 
 ---
---- 设置伪随机数种子，同样的种子会导致后面的随机序列相同。
+--- Set the pseudo-random number seed, the same seed will result in the same random sequence later.
 ---@param x number
 function srnd(x) end

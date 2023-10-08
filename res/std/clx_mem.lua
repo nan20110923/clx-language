@@ -1,8 +1,8 @@
 
 
 ---
---- 加载一个应用，PARAM_STR 可以在应用启动后通过接口访问。
---- 加载后新应用会替换当前应用。
+--- Load an application where PARAM_STR can be accessed through the interface after the application is started.
+--- The new application replaces the current application after loading.
 ---@param FILENAME string
 ---@param NA any
 ---@param PARAM_STR string
@@ -11,13 +11,13 @@ function load(FILENAME, NA, PARAM_STR) end
 
 
 ---
---- 读取n个字节，起始地址是addr。
+--- Read n bytes, starting address is ADDR.
 ---@param ADDR number
 ---@param N number
 function peek(ADDR, N) end
 
 ---
---- 向地址addr写字节数据。
+--- Write byte data to address ADDR.
 ---@param ADDR number
 ---@param VAL1 number
 ---@param VAL2 number
@@ -25,13 +25,13 @@ function poke(ADDR, VAL1, VAL2, ...) end
 
 
 ---
---- 读取short数据(2字节)。
+--- Read short type data (2 bytes).
 ---@param ADDR number
 function peek2(ADDR) end
 
 
 ---
---- 写short数据(2字节)。
+--- Write short type data (2 bytes).
 ---@param ADDR number
 ---@param VAL1 number
 ---@param VAL2 number
@@ -39,28 +39,28 @@ function poke2(ADDR, VAL1, VAL2, ...) end
 
 
 ---
---- 读取整数数据(4字节)。
+--- Read integer type data (4 bytes).
 ---@param ADDR number
 function peek4(ADDR) end
 
 
 ---
---- 写整数数据(4字节)。
+--- Write integer type data (4 bytes).
 ---@param ADDR number
 ---@param VAL1 number
 ---@param VAL2 number
 function poke4(ADDR, VAL1, VAL2, ...) end
 
 ---
---- 从source_addr位置拷贝len长度的数据到dest_addr，目的和原区域允许重叠覆盖。
+--- Copy len length data from SOURCE_ADDR location to DEST_ADDR, with overlapping overwrites allowed for destination and original region.
 ---@param DEST_ADDR number
 ---@param SOURCE_ADDR number
 ---@param LEN number
 function memcpy(DEST_ADDR, SOURCE_ADDR, LEN) end
 
 ---
---- 从应用文件里面重新加载应用数据。
---- 如果提供了文件名，那么会加载文件里面对应的数据，否则就是当前应用的数据。
+--- Reloads the application data from inside the application file.
+--- If a filename is provided, then the corresponding data inside the file is loaded, otherwise it is the current application data.
 ---@param DEST_ADDR number
 ---@param SOURCE_ADDR number
 ---@param LEN number
@@ -69,7 +69,7 @@ function reload(DEST_ADDR, SOURCE_ADDR, LEN, FILENAME) end
 
 
 ---
---- 对dest_addr地址填充字节值val，填充长度len。
+--- Fill byte value val for DEST_ADDR address, fill length len.
 ---@param DEST_ADDR number
 ---@param VAL number
 ---@param LEN number

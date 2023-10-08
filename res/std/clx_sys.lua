@@ -1,136 +1,136 @@
 
 
 ---
---- 加载一个应用，PARAM_STR 可以在应用启动后通过接口访问。
---- 加载后新应用会替换当前应用。
+--- Load an application where PARAM_STR can be accessed through the interface after the application is started.
+--- The new application replaces the current application after loading.
 ---@param FILENAME string
 ---@param NA any
 ---@param PARAM_STR string
 function load(FILENAME, NA, PARAM_STR) end
 
 ---
---- 应用从头开始运行。
---- run() 可以从正在运行的程序内部调用以进行重置。
---- 提供 PARAM_STR 时，可以在运行时使用 stat(6) 访问它。
+--- The application is run from scratch.
+--- run() can be called from within the running program to reset it.
+--- When PARAM_STR is provided, it can be accessed at runtime using stat(6).
 ---@param PARAM_STR string
 function run(PARAM_STR) end
 
 ---
---- 重置运行状态。 这包括调色板、相机位置、剪裁和填充图案。
+--- Reset the running state. This includes color palettes, camera positions, cropping and fill patterns.
 function reset() end
 
 ---
---- 将 参数 打印到主机操作系统的控制台以进行调试。 函数类似lua原始的print。
+--- Prints arguments to the host OS console for debugging. The function is similar to lua's original print.
 function printh(...) end
 
 ---
---- 返回应用运行以来经过的秒数。
---- 这不是真实世界的时间，而是通过帧数计算出来的逻辑时间。
+--- Returns the number of seconds that have elapsed since the application ran.
+--- This is not real-world time, but a logical time calculated from the number of frames.
 function time() end
 
 ---
---- 0时区，1970年以来的秒数。
+--- Time zone 0, seconds since 1970.
 function utcsec() end
 
 
 ---
---- 根据格式转换时间, 类似标准的lua的os.date
+--- Converts the time according to the format, similar to the standard lua os.date.
 ---@param fmt string
 ---@param sec number
 function utcdate(fmt, sec) end
 
 ---
---- 获取 X 所在的系统状态：
---- 0        内存使用，单位kBytes
---- 1        上一帧的cpu占用率
---- 5        平台版本号
---- 6        应用加载时的参数
---- 7        当前帧率
---- 8        设定帧率
+--- Get the status of the system where X is located:
+--- 0 memory usage in kBytes
+--- 1 cpu usage in previous frame
+--- 5 Platform version number
+--- 6 Parameters when the application is loaded
+--- 7 Current frame rate
+--- 8 Set frame rate
 
---- 30       是否有键盘数据
---- 31       缓存的键盘数据
---- 32       鼠标/触摸的x位置
---- 33       鼠标/触摸的y位置 
---- 34       鼠标/触摸的按键状态
+--- 30 Availability of keyboard data
+--- 31 Cached keyboard data
+--- 32 x position of mouse/touch
+--- 33 Mouse/touch y position 
+--- 34 Key status of mouse/touch
 
 --- 16..19
---- 46..49   当前在通道 0..3 上播放 SFX 的索引
+--- 46..49 Index of SFX currently playing on channels 0..3
 --- 20..23
---- 50..53   通道 0..3 上的音符编号 (0..31)
---- 24/54    当前播放模式索引
---- 25/55    已播放的模式总数
---- 56       当前模式下的播放的tick数
+--- 50..53 Note number (0..31) on channels 0..3
+--- 24/54 Index of the current playback mode
+--- 25/55 Total number of played modes
+--- 56 Number of ticks played in the current mode
 
---- 90..96   本地时间 年、月、日、时、分、秒、星期
+--- 90..96 Local time Year, month, day, hour, minute, second, day of week
 ---@param X number
 function stat(X) end
 
 ---
---- 根据key设置系统状态，如果没有val，表示只是查询，返回上次的值：
---- altc     替换颜色(32位颜色模式下，填充模版使用的替代颜色)
---- tlmw     tline使用的map的宽度掩码
---- tlmh     tline使用的map的高度掩码
---- tlmx     tline使用的map的x偏移量
---- tlmx     tline使用的map的y偏移量
---- sprm     精灵数据地址映射，0x60表示使用vram地址
---- scrm     屏幕数据地址映射，0x60表示使用vram地址，其他值表示使用精灵数据地址
---- mapw     地图宽度定义，0表示使用规格默认宽度
---- colm     颜色掩码定义，影响4bpp绘图(模拟融合)
+--- Set the system state based on key, if there is no val, it means it is just a query to return the last value:
+--- altc replacement color (alternative color used by fill template in 32-bit color mode)
+--- tlmw width mask of the map used by tline
+--- tlmh Height mask of the map used by tline
+--- x offset of the map used by tlmx tline
+--- y offset of the map used by tlmx tline
+--- sprm sprite data address mapping, 0x60 means use vram address
+--- scrm screen data address mapping, 0x60 means use vram address, other value means use sprite data address
+--- mapw Map width definition, 0 means use specification default width
+--- colm color mask definition, affects 4bpp mapping (analog fusion)
 ---@param key string
 ---@param val any
 function statctl(key, val) end
 
 
 ---
---- 获取应用列表。
+--- Get a list of applications.
 function __listcarts() end
 
 ---
---- 获取应用参数，如果del为true，会在获取后清空参数。
+--- Get the application parameters, if del is true, it will clear the parameters after getting them.
 ---@param del boolean
 function __getparams(del) end
 
 ---
---- 加载bios。
+--- Load bios.
 function __loadbioscart() end
 
 ---
---- 加载前一个应用(如果有的话)。
+--- Load the previous application (if any).
 function __loadprevcart() end
 
 
 ---
---- 加载系统设置菜单(通用菜单)。
+--- Loads the system setup menu (general menu).
 function __loadsettingscart() end
 
 
 ---
---- 加载暂停菜单(如果没有参数，就会根据当前状态做反转)。
+--- Loads the pause menu (if there is no parameter, it will do the inversion based on the current state).
 ---@param pause boolean
 function __togglepausemenu(pause) end
 
 
 ---
---- 重新加载应用。
+--- Reload the application.
 function __resetcart() end
 
 
 ---
---- 读取并返回配置文件的内容。
+--- Reads and returns the contents of the configuration file.
 ---@param filename string
 function __cfgread(filename) end
 
 
 ---
---- 写配置文件内容，成功返回true。
+--- Write the contents of the configuration file, return true on success.
 ---@param filename string
 ---@param str string
 function __cfgwrite(filename, str) end
 
 
 ---
---- 删除配置文件。
+--- Delete the configuration file.
 ---@param filename string
 function __cfgdel(filename) end
 
