@@ -1,6 +1,6 @@
 # Clx-language
 
-[🌐English](./README.md)
+[🌐English](https://dev.azure.com/Lifesmart/_git/clx-language?path=/README.md)
 
 ## 简介
 

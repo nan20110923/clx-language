@@ -4,7 +4,11 @@
   "publisher": "Lifesmart",
   "description": "",
   "icon": "res/icon.png",
-  "version": "1.0.2",
+  "version": "1.0.3",
+  "repository": {
+    "type": "git",
+    "url": "https://Lifesmart@dev.azure.com/Lifesmart/clx-language/_git/clx-language"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
