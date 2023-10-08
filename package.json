@@ -2,7 +2,7 @@
   "name": "clx-language",
   "displayName": "clx-language",
   "publisher": "Lifesmart",
-  "description": "",
+  "description": "Development tool for colox",
   "icon": "res/icon.png",
   "version": "1.0.3",
   "repository": {

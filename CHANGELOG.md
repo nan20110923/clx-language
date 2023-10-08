@@ -1,9 +1,4 @@
-# Change Log
+### 1.0.3 (2023-10-08)
 
-All notable changes to the "clx-language" extension will be documented in this file.
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+- Add English documents
+- Fixed a few bugs
