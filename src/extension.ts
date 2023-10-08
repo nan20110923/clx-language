@@ -172,6 +172,11 @@ async function startServer() {
 }
 
 async function doStartServer() {
+	let currentLanguage = vscode.env.language;
+	let isZh = false
+	if (currentLanguage.startsWith("zh")) {
+		isZh = true
+	}
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{ scheme: 'file', language: LANGUAGE_ID }],
 		synchronize: {
@@ -181,7 +186,7 @@ async function doStartServer() {
 			]
 		},
 		initializationOptions: {
-			stdFolder: vscode.Uri.file(path.resolve(extensionContext.extensionPath, "res/std")).toString(),
+			stdFolder: vscode.Uri.file(path.resolve(extensionContext.extensionPath, isZh ? "res/std_zh" : "res/std")).toString(),
 			apiFolders: [],
 			client: 'vsc',
 		}
