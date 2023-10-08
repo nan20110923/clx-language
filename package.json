@@ -12,6 +12,11 @@
     "Programming Languages",
     "Debuggers"
   ],
+  "keywords": [
+    "ColoPlay",
+    "ColoX",
+    "Cololight"
+  ],
   "contributes": {
     "configuration": {
       "title": "clx-language",

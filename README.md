@@ -1,32 +1,27 @@
 # Clx-language
 
-## 简介
+[🌐中文](./README_zh.md)
 
-您可以使用本插件开发基于LUA扩展语法的CLX程序，该程序可在Lifesmart发布的ColoPlay设备上运行，本插件提供了开发调试相关环境，您可以使用本插件实现：
+## Introduction
 
-- CLX语法高亮、语法提示
-- ColoX相关接口提示
-- 编译文件并在ColoX模拟器中运行
-- 断点调试
+You can use this extension to develop CLX programs based on LUA extended syntax, which can be run on ColoPlay devices released by Lifesmart. This extension provides an environment related to development and debugging:
 
-## 运行环境
+- CLX syntax highlighting, syntax hints
+- ColoX related interface tips
+- Compile files and run them in ColoX emulator
+- Breakpoints debugging
 
-本插件目前仅支持Win32和OSX环境，并且需要预先配置好JAVA_HOME环境，目前支持Java11及以上版本，如果您不希望修改系统环境中原有的的JAVA_HOME变量，也可以修改本插件的相关配置项
+## Environment
 
-## 更多
+This extension currently only supports Win32 and OSX environments, and you need to pre-configure the JAVA_HOME environment, currently supports Java11 and above, if you do not want to modify the system environment in the original JAVA_HOME variable, you can also modify the extension related configuration items
 
-#### 文档
+## More
 
-[ColoX文档](https://x.cololight.com/mweb/docs/)
+* [ColoX Doc](https://x.cololight.com/mweb/docs/)
+* Tips
 
-#### 使用技巧
+  * When debugging breakpoints, vscode may automatically move the cursor to the breakpoint, which is not conducive to continuous debug console operation, then you can change the *"debug.focusEditorOnBreak"* item to false in the settings.
 
-在调试断点时，vscode可能会自动将光标移到断点处，不利于连续的debug console操作，这时可以在设置中将下列配置项修改为false
+## Thanks
 
-```json
-"debug.focusEditorOnBreak": false
-```
-
-## 感谢
-
-本插件的Language Server基于[EmmyLua-LanguageServer](https://github.com/EmmyLua/EmmyLua-LanguageServer/)修改
+The Language Server of this extension is modified based on [EmmyLua-LanguageServer](https://github.com/EmmyLua/EmmyLua-LanguageServer/)
