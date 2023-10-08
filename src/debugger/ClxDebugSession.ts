@@ -8,7 +8,7 @@ import * as readline from "readline";
 import { runColoXTool, coloxProcess, isColoXToolRunning, terminateColoXTool } from "../extension";
 import { delay } from "../util";
 
-type MsgHook = (line: string) => { line: string | null, isEnd: boolean };
+type MsgHook = (line: string) => { line: string | null, isEnd: boolean, state: number };
 type MsgInfoHandler = (stat: number, info: string[]) => void;
 
 export class ClxDebugSession extends LoggingDebugSession {
@@ -97,6 +97,21 @@ export class ClxDebugSession extends LoggingDebugSession {
                 }
             }
         }, true, true))
+        this.hookMsg(this.getFilterMsgHook('b', function(stat, info) {
+            // just hook
+        }, true, true))
+        this.hookMsg(this.getFilterMsgHook('d', function(stat, info) {
+            // just hook
+        }, true, true))
+        this.hookMsg(this.getFilterMsgHook('c', function(stat, info) {
+            // just hook
+        }, true, true))
+        this.hookMsg(this.getFilterMsgHook('n', function(stat, info) {
+            // just hook
+        }, true, true))
+        this.hookMsg(this.getFilterMsgHook('pause', function(stat, info) {
+            // just hook
+        }, true, true))
     }
 
     protected doCmd(cmd: string) {
@@ -153,11 +168,16 @@ export class ClxDebugSession extends LoggingDebugSession {
         if (this.msgHooks.length > 0) {
             for (let i = 0; i < lines.length; i++) {
                 let line: string | null = lines[i]
+                let handled = false
                 let idx = 0
                 let hf = this.msgHooks[idx]
                 while (hf) {
                     let ret = hf(line)
                     line = ret.line
+                    let state = ret.state
+                    if (state != 0) {
+                        handled = true
+                    }
                     if (ret.isEnd) {
                         this.msgHooks.splice(idx, 1)
                         idx -= 1
@@ -168,12 +188,13 @@ export class ClxDebugSession extends LoggingDebugSession {
                     idx += 1
                     hf = this.msgHooks[idx]
                 }
-                if (line) {
+                console.log(`${line}`)
+                if (line && !handled && !line.startsWith('Breakpoint ')) {
                     this.sendEvent(new OutputEvent(`${line}\n`))
                 }
             }
         }
-    } 
+    }
 
     private onSocketClose() {
         if (this.client) {
@@ -192,17 +213,17 @@ export class ClxDebugSession extends LoggingDebugSession {
         let info: string[] = []
         let cmp = `>->${token}`
         let cmpend = `<-<${token}`
-        function f(line: string): {line: string | null, isEnd: boolean} {
+        function f(line: string): {line: string | null, isEnd: boolean, state: number} {
             if (stat == 0) {
                 if (line == cmp) {
                     stat = 1
                     if (noDel) {
-                        return {line: line, isEnd: false}
+                        return {line: line, isEnd: false, state: stat}
                     } else {
-                        return {line: null, isEnd: false}
+                        return {line: null, isEnd: false, state: stat}
                     }
                 }
-                return {line: line, isEnd: false}
+                return {line: line, isEnd: false, state: stat}
             }
             if (stat == 1) {
                 if (line == cmpend) {
@@ -214,6 +235,8 @@ export class ClxDebugSession extends LoggingDebugSession {
             if (cb) {
                 cb(stat, info)
             }
+            // tricks, keep origin stat
+            let state = stat
             if (noEnd) {
                 if (stat == 2) {
                     info = []
@@ -221,9 +244,9 @@ export class ClxDebugSession extends LoggingDebugSession {
                 }
             }
             if (noDel) {
-                return {line: line, isEnd: stat == 2}
+                return {line: line, isEnd: stat == 2, state: state}
             } else {
-                return {line: null, isEnd: stat == 2}
+                return {line: null, isEnd: stat == 2, state: state}
             }
         }
         return f
