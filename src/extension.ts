@@ -124,7 +124,7 @@ export function deactivate() {
 
 async function validateJava(): Promise<void> {
 	const exePath = javaExecutablePath || "java";
-	console.log('exe path : ' + exePath);
+	// console.log('exe path : ' + exePath);
 	return new Promise<void>((resolve, reject) => {
 		child_process.exec(`"${exePath}" -version`, (e, stdout, stderr) => {
 			let regexp: RegExp = /(?:java|openjdk) version "((\d+)(\.(\d+).+?)?)"/g;
@@ -132,8 +132,8 @@ async function validateJava(): Promise<void> {
 				let match = regexp.exec(stderr);
 				if (match) {
 					let major = parseInt(match[2]) || 0;
-					let minor = parseInt(match[4]) || 0;
-					console.log(`major: ${major} minor: ${minor}`)
+					// let minor = parseInt(match[4]) || 0;
+					// console.log(`major: ${major} minor: ${minor}`)
 					// java 11+
 					if (major >= 11) {
 						resolve();

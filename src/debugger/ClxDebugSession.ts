@@ -1,5 +1,5 @@
 import * as net from "net";
-import { Breakpoint, InitializedEvent, LoggingDebugSession, OutputEvent, Source, StackFrame, StoppedEvent, Thread } from "@vscode/debugadapter";
+import { Breakpoint, InitializedEvent, LoggingDebugSession, OutputEvent, Source, StackFrame, StoppedEvent, TerminatedEvent, Thread } from "@vscode/debugadapter";
 import { DebugProtocol } from "@vscode/debugprotocol";
 import { FileUtil } from './FileUtil';
 import { Uri, ViewColumn, commands, window, workspace } from "vscode";
@@ -25,7 +25,7 @@ export class ClxDebugSession extends LoggingDebugSession {
     private bpLines: number[] = [];
 
     protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
-        console.log('initializeRequest')
+        // console.log('initializeRequest')
         response.body = {
             
         };
@@ -37,8 +37,6 @@ export class ClxDebugSession extends LoggingDebugSession {
     }
 
     protected async launchRequest(response: DebugProtocol.LaunchResponse, args: DebugProtocol.LaunchRequestArguments, request?: DebugProtocol.Request | undefined): Promise<void> {
-        console.log(`launchRequest args: ${args}`)
-
         if (!isColoXToolRunning()) {
             runColoXTool(null, true)
             await delay(1000)
@@ -182,6 +180,7 @@ export class ClxDebugSession extends LoggingDebugSession {
             this.client.removeAllListeners();
         }
         this.sendEvent(new OutputEvent('Disconnected.\n'));
+        this.sendEvent(new TerminatedEvent());
     }
 
     private hookMsg(hook: MsgHook) {
