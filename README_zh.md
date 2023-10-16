@@ -15,6 +15,15 @@
 
 本插件目前仅支持Win32和OSX环境，并且需要预先配置好JAVA_HOME环境，目前支持Java11及以上版本，如果您不希望修改系统环境中原有的的JAVA_HOME变量，也可以修改本插件的相关配置项
 
+## 配置项
+
+* Select debugger，本插件内置了ColoPlay和Nature两种模拟器程序
+  * Default，本插件会根据文件首行标识的设备规格选择（推荐）
+  * Nature，会无条件使用Nature模拟器程序（win32暂不支持)
+  * Custom，根据配置项Custom debugger path使用用户指定的程序（一般用户无需使用）
+* Custom debugger path，用户指定模拟器程序路径
+* JAVA_HOME，上述运行环境中提到的自定义配置项
+
 ## 更多
 
 * [ColoX文档](https://x.cololight.com/mweb/docs/)

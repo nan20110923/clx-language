@@ -15,6 +15,15 @@ You can use this extension to develop CLX programs based on LUA extended syntax,
 
 This extension currently only supports Win32 and OSX environments, and you need to pre-configure the JAVA_HOME environment, currently supports Java11 and above, if you do not want to modify the system environment in the original JAVA_HOME variable, you can also modify the extension related configuration items
 
+## Configuration items
+
+* Select debugger，this plugin has two built-in emulator programs, ColoPlay and Nature.
+  * Default, this plugin will select the device specification according to the first line of the file (recommended)
+  * Natur, will unconditionally use the Nature emulator program (win32 is not supported for the time being)
+  * Custom, according to the configuration item Custom debugger path to use the user-specified program (general users do not need to use)
+* Custom debugger path, user-specified emulator program path
+* JAVA_HOME, the custom configuration item mentioned in the above runtime environment.
+
 ## More
 
 * [ColoX Doc](https://x.cololight.com/mweb/docs/)
