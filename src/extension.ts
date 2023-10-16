@@ -109,7 +109,7 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 				let dir = path.dirname(targetResource!.fsPath);
 				let fileName = path.basename(targetResource!.fsPath);
 				let cmdStr = `${dbgPath} -d ` + dir + path.sep + " -r " + fileName;
-				if (debug && dbg.type == 'ColoPlay') {
+				if (debug) {
 					cmdStr += " -x"
 				}
 				try {

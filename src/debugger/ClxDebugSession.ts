@@ -349,13 +349,17 @@ export class ClxDebugSession extends LoggingDebugSession {
             }
             this.sourceUri = undefined
         }
+
+        // Clear all breakpoints then continue to let window running
+        this.sendMessage('d')
+        this.sendMessage('c')
         terminateColoXTool()
         super.disconnectRequest(response, args, request)
     }
 
     private sendDebugAction(response: DebugProtocol.Response, action: String) {
         this.sendMessage(action)
-        this.sendResponse(response);
+        this.sendResponse(response)
     }
 
 }
