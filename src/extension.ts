@@ -99,22 +99,37 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 				return
 			}
 			const firstLine = lines[0]
-			var matches = firstLine.match(/coloX-(4|16|32)(P|B|C|L|W)?/g)
-			if (matches && matches.length >= 1) {
+			var matches = firstLine.match(/coloX-((4|16|32))(P|B|C|L|W)?/)
+			if (matches && matches.length >= 2) {
 				const sizeSpec = matches[1]
-				const debuggerPath = selectDebuggerPath(sizeSpec)
-				if (!debuggerPath) return
+				const dbg = selectDebugger(sizeSpec)
+				if (!dbg) return
 
+				let dbgPath = dbg.path
 				let dir = path.dirname(targetResource!.fsPath);
 				let fileName = path.basename(targetResource!.fsPath);
-				let cmdStr = `${debuggerPath} -d ` + dir + path.sep + " -r " + fileName;
-				if (debug) {
+				let cmdStr = `${dbgPath} -d ` + dir + path.sep + " -r " + fileName;
+				if (debug && dbg.type == 'ColoPlay') {
 					cmdStr += " -x"
 				}
 				try {
-					coloxProcess = child_process.exec(`export DYLD_LIBRARY_PATH=${path.dirname(debuggerPath)}\n${cmdStr}`)
+					coloxProcess = child_process.exec(
+						`export DYLD_LIBRARY_PATH=${path.dirname(dbgPath)}\n${cmdStr}`,
+						(error, stdout, stderr) => {
+							console.log('stdout: ', stdout)
+						}
+					)
 					coloxProcess.on('close', (code) => {
+						console.log('coloxProcess close: ', code)
+						coloxProcess = undefined
+					})
+					coloxProcess.on('exit', (code) => {
 						console.log('coloxProcess exit: ', code)
+						coloxProcess = undefined
+					})
+					coloxProcess.on('disconnect', (code) => {
+						console.log('coloxProcess disconnect: ', code)
+						coloxProcess = undefined
 					})
 				} catch (e) {
 					vscode.window.showErrorMessage(`Run coloXtool failed: ${e}`)
@@ -131,17 +146,24 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 // 当用户自定义Debugger Path时，使用用户自定义的
 // 当用户指定Debugger为For Nature时，使用Natuer Debugger
 // 默认根据文件首行标识的设备规格来选择Debugger
-function selectDebuggerPath(sizeSpec : string) : string | null {
+function selectDebugger(sizeSpec : string) : {type: string, path: string} | null {
 	var debuggerType = vscode.workspace.getConfiguration("clx-language").get<string>("debugger")
 	var debuggerCustomPath = vscode.workspace.getConfiguration("clx-language").get<string>("debuggerCustomPath")
 	if (debuggerType == 'Custom' && debuggerCustomPath && debuggerCustomPath.length > 0) {
-		return debuggerCustomPath
+		return {type: 'Custom', path: debuggerCustomPath}
 	}
 	
+	let type: string
 	if (debuggerType == 'Nature' || sizeSpec == '32') {
-		return getDebuggerPathByType('Nature')
+		type = 'Nature'
+	} else {
+		type = 'ColoPlay'
 	}
-	return getDebuggerPathByType('ColoPlay')
+	let path = getDebuggerPathByType(type)
+	if (!path) {
+		return null
+	}
+	return {type: type, path: path}
 }
 
 function getDebuggerPathByType(debugType: string) : string | null {

@@ -70,5 +70,101 @@
         "body": "coloX-4P\nversion ${1:1}\nstyle: ${2:game}\nname: ${3:}\nauthor: ${4:}\ndesc: ${5:}\n\n__lua__\n\nfunction _init()\nend\n\nfunction _update()\nend\n\nfunction _draw()\n\t${6:print('hello world',10,50,red)}\nend\n\nfunction _idle_update()\nend\n\nfunction _idle_draw()\nend\n\nfunction _svcind(sep,name,path)\nend\n\n__gfx__\n\n__gff__\n\n__map__\n\n__sfx__\n\n__music__",
         "description": "header include description",
         "scope": "source.clx"
+    },
+    "coloX-4": {
+        "prefix": "coloX-4",
+        "body": "coloX-4",
+        "description": "coloX-4",
+        "scope": "source.clx"
+    },
+    "coloX-4P": {
+        "prefix": "coloX-4P",
+        "body": "coloX-4P",
+        "description": "coloX-4P",
+        "scope": "source.clx"
+    },
+    "coloX-4B": {
+        "prefix": "coloX-4B",
+        "body": "coloX-4B",
+        "description": "coloX-4B",
+        "scope": "source.clx"
+    },
+    "coloX-4C": {
+        "prefix": "coloX-4C",
+        "body": "coloX-4C",
+        "description": "coloX-4C",
+        "scope": "source.clx"
+    },
+    "coloX-4L": {
+        "prefix": "coloX-4L",
+        "body": "coloX-4L",
+        "description": "coloX-4L",
+        "scope": "source.clx"
+    },
+    "coloX-4W": {
+        "prefix": "coloX-4W",
+        "body": "coloX-4W",
+        "description": "coloX-4W",
+        "scope": "source.clx"
+    },
+    "coloX-16": {
+        "prefix": "coloX-16",
+        "body": "coloX-16",
+        "description": "coloX-16",
+        "scope": "source.clx"
+    },
+    "coloX-16B": {
+        "prefix": "coloX-16B",
+        "body": "coloX-16B",
+        "description": "coloX-16B",
+        "scope": "source.clx"
+    },
+    "coloX-16C": {
+        "prefix": "coloX-16C",
+        "body": "coloX-16C",
+        "description": "coloX-16C",
+        "scope": "source.clx"
+    },
+    "coloX-16L": {
+        "prefix": "coloX-16L",
+        "body": "coloX-16L",
+        "description": "coloX-16L",
+        "scope": "source.clx"
+    },
+    "coloX-16W": {
+        "prefix": "coloX-16W",
+        "body": "coloX-16W",
+        "description": "coloX-16W",
+        "scope": "source.clx"
+    },
+    "coloX-32": {
+        "prefix": "coloX-32",
+        "body": "coloX-32",
+        "description": "coloX-32",
+        "scope": "source.clx"
+    },
+    "coloX-32B": {
+        "prefix": "coloX-32B",
+        "body": "coloX-32B",
+        "description": "coloX-32B",
+        "scope": "source.clx"
+    },
+    "coloX-32C": {
+        "prefix": "coloX-32C",
+        "body": "coloX-32C",
+        "description": "coloX-32C",
+        "scope": "source.clx"
+    },
+    "coloX-32L": {
+        "prefix": "coloX-32L",
+        "body": "coloX-32L",
+        "description": "coloX-32L",
+        "scope": "source.clx"
+    },
+    "coloX-32W": {
+        "prefix": "coloX-32W",
+        "body": "coloX-32W",
+        "description": "coloX-32W",
+        "scope": "source.clx"
     }
 }
