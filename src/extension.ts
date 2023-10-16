@@ -89,33 +89,78 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 	}
 
 	if (targetResource) {
-		let extensionPath = extensionContext.extensionPath;
-		let platform: string = os.platform();
-		let coloxToolPath: string = "";
-		if (platform == 'darwin') {
-			coloxToolPath = path.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
-		} else if (platform == 'win32') {
-			coloxToolPath = path.resolve(extensionPath, "debugger", "win32", "coloXtool.exe");
-		} else {
-			console.log("not support platform: ", platform);
-			return;
-		}
+		vscode.workspace.fs.readFile(targetResource).then(content => {
+			const contentStr = new TextDecoder().decode(content)
+			
+			const lines = contentStr.split(/\r?\n/)
 
-		let dir = path.dirname(targetResource.fsPath);
-		let fileName = path.basename(targetResource.fsPath);
-		let cmdStr = `${coloxToolPath} -d ` + dir + path.sep + " -r " + fileName;
-		if (debug) {
-			cmdStr += " -x"
-		}
-		try {
-			coloxProcess = child_process.exec(cmdStr);
-			coloxProcess.addListener("exit", () => {
-				coloxProcess = undefined
-			})
-		} catch (e) {
-			console.log("run coloXtool exception: ", e);
-		}
+			if (lines.length == 0) {
+				vscode.window.showErrorMessage('CLX file no content!!')
+				return
+			}
+			const firstLine = lines[0]
+			var matches = firstLine.match(/coloX-(4|16|32)(P|B|C|L|W)?/g)
+			if (matches && matches.length >= 1) {
+				const sizeSpec = matches[1]
+				const debuggerPath = selectDebuggerPath(sizeSpec)
+				if (!debuggerPath) return
+
+				let dir = path.dirname(targetResource!.fsPath);
+				let fileName = path.basename(targetResource!.fsPath);
+				let cmdStr = `${debuggerPath} -d ` + dir + path.sep + " -r " + fileName;
+				if (debug) {
+					cmdStr += " -x"
+				}
+				try {
+					coloxProcess = child_process.exec(`export DYLD_LIBRARY_PATH=${path.dirname(debuggerPath)}\n${cmdStr}`)
+					coloxProcess.on('close', (code) => {
+						console.log('coloxProcess exit: ', code)
+					})
+				} catch (e) {
+					vscode.window.showErrorMessage(`Run coloXtool failed: ${e}`)
+				}
+
+			} else {
+				vscode.window.showErrorMessage('The devcice specification must be labeled on the first line!!')
+				return
+			}
+		})
 	}
+}
+
+// 当用户自定义Debugger Path时，使用用户自定义的
+// 当用户指定Debugger为For Nature时，使用Natuer Debugger
+// 默认根据文件首行标识的设备规格来选择Debugger
+function selectDebuggerPath(sizeSpec : string) : string | null {
+	var debuggerType = vscode.workspace.getConfiguration("clx-language").get<string>("debugger")
+	var debuggerCustomPath = vscode.workspace.getConfiguration("clx-language").get<string>("debuggerCustomPath")
+	if (debuggerType == 'Custom' && debuggerCustomPath && debuggerCustomPath.length > 0) {
+		return debuggerCustomPath
+	}
+	
+	if (debuggerType == 'Nature' || sizeSpec == '32') {
+		return getDebuggerPathByType('Nature')
+	}
+	return getDebuggerPathByType('ColoPlay')
+}
+
+function getDebuggerPathByType(debugType: string) : string | null {
+	let extensionPath = extensionContext.extensionPath
+	let platform: string = os.platform()
+	let coloxToolPath : string | null = null
+	if (platform == 'darwin') {
+		if (debugType == 'Nature') {
+			coloxToolPath = path.resolve(extensionPath, "debugger", "nature/osx/bin", "coloXtool");
+		} else {
+			coloxToolPath = path.resolve(extensionPath, "debugger", "osx/MacOS", "coloXtool");
+		}
+	} else if (platform == 'win32') {
+		// win32 暂时不支持nature
+		coloxToolPath = path.resolve(extensionPath, "debugger", "win32", "coloXtool.exe");
+	} else {
+		vscode.window.showErrorMessage(`Not support platform: ${platform}`)
+	}
+	return coloxToolPath
 }
 
 export function deactivate() {

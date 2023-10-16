@@ -29,6 +29,17 @@
           "type": "string",
           "default": "",
           "description": "Java 11 or above"
+        },
+        "clx-language.debugger": {
+          "type": "string",
+          "enum": ["Default", "Nature", "Custom"],
+          "default": "Default",
+          "description": "Select debugger"
+        },
+        "clx-language.debuggerCustomPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom debugger path"
         }
       }
     },
