@@ -1,30 +1,35 @@
 {
     "comments": {
-        // symbol used for single line comment. Remove this entry if your language does not support line comments
-        "lineComment": "//",
-        // symbols used for start and end a block comment. Remove this entry if your language does not support block comments
-        "blockComment": [ "/*", "*/" ]
+        "lineComment": "--",
+        "blockComment": [ "--[[", "--]]" ]
     },
-    // symbols used as brackets
     "brackets": [
-        ["{", "}"],
-        ["[", "]"],
-        ["(", ")"]
-    ],
-    // symbols that are auto closed when typing
-    "autoClosingPairs": [
-        ["{", "}"],
-        ["[", "]"],
-        ["(", ")"],
-        ["\"", "\""],
-        ["'", "'"]
-    ],
-    // symbols that can be used to surround a selection
-    "surroundingPairs": [
-        ["{", "}"],
-        ["[", "]"],
-        ["(", ")"],
-        ["\"", "\""],
-        ["'", "'"]
-    ]
+		["[", "]"],
+		["(", ")"],
+		["{", "}"]
+	],
+	"autoClosingPairs": [
+		{ "open": "[", "close": "]" },
+		{ "open": "(", "close": ")" },
+		{ "open": "{", "close": "}", "notIn": ["string", "comment"] },
+		{ "open": "'", "close": "'", "notIn": ["string", "comment"] },
+		{ "open": "\"", "close": "\"", "notIn": ["string"] }
+	],
+	"surroundingPairs": [
+		["[", "]"],
+		["(", ")"],
+		["{", "}"],
+		["\"", "\""],
+		["'", "'"]
+	],
+	"folding": {
+		"markers": {
+			"start": "^\\s*--region\\b",
+			"end": "^\\s*--endregion\\b"
+		}
+	},
+	"indentationRules": {
+		"increaseIndentPattern": "\\b(do|else|then|repeat|function)\\b((?!end).)*$",
+		// "decreaseIndentPattern": "\\b(end|else|elseif|until)\\b"
+	}
 }
