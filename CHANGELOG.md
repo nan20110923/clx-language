@@ -1,3 +1,10 @@
+### 1.0.8 (2023-10-30)
+
+* Update macos platform emulator
+* Bug Fixed:
+
+  * Windows platform emulator failed to start
+
 ### 1.0.7 (2023-10-16)
 
 * Add Nature debugger
