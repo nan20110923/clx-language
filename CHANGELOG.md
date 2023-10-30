@@ -1,4 +1,4 @@
-### 1.0.8 (2023-10-30)
+### 1.0.10 (2023-10-30)
 
 * Update macos platform emulator
 * Bug Fixed:
