@@ -31,14 +31,14 @@
 
 **新建clx后缀的文件，可以输入template，插件会提示内置的应用初始模板**
 
-![1698635212013](image/README_zh/1698635212013.png)
+![create](https://dev.azure.com/Lifesmart/clx-language/_git/clx-language?path=/image/README/create.png)
 
 
 ### 在模拟器中运行文件
 
 **当鼠标焦点处于clx文件时，点击右上角运行按钮(也可使用F5快捷键)运行文件，即可打开模拟器并运行该文件，同时会在同级目录下生成rom文件**
 
-![1698635281887](image/README_zh/1698635281887.png)
+![run](https://dev.azure.com/Lifesmart/clx-language/_git/clx-language?path=/image/README/run.png)
 
 
 ### 调试
@@ -50,7 +50,7 @@
 3. 基于 **debug_temp.clx** 文件进行断点调试
 4. 也可以在 **DEBUG CONSOLE** 中进行命令行调试 输入 **help** 可查看使用帮助
 
-![1698635367100](image/README_zh/1698635367100.png)
+![debug](https://dev.azure.com/Lifesmart/clx-language/_git/clx-language?path=/image/README/debug.png)
 
 ## 更多
 

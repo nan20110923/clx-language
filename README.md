@@ -30,13 +30,13 @@ This extension currently only supports Win32 and OSX environments, and you need 
 
 To create a new file with a clx suffix, you can type "template" and the plugin will prompt for the built-in initial template for the application
 
-![create](image/README/create.png)
+![create](https://dev.azure.com/Lifesmart/clx-language/_git/clx-language?path=/image/README/create.png)
 
 ### Run the file in the emulator
 
 **When the mouse focus is on the clx file, click the Run button in the upper right corner (you can also use the F5 shortcut key) to run the file, you can open the emulator and run the file, and at the same time, it will generate a rom file in the same directory.**
 
-![run](image/README/run.png)
+![run](https://dev.azure.com/Lifesmart/clx-language/_git/clx-language?path=/image/README/run.png)
 
 ### Debugging
 
@@ -47,7 +47,7 @@ To create a new file with a clx suffix, you can type "template" and the plugin w
 3. Debugging with breakpoints based on **debug_temp.clx** file
 4. You can also do command line debugging in **DEBUG CONSOLE**, type **help** to see the help.
 
-![debug](image/README/debug.png)
+![debug](https://dev.azure.com/Lifesmart/clx-language/_git/clx-language?path=/image/README/debug.png)
 
 ## More
 
