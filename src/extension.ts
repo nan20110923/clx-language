@@ -116,7 +116,7 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 				if (platform == 'darwin') {
 					cmdStr = `export DYLD_LIBRARY_PATH=${path.dirname(dbgPath)}\n${cmdStr}`;
 				} else if (platform == 'win32') {
-					cmdStr = `setx /m DYLD_LIBRARY_PATH ${path.dirname(dbgPath)}\n${cmdStr}`;
+					cmdStr = `set DYLD_LIBRARY_PATH="${path.dirname(dbgPath)}"\n${cmdStr}`;
 				}
 				try {
 					coloxProcess = child_process.exec(

@@ -7,7 +7,7 @@
   "version": "1.0.8",
   "repository": {
     "type": "git",
-    "url": "https://Lifesmart@dev.azure.com/Lifesmart/clx-language/_git/clx-language"
+    "url": "https://dev.azure.com/Lifesmart/clx-language/_git/clx-language"
   },
   "engines": {
     "vscode": "^1.80.0"
@@ -76,6 +76,7 @@
         "command": "extension.clx-language.run",
         "key": "f5",
         "mac": "f5",
+        "win": "f5",
         "when": "editorTextFocus && resourceLangId == clx"
       }
     ],
