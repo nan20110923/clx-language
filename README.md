@@ -30,13 +30,13 @@ This extension currently only supports Win32 and OSX environments, and you need 
 
 To create a new file with a clx suffix, you can type "template" and the plugin will prompt for the built-in initial template for the application
 
-![create](https://dev.azure.com/Lifesmart/0f382694-926a-46b1-8cf5-adb164bff633/_apis/git/repositories/c1fc6427-90bd-4448-aa72-d13d91510ed7/items?path=/image/README/create.png&versionDescriptor%5BversionOptions%5D=0&versionDescriptor%5BversionType%5D=0&versionDescriptor%5Bversion%5D=main&resolveLfs=true&%24format=octetStream&api-version=5.0)
+![create](https://x.cololight.com/mweb/docs/assets/images/create-1d320d24952dbca8a347efd2e0725f29.gif)
 
 ### Run the file in the emulator
 
 **When the mouse focus is on the clx file, click the Run button in the upper right corner (you can also use the F5 shortcut key) to run the file, you can open the emulator and run the file, and at the same time, it will generate a rom file in the same directory.**
 
-![run](https://dev.azure.com/Lifesmart/0f382694-926a-46b1-8cf5-adb164bff633/_apis/git/repositories/c1fc6427-90bd-4448-aa72-d13d91510ed7/items?path=/image/README/run.png&versionDescriptor%5BversionOptions%5D=0&versionDescriptor%5BversionType%5D=0&versionDescriptor%5Bversion%5D=main&resolveLfs=true&%24format=octetStream&api-version=5.0)
+![run](https://x.cololight.com/mweb/docs/assets/images/run-0dad04a59d0723673c04cc5540ce15f6.gif)
 
 ### Debugging
 
@@ -47,7 +47,7 @@ To create a new file with a clx suffix, you can type "template" and the plugin w
 3. Debugging with breakpoints based on **debug_temp.clx** file
 4. You can also do command line debugging in **DEBUG CONSOLE**, type **help** to see the help.
 
-![debug](https://dev.azure.com/Lifesmart/0f382694-926a-46b1-8cf5-adb164bff633/_apis/git/repositories/c1fc6427-90bd-4448-aa72-d13d91510ed7/items?path=/image/README/debug.png&versionDescriptor%5BversionOptions%5D=0&versionDescriptor%5BversionType%5D=0&versionDescriptor%5Bversion%5D=main&resolveLfs=true&%24format=octetStream&api-version=5.0)
+![debug](https://x.cololight.com/mweb/docs/assets/images/debug-258b9f11b14dfc971b29f6719a4aaba5.gif)
 
 ## More
 

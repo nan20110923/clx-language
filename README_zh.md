@@ -31,13 +31,13 @@
 
 **新建clx后缀的文件，可以输入template，插件会提示内置的应用初始模板**
 
-![create](https://dev.azure.com/Lifesmart/0f382694-926a-46b1-8cf5-adb164bff633/_apis/git/repositories/c1fc6427-90bd-4448-aa72-d13d91510ed7/items?path=/image/README/create.png&versionDescriptor%5BversionOptions%5D=0&versionDescriptor%5BversionType%5D=0&versionDescriptor%5Bversion%5D=main&resolveLfs=true&%24format=octetStream&api-version=5.0)
+![create](https://x.cololight.com/mweb/docs/assets/images/create-1d320d24952dbca8a347efd2e0725f29.gif)
 
 ### 在模拟器中运行文件
 
 **当鼠标焦点处于clx文件时，点击右上角运行按钮(也可使用F5快捷键)运行文件，即可打开模拟器并运行该文件，同时会在同级目录下生成rom文件**
 
-![run](https://dev.azure.com/Lifesmart/0f382694-926a-46b1-8cf5-adb164bff633/_apis/git/repositories/c1fc6427-90bd-4448-aa72-d13d91510ed7/items?path=/image/README/run.png&versionDescriptor%5BversionOptions%5D=0&versionDescriptor%5BversionType%5D=0&versionDescriptor%5Bversion%5D=main&resolveLfs=true&%24format=octetStream&api-version=5.0)
+![run](https://x.cololight.com/mweb/docs/assets/images/run-0dad04a59d0723673c04cc5540ce15f6.gif)
 
 ### 调试
 
@@ -48,7 +48,7 @@
 3. 基于 **debug_temp.clx** 文件进行断点调试
 4. 也可以在 **DEBUG CONSOLE** 中进行命令行调试 输入 **help** 可查看使用帮助
 
-![debug](https://dev.azure.com/Lifesmart/0f382694-926a-46b1-8cf5-adb164bff633/_apis/git/repositories/c1fc6427-90bd-4448-aa72-d13d91510ed7/items?path=/image/README/debug.png&versionDescriptor%5BversionOptions%5D=0&versionDescriptor%5BversionType%5D=0&versionDescriptor%5Bversion%5D=main&resolveLfs=true&%24format=octetStream&api-version=5.0)
+![debug](https://x.cololight.com/mweb/docs/assets/images/debug-258b9f11b14dfc971b29f6719a4aaba5.gif)
 
 ## 更多
 
