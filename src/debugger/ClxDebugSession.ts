@@ -167,6 +167,7 @@ export class ClxDebugSession extends LoggingDebugSession {
     }
 
     protected sendMessage(msg: String) {
+        // console.log(`sendMessage: ${msg}`)
         if (this.client) {
             this.client.write(`${msg}\n`);
         }
@@ -267,7 +268,8 @@ export class ClxDebugSession extends LoggingDebugSession {
 
     protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): Promise<void> {
         const path = args.source.path as string;
-        if (path == this.sourceUri?.path) {
+        // console.log(`setBreakPointsRequest path: ${path} sourceUri: ${this.sourceUri?.fsPath}`)
+        if (this.sourceUri?.fsPath.endsWith(path)) {
             // delete all breakpoint
             this.sendMessage('d');
 
