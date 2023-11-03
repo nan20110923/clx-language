@@ -48,9 +48,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// regiser command
 	context.subscriptions.push(
-		vscode.commands.registerCommand('extension.clx-language.run', (resource: vscode.Uri) => {
-			if (!isColoXToolRunning()) {
+		vscode.commands.registerCommand('extension.clx-language.run', async (resource: vscode.Uri) => {
+			var connect = await tryConnectColoXTool()
+			if (!connect && !isColoXToolRunning()) {
 				runColoXTool(resource, false)
+			} else {
+				vscode.window.showErrorMessage("ColoX emulator is already running!!")
 			}
 		}),
 		// vscode.commands.registerCommand('extension.clx-language.debug', (resource: vscode.Uri) => {
@@ -70,6 +73,20 @@ export function activate(context: vscode.ExtensionContext) {
 			languageClient?.sendRequest("emmy/reportAPI", classDoc);
 		}
 	}
+}
+
+export async function tryConnectColoXTool() : Promise<boolean> {
+	return new Promise((resolve, reject) => {
+		var socket = net.connect({
+			port: 3563,
+			host: '127.0.0.1'
+		}).on('connect', () => {
+			socket.destroy()
+			resolve(true)
+		}).on('error', err => {
+			resolve(false)
+		})
+	})
 }
 
 export function isColoXToolRunning() {
@@ -136,7 +153,7 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 						coloxProcess = undefined
 					})
 				} catch (e) {
-					vscode.window.showErrorMessage(`Run coloXtool failed: ${e}`)
+					vscode.window.showErrorMessage(`Run coloX simulator failed: ${e}`)
 				}
 
 			} else {

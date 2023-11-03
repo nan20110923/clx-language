@@ -5,7 +5,7 @@ import { FileUtil } from './FileUtil';
 import { Uri, ViewColumn, commands, window, workspace } from "vscode";
 import { basename } from "path";
 import * as readline from "readline";
-import { runColoXTool, coloxProcess, isColoXToolRunning, terminateColoXTool } from "../extension";
+import { runColoXTool, coloxProcess, isColoXToolRunning, terminateColoXTool, tryConnectColoXTool } from "../extension";
 import { delay } from "../util";
 
 type MsgHook = (line: string) => { line: string | null, isEnd: boolean, state: number };
@@ -37,9 +37,22 @@ export class ClxDebugSession extends LoggingDebugSession {
     }
 
     protected async launchRequest(response: DebugProtocol.LaunchResponse, args: DebugProtocol.LaunchRequestArguments, request?: DebugProtocol.Request | undefined): Promise<void> {
-        if (!isColoXToolRunning()) {
-            runColoXTool(null, true)
-            await delay(1000)
+        var coloXToolExists = await tryConnectColoXTool()
+
+        if (!coloXToolExists && !isColoXToolRunning()) {
+            runColoXTool(null, true);
+            var connect: boolean = false;
+            for (let i = 0; i < 10; i++) {
+                await delay(1000);
+                connect = await tryConnectColoXTool();
+                if (connect) {
+                    break;
+                }
+            }
+            if (!connect) {
+                window.showErrorMessage('Run coloX emulator failed!!')
+                return;
+            }
         }
 
         coloxProcess?.stdout?.on('data', (data) => this.sendEvent(new OutputEvent(`${data}\n`)))

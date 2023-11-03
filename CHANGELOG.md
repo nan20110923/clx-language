@@ -1,3 +1,8 @@
+### 1.0.11 (2023-11-03)
+
+* README.md add usage
+* Optimize debugger connection
+
 ### 1.0.10 (2023-10-30)
 
 * Update macos platform emulator
