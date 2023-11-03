@@ -4,7 +4,7 @@
   "publisher": "LifeSmart",
   "description": "Development tool for coloX",
   "icon": "res/icon.png",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "repository": {
     "type": "git",
     "url": "https://dev.azure.com/Lifesmart/clx-language/_git/clx-language"
