@@ -1,3 +1,7 @@
+### 1.0.13 (2023-11-17)
+
+* Update macos platform emulator
+
 ### 1.0.12 (2023-11-03)
 
 * README.md add usage
