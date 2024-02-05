@@ -55,6 +55,7 @@ To create a new file with a clx suffix, you can type "template" and the plugin w
 * Tips
 
   * When debugging breakpoints, vscode may automatically move the cursor to the breakpoint, which is not conducive to continuous debug console operation, then you can change the *"debug.focusEditorOnBreak"* item to false in the settings.
+  * If the emulator not startup properly on Windows 11, try reinstalling the .NET Framework (3.5 and 4.8)
 
 ## Thanks
 

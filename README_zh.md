@@ -24,7 +24,6 @@
 * Custom debugger path，用户指定模拟器程序路径
 * JAVA_HOME，上述运行环境中提到的自定义配置项
 
-
 ## 使用
 
 ### 新建文件
@@ -54,8 +53,8 @@
 
 * [ColoX文档](https://x.cololight.com/mweb/docs/)
 * 使用技巧
-
   * 在调试断点时，vscode可能会自动将光标移到断点处，不利于连续的debug console操作，这时可以在设置中将*"debug.focusEditorOnBreak"*项修改为false
+  * 如果在Windows11上遇到模拟器无法正常打开的情况，请尝试重新安装.NET框架（3.5和4.8）
 
 ## 感谢
 

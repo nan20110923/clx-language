@@ -1,3 +1,9 @@
+### 1.0.14 (2024-02-06)
+
+* Bug Fixed:
+
+  * Not generate rom file automatically on windows platform
+
 ### 1.0.13 (2023-12-11)
 
 * Update macos platform emulator

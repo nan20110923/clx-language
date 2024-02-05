@@ -133,11 +133,12 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 				if (platform == 'darwin') {
 					cmdStr = `export DYLD_LIBRARY_PATH=${path.dirname(dbgPath)}\n${cmdStr}`;
 				}
+				console.log('runColoXTool cmdStr: ', cmdStr)
 				try {
 					coloxProcess = child_process.exec(
 						cmdStr,
 						(error, stdout, stderr) => {
-							console.log('stdout: ', stdout)
+							console.log('error: ', error, 'stdout: ', stdout, 'stderr: ', stderr)
 						}
 					)
 					coloxProcess.on('close', (code) => {
