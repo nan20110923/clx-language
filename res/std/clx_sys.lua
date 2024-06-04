@@ -62,7 +62,7 @@ function utcdate(fmt, sec) end
 --- 25/55 Total number of played modes
 --- 56 Number of ticks played in the current mode
 
---- 90..96 Local time Year, month, day, hour, minute, second, day of week
+--- 90..96 Local time Year, month, day, hour, minute, second, week(from 1 to 7 means from Sunday to Saturday)
 ---@param X number
 function stat(X) end
 

@@ -271,9 +271,47 @@ function print(STR, X, Y, COL, OPT, SIZE, FONT) end
 ---   bit8-15: 字间距
 --- SIZE 是字体大小，如果是不支持的size，就会使用默认大小。
 --- FONT 是字体名，如果不支持会使用默认。
+---   Supported:
+---     ver < 10: Colo-PLAY 8,12,20,32,16 (unsc,cjk,phb)，缺省12
+---     ver >= 10:  Colo-PLAY any (ascii,mascii,wascii,DIN\_NATURE\_Bold,gp,dig,vampire)
+---     NatureMiniPro any(default, ascii, mascii, wascii, DIN\_NATURE\_Bold, gp, dig, vampire)
 ---@param STR string
 function drawTxt_h(STR) end
 
+---
+--- ver >= 10
+--- Load custom truetype font.
+--- 加载自定义truetype字体。
+--- name 字体名字
+--- size 字体大小, 这里填写0(矢量字体指定大小)
+--- ttfdata 字体数据(ttf字体)
+--- cache 允许缓存的字数, nil或者不在允许范围内(1-default)的数都会使用default大小
+--- rbname 缺少字体时使用的字体,nil表示不会滚
+--- return 字体对象
+---   **注意,返回字体对象必须保持引用,避免被回收**
+--- 字体数据是字符串, 由于rom大小限制, 需要裁剪字体文件, 只包含使用到的字符.
+---@param name string
+---@param size number
+---@param ttfdata string
+---@param cache number
+---@param rbname string
+---@return table
+function font_add(name, size, ttfdata, cache, rbname) end
+
+---
+--- ver >= 10
+--- 移除自定义的字体
+--- font font_add返回的字体对象
+---@param font any
+function font_close(font) end
+
+---
+--- ver >= 10
+--- 清理字体缓存(节约内存)
+--- global true表示清理自定义和全局字体缓存, false表示只清理自定义字体缓存
+---  **注意, 使用大字体渲染后,最好调用font_shrink,释放字体缓存,避免过多占用内存**
+---@param global boolean
+function font_shrink(global) end
 
 ---
 --- 设置光标位置。
@@ -573,12 +611,27 @@ function palrgb(idx,r,g,b,a) end
 function getcolor(r,g,b,a) end
 
 
+--- ver >= 11
+--- 在x,y位置绘制二维码, 图像宽度w (w小于最小二维码宽度时不会绘制)(图像超出屏幕不绘制)
+--- 返回二维码的原始宽度[21,177]
+---   注意, 绘制只会绘制有效像素, 背景色需要事先绘制.
+---@param str string
+---@param col number
+---@param w number
+---@param x number
+---@param y number
+---@return qrcode size(px width) number
+function qrcode(str,col,w,x,y) end
+
+
 --- 加载图片数据(png/jpg格式)，如果提供了bpp参数，会转换为对应的图像格式，否则安装系统规格转换。
---- 支持加载gif图片(version>=6)
+--- 支持加载gif图片（version >= 6）
 ---   默认只加载首帧
 ---   通过参数gifall可以加载所有帧:gif=img_gif_load(gifdata,nil,nil,true)
 ---   多帧会按照Y方向拼接为一个图像
 ---   注意加载所有帧图片会大量消耗内存,尽量避免,计算好内存用量
+--- 支持加载webp格式（version >= 12）
+---   只支持bpp = 16 or 32
 --- 返回图像对象img。
 ---@param picdata string
 ---@param bpp number
@@ -603,39 +656,75 @@ function img_close(img) end
 function img_info(img) end
 
 ---
---- 粘贴图像到x,y位置，flag参考blit的参数。
+--- 粘贴图像到x,y位置，opflag参考blit的参数。
 ---@param img table
 ---@param x number
 ---@param y number
----@param flag number
-function img_draw(img,x,y,flag) end
-
+---@param opflag number
+function img_draw(img,x,y,opflag) end
 
 ---
---- 粘贴图像的特定区域到x,y位置，flag参考blit的参数。
+--- 粘贴图像的特定区域到x,y位置，opflag参考blit的参数。
 ---@param img table
 ---@param x number
 ---@param y number
----@param flag number
+---@param opflag number
 ---@param sx number
 ---@param sy number
 ---@param sw number
 ---@param sh number
-function img_drawex(img,x,y,flag,sx,sy,sw,sh) end
+function img_drawex(img,x,y,opflag,sx,sy,sw,sh) end
+
+--- ver >= 12
+--- 类似rotspr
+--- img的bpp格式必须和规格一致
+--- OPFLAG 暂时只支持1
+--- SX,SY,SW,SH 为img的图像区域, 超出的话不绘制, 默认为整个图像
+---@param img table
+---@param SX number
+---@param SY number
+---@param SW number
+---@param SH number
+---@param DX number
+---@param DY number
+---@param ANGLE number
+---@param ZOOMX number
+---@param ZOOMY number
+function img_drawrot(img, DX, DY, OPFLAG, SX, SY, SW, SH, ANGLE, ZOOM) end
+
+--- ver >= 12
+--- 缩放绘制图像到目标大小
+--- img的bpp格式必须和规格一致
+--- OPFLAG :
+---   bit0 : should be 1 
+---   bit8 : 1 for x flip
+---   bit9 : 1 for y flip
+--- SY,SW,SH 为img的图像区域, 超出的话不绘制, 默认为整个图像
+---@param img table
+---@param DX number
+---@param DY number
+---@param DW number
+---@param DH number
+---@param SX number
+---@param SY number
+---@param SW number
+---@param SH number
+---@param OPFLAG number
+function img_drawzoom(img, DX, DY, DW, DH, SX, SY, SW, SH, OPFLAG) end
 
 
 ---
---- 粘贴gif图像帧的特定区域到x,y位置，flag参考blit的参数。 返回: 当前帧号,需要的延时时间
+--- 粘贴gif图像帧的特定区域到x,y位置，opflag参考blit的参数。 返回: 当前帧号,需要的延时时间
 ---@param img table
 ---@param frameidx number
 ---@param x number
 ---@param y number
----@param flag number
+---@param opflag number
 ---@param sx number
 ---@param sy number
 ---@param sw number
 ---@param sh number
-function img_drawgif(img,frameidx,x,y,flag,sx,sy,sw,sh) end
+function img_drawgif(img,frameidx,x,y,opflag,sx,sy,sw,sh) end
 
 
 ---
@@ -663,6 +752,25 @@ function img_gif_file(filename,bpp) end
 ---@param img table
 ---@return any
 function img_gif_next(img) end
+
+
+---
+--- 加载图片数据(webp格式)，如果提供了bpp参数，会转换为对应的图像格式，否则安装系统规格转换。bpp只能是16 or 32
+--- 返回图像对象和原始图像宽高: img, fullwidth, fullheight
+--- opt: bit0=1 表示使用裁剪区域加载, bit1=1 表示进行缩小(只能缩小)
+--- crop[x,y,w,h] 需要加载的区域
+--- sw,sh 缩小后的宽高
+---@param picdata string
+---@param bpp number
+---@param flag number
+---@param opt number
+---@param cropx number
+---@param cropy number
+---@param cropw number
+---@param croph number
+---@param sw number
+---@param sh number
+function img_loadwebp(picdata,bpp,flag,opt,cropx,cropy,cropw,croph,sw,sh) end
 
 
 ---

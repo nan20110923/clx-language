@@ -132,4 +132,4 @@ function rnd(x) end
 ---
 --- 设置伪随机数种子，同样的种子会导致后面的随机序列相同。
 ---@param x number
-function srnd(x) end
+function srand(x) end

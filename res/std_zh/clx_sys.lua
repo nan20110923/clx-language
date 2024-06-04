@@ -62,7 +62,7 @@ function utcdate(fmt, sec) end
 --- 25/55    已播放的模式总数
 --- 56       当前模式下的播放的tick数
 
---- 90..96   本地时间 年、月、日、时、分、秒、星期
+--- 90..96   本地时间 年、月、日、时、分、秒、星期（从1到7表示星期天到星期六）
 ---@param X number
 function stat(X) end
 

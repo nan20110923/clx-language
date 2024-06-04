@@ -132,4 +132,4 @@ function rnd(x) end
 ---
 --- Set the pseudo-random number seed, the same seed will result in the same random sequence later.
 ---@param x number
-function srnd(x) end
+function srand(x) end

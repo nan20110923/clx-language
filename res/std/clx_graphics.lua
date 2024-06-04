@@ -172,14 +172,16 @@ function gb2312_to_utf8(gb2312) end
 ---   bit0: under-coordinate alignment
 ---   bit1-2: alignment mode, 1 means right-aligned, 2 means center-aligned, 3 means no draw (return width), note that print does not support this, drawTxt_h takes effect.
 ---   bit7: print without line breaks
----   bit8-15: word spacing
+---   bit8-15: word spacing, 8bit int(ver>=10 can be negative)
 --- SIZE is the font size, if it is an unsupported size, the default size will be used.
 --- FONT is the font name, if it is an unsupported size the default will be used.
+---   Fonts supported: English 8(8x8), 16(8x16), default 4(4x6), Chinese 16(16x16).
 ---@param STR string
 ---@param X number
 ---@param Y number
 ---@param COL number
 ---@param OPT number
+---@param SIZE number
 ---@param FONT number
 function print(STR, X, Y, COL, OPT, SIZE, FONT) end
 
@@ -193,9 +195,51 @@ function print(STR, X, Y, COL, OPT, SIZE, FONT) end
 ---   bit8-15: word spacing
 --- SIZE is the font size, if it is an unsupported size, the default size will be used.
 --- FONT is the font name, if it is an unsupported size the default will be used.
+---   Supported:
+---     ver < 10: Colo-PLAY 8,12,20,32,16 (unsc,cjk,phb), default 12.
+---     ver >= 10:  Colo-PLAY any (ascii,mascii,wascii,DIN\_NATURE\_Bold,gp,dig,vampire)
+---     NatureMiniPro any(default, ascii, mascii, wascii, DIN\_NATURE\_Bold, gp, dig, vampire).
 ---@param STR string
-function drawTxt_h(STR) end
+---@param X number
+---@param Y number
+---@param COL number
+---@param OPT number
+---@param SIZE number
+---@param FONT number
+function drawTxt_h(STR, X, Y, COL, OPT, SIZE, FONT) end
 
+---
+--- ver >= 10
+--- Load custom truetype font.
+--- name is the font name
+--- size is the font size, ttfdata is the font data, cache is the cache size, rbname is the cache name.
+--- cache is cache size. nil or invald size will be default.
+--- rbname rollback font name when can't find char data.
+--- return fontobj
+---   **Notice, you should keep it to avoid gc**
+--- font data should be string obj, for rom size limit, you need cut ttf file, only include font data needed.
+---@param name string
+---@param size number
+---@param ttfdata string
+---@param cache number
+---@param rbname string
+---@return table
+function font_add(name, size, ttfdata, cache, rbname) end
+
+---
+--- ver >= 10
+--- Remove font object from font_add
+--- font font_add返回的字体对象
+---@param global boolean
+function font_close(global) end
+
+---
+--- ver >= 10
+--- Clear font cache for saving memory
+--- global true means clear custom and global font cache, false means clear custom font cache only
+---  **Notice, After rendering with large fonts, it is better to call font_shrink to release the font cache to avoid too much memory usage.**
+---@param global boolean
+function font_shrink(global) end
 
 ---
 --- Set the cursor position.
@@ -496,13 +540,28 @@ function palrgb(idx,r,g,b,a) end
 function getcolor(r,g,b,a) end
 
 
+--- ver >= 11
+--- draw qrcode at pos (x,y)-(x+w,y+w)
+--- if image out screen or w too small , will draw nothing.
+---  **Note funciton will only draw valid point, backgrand need fill first.
+---@param str string
+---@param col number
+---@param w number
+---@param x number
+---@param y number
+---@return qrcode size(px width) number
+function qrcode(str,col,w,x,y) end
+
+
 ---
 --- Load image data (png/jpg format), if the bpp parameter is provided, it will be converted to the corresponding image format, otherwise the installation system specification is converted.
---- Support load gif image(version>=6).
----   load only first frame by default
+--- Support load gif image(version >= 6).
+---   Load only first frame by default
 ---   All frames can be loaded by parameter gifall:gif=img_gif_load(gifdata,nil,nil,true)
 ---   Multiple frames will be stitched together into one image in Y direction.
 ---   Note that loading all frames will consume a lot of memory, try to avoid it, calculate the memory usage.
+--- Support load webp image(version >= 12).
+---   Only bpp = 16 or 32
 --- Return the image object img.
 ---@param picdata string
 ---@param bpp number
@@ -527,40 +586,76 @@ function img_close(img) end
 function img_info(img) end
 
 ---
---- Paste the image to the x,y position, flag refers to the parameters of blit.
+--- Paste the image to the x,y position, opflag refers to the parameters of blit.
 ---@param img table
 ---@param x number
 ---@param y number
----@param flag number
-function img_draw(img,x,y,flag) end
+---@param opflag number
+function img_draw(img,x,y,opflag) end
 
 
 ---
---- Paste a specific area of the image to the x,y position, flag refers to the parameters of blit.
+--- Paste a specific area of the image to the x,y position, opflag refers to the parameters of blit.
 ---@param img table
 ---@param x number
 ---@param y number
----@param flag number
+---@param opflag number
 ---@param sx number
 ---@param sy number
 ---@param sw number
 ---@param sh number
-function img_drawex(img,x,y,flag,sx,sy,sw,sh) end
+function img_drawex(img,x,y,opflag,sx,sy,sw,sh) end
 
+--- ver >= 12
+--- refers to the rotspr
+--- img's bpp must be same with spec bpp
+--- OPFLAG : now please use 1
+--- SX,SY,SW,SH must in the img's area
+---@param img table
+---@param SX number
+---@param SY number
+---@param SW number
+---@param SH number
+---@param DX number
+---@param DY number
+---@param ANGLE number
+---@param ZOOMX number
+---@param ZOOMY number
+function img_drawrot(img, DX, DY, OPFLAG, SX, SY, SW, SH, ANGLE, ZOOM) end
+
+--- ver >= 12
+--- zoom draw img
+--- img's bpp must be same with spec bpp
+--- OPFLAG :
+---   bit0 : should be 1 
+---   bit8 : 1 for x flip
+---   bit9 : 1 for y flip
+--- SX,SY,SW,SH must in the img's area
+---@param img table
+---@param DX number
+---@param DY number
+---@param DW number
+---@param DH number
+---@param SX number
+---@param SY number
+---@param SW number
+---@param SH number
+---@param OPFLAG number
+function img_drawzoom(img, DX, DY, DW, DH, SX, SY, SW, SH, OPFLAG) end
 
 ---
---- Paste a specific region of a gif image frame to x,y position, flag refer to blit's parameter.
+--- Paste a specific region of a gif image frame to x,y position, opflag refer to blit's parameter.
 --- Return: current frame number, delay time needed.
 ---@param img table
 ---@param frameidx number
 ---@param x number
 ---@param y number
----@param flag number
+---@param opflag number
 ---@param sx number
 ---@param sy number
 ---@param sw number
 ---@param sh number
-function img_drawgif(img,frameidx,x,y,flag,sx,sy,sw,sh) end
+function img_drawgif(img,frameidx,x,y,opflag,sx,sy,sw,sh) end
 
 
 ---
@@ -589,6 +684,23 @@ function img_gif_file(filename,bpp) end
 ---@return any
 function img_gif_next(img) end
 
+---
+--- Load image data (webp format), if the bpp parameter is provided, it will be converted to the corresponding image format, otherwise, the system specification conversion will be installed. bpp must be 16 or 32
+--- return img obj and full webp pic width/height : img, fullwidth, fullheight
+--- opt: bit0=1 use crop area, bit1=1 use scale
+--- crop[x,y,w,h] crop params
+--- sw,sh scale to sw,sh, only support zoom in
+---@param picdata string
+---@param bpp number
+---@param flag number
+---@param opt number
+---@param cropx number
+---@param cropy number
+---@param cropw number
+---@param croph number
+---@param sw number
+---@param sh number
+function img_loadwebp(picdata,bpp,flag,opt,cropx,cropy,cropw,croph,sw,sh) end
 
 ---
 --- Load rlottie animation data, key is id (cont must be the same for the same id), w/h is render size,
