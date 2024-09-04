@@ -1,3 +1,7 @@
+### 1.0.16 (2024-09-04)
+
+* Update emulator
+
 ### 1.0.15 (2024-06-04)
 
 * Update emulator

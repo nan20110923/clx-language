@@ -117,49 +117,55 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 			}
 			const firstLine = lines[0]
 			var matches = firstLine.match(/coloX-((4|16|32))(P|B|C|L|W)?/)
+			var dbg: { type: string; path: string; } | null = null
 			if (matches && matches.length >= 2) {
 				const sizeSpec = matches[1]
-				const dbg = selectDebugger(sizeSpec)
-				if (!dbg) return
-
-				let dbgPath = dbg.path
-				let dir = path.dirname(targetResource!.fsPath);
-				let fileName = path.basename(targetResource!.fsPath);
-				let cmdStr = `${dbgPath} -d ` + dir + path.sep + " -r " + fileName;
-				if (debug) {
-					cmdStr += " -x"
-				}
-				let platform = os.platform()
-				if (platform == 'darwin') {
-					cmdStr = `export DYLD_LIBRARY_PATH=${path.dirname(dbgPath)}\n${cmdStr}`;
-				}
-				console.log('runColoXTool cmdStr: ', cmdStr)
-				try {
-					coloxProcess = child_process.exec(
-						cmdStr,
-						(error, stdout, stderr) => {
-							console.log('error: ', error, 'stdout: ', stdout, 'stderr: ', stderr)
-						}
-					)
-					coloxProcess.on('close', (code) => {
-						console.log('coloxProcess close: ', code)
-						coloxProcess = undefined
-					})
-					coloxProcess.on('exit', (code) => {
-						console.log('coloxProcess exit: ', code)
-						coloxProcess = undefined
-					})
-					coloxProcess.on('disconnect', (code) => {
-						console.log('coloxProcess disconnect: ', code)
-						coloxProcess = undefined
-					})
-				} catch (e) {
-					vscode.window.showErrorMessage(`Run coloX simulator failed: ${e}`)
-				}
-
+				dbg = selectDebugger(sizeSpec)
 			} else {
-				vscode.window.showErrorMessage('The devcice specification must be labeled on the first line!!')
+				var matches = firstLine.match(/X-(\d+)x(\d+)_(\d+)?/)
+				if (matches && matches.length >= 2) {
+					dbg = selectDebugger('ColoPlay')
+				}
+			}
+
+			if (!dbg) {
+				vscode.window.showErrorMessage('The device specification must be labeled on the first line!!')
 				return
+			}
+
+			let dbgPath = dbg.path
+			let dir = path.dirname(targetResource!.fsPath);
+			let fileName = path.basename(targetResource!.fsPath);
+			let cmdStr = `${dbgPath} -d ` + dir + path.sep + " -r " + fileName;
+			if (debug) {
+				cmdStr += " -x"
+			}
+			let platform = os.platform()
+			if (platform == 'darwin') {
+				cmdStr = `export DYLD_LIBRARY_PATH=${path.dirname(dbgPath)}\n${cmdStr}`;
+			}
+			console.log('runColoXTool cmdStr: ', cmdStr)
+			try {
+				coloxProcess = child_process.exec(
+					cmdStr,
+					(error, stdout, stderr) => {
+						console.log('error: ', error, 'stdout: ', stdout, 'stderr: ', stderr)
+					}
+				)
+				coloxProcess.on('close', (code) => {
+					console.log('coloxProcess close: ', code)
+					coloxProcess = undefined
+				})
+				coloxProcess.on('exit', (code) => {
+					console.log('coloxProcess exit: ', code)
+					coloxProcess = undefined
+				})
+				coloxProcess.on('disconnect', (code) => {
+					console.log('coloxProcess disconnect: ', code)
+					coloxProcess = undefined
+				})
+			} catch (e) {
+				vscode.window.showErrorMessage(`Run coloX simulator failed: ${e}`)
 			}
 		})
 	}
