@@ -1,3 +1,8 @@
+### 1.0.17 (2025-08-29)
+
+* Bug Fixed:
+  * The emulator fails to run properly when the working directory path contains spaces.
+
 ### 1.0.16 (2024-09-04)
 
 * Update emulator
