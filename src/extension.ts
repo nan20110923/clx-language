@@ -136,7 +136,7 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 			let dbgPath = dbg.path
 			let dir = path.dirname(targetResource!.fsPath);
 			let fileName = path.basename(targetResource!.fsPath);
-			let cmdStr = `${dbgPath} -d ` + dir + path.sep + " -r " + fileName;
+			let cmdStr = `${dbgPath} -d '` + dir + path.sep + "' -r " + fileName;
 			if (debug) {
 				cmdStr += " -x"
 			}
