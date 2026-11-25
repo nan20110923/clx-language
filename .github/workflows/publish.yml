@@ -1,0 +1,36 @@
+# Publishes the extension to the VS Code Marketplace.
+# The Marketplace "Trusted Publishing" policy must name this file (publish.yml):
+# https://marketplace.visualstudio.com/manage/publishers
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Lets the job request the OIDC token that vsce exchanges for a Marketplace session.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+
+      - name: Check that the tag matches the version in package.json
+        if: github.ref_type == 'tag'
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error title=Version mismatch::tag is $GITHUB_REF_NAME but package.json says $expected. Bump the version, commit, then move or recreate the tag."
+            exit 1
+          fi
+
+      - run: npx @vscode/vsce publish --oidc

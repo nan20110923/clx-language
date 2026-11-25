@@ -1,6 +1,6 @@
 # Clx-language
 
-[🌐中文](https://dev.azure.com/Lifesmart/_git/clx-language?path=/README_zh.md)
+[🌐中文](https://github.com/nan20110923/clx-language/blob/main/README_zh.md)
 
 ## Introduction
 
@@ -51,6 +51,7 @@ To create a new file with a clx suffix, you can type "template" and the plugin w
 
 ## More
 
+* [VS Code plugin guide](https://x.cololight.com/mweb/docs/VSCodePlugin)
 * [ColoX Doc](https://x.cololight.com/mweb/docs/)
 * Tips
 

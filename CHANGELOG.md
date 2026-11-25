@@ -1,3 +1,10 @@
+### 1.0.18 (2026-11-25)
+
+* Bug Fixed:
+  * The simulator is now launched with an argument array instead of a shell command string, so paths containing spaces work on Windows.
+* Maintenance:
+  * The project has moved to GitHub. Releases are now published automatically by GitHub Actions.
+
 ### 1.0.17 (2025-08-29)
 
 * Bug Fixed:

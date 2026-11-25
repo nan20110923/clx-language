@@ -4,10 +4,10 @@
   "publisher": "LifeSmart",
   "description": "Development tool for coloX",
   "icon": "res/icon.png",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "repository": {
     "type": "git",
-    "url": "https://dev.azure.com/Lifesmart/clx-language/_git/clx-language"
+    "url": "https://github.com/nan20110923/clx-language"
   },
   "engines": {
     "vscode": "^1.80.0"
@@ -190,6 +190,7 @@
     "@typescript-eslint/parser": "^5.17.0",
     "@vscode/debugadapter": "^1.56.0",
     "@vscode/debugadapter-testsupport": "^1.56.0",
+    "@vscode/vsce": "^4.1.1",
     "await-notify": "^1.0.1",
     "base64-js": "^1.5.1",
     "esbuild": "^0.14.29",
@@ -201,7 +202,6 @@
     "rimraf": "^3.0.2",
     "typescript": "^4.6.3",
     "url": "^0.11.0",
-    "vsce": "^2.7.0",
     "vscode-languageclient": "8.0.2"
   },
   "main": "./dist/extension.js",

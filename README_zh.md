@@ -1,6 +1,6 @@
 # Clx-language
 
-[🌐English](https://dev.azure.com/Lifesmart/_git/clx-language?path=/README.md)
+[🌐English](https://github.com/nan20110923/clx-language/blob/main/README.md)
 
 ## 简介
 
@@ -51,6 +51,7 @@
 
 ## 更多
 
+* [VS Code插件文档](https://x.cololight.com/mweb/docs/VSCodePlugin)
 * [ColoX文档](https://x.cololight.com/mweb/docs/)
 * 使用技巧
   * 在调试断点时，vscode可能会自动将光标移到断点处，不利于连续的debug console操作，这时可以在设置中将*"debug.focusEditorOnBreak"*项修改为false
