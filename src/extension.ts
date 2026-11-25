@@ -136,31 +136,35 @@ export function runColoXTool(resource: vscode.Uri | null, debug: boolean) {
 			let dbgPath = dbg.path
 			let dir = path.dirname(targetResource!.fsPath);
 			let fileName = path.basename(targetResource!.fsPath);
-			let cmdStr = `${dbgPath} -d '` + dir + path.sep + "' -r " + fileName;
+			// 以参数数组启动，路径不经过 shell：cmd.exe 不认单引号，会把引号当成路径的一部分传给模拟器
+			let args = ['-d', dir + path.sep, '-r', fileName]
 			if (debug) {
-				cmdStr += " -x"
+				args.push('-x')
 			}
-			let platform = os.platform()
-			if (platform == 'darwin') {
-				cmdStr = `export DYLD_LIBRARY_PATH=${path.dirname(dbgPath)}\n${cmdStr}`;
+			let env = process.env
+			if (os.platform() == 'darwin') {
+				env = { ...process.env, DYLD_LIBRARY_PATH: path.dirname(dbgPath) }
 			}
-			console.log('runColoXTool cmdStr: ', cmdStr)
+			console.log('runColoXTool: ', dbgPath, args)
 			try {
-				coloxProcess = child_process.exec(
-					cmdStr,
-					(error, stdout, stderr) => {
-						console.log('error: ', error, 'stdout: ', stdout, 'stderr: ', stderr)
-					}
-				)
-				coloxProcess.on('close', (code) => {
+				let child = child_process.spawn(dbgPath, args, { env: env })
+				coloxProcess = child
+				child.stdout.on('data', (data) => { console.log('coloxProcess stdout: ', String(data)) })
+				child.stderr.on('data', (data) => { console.log('coloxProcess stderr: ', String(data)) })
+				child.on('error', (e) => {
+					console.log('coloxProcess error: ', e)
+					coloxProcess = undefined
+					vscode.window.showErrorMessage(`Run coloX simulator failed: ${e}`)
+				})
+				child.on('close', (code) => {
 					console.log('coloxProcess close: ', code)
 					coloxProcess = undefined
 				})
-				coloxProcess.on('exit', (code) => {
+				child.on('exit', (code) => {
 					console.log('coloxProcess exit: ', code)
 					coloxProcess = undefined
 				})
-				coloxProcess.on('disconnect', (code) => {
+				child.on('disconnect', (code) => {
 					console.log('coloxProcess disconnect: ', code)
 					coloxProcess = undefined
 				})
