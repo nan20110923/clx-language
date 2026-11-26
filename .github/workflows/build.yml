@@ -69,9 +69,13 @@ jobs:
           [ "$missing" -eq 0 ] || exit 1
           echo "Package contents are correct." >> "$GITHUB_STEP_SUMMARY"
 
+      # `.artifacts/` 以点开头，而 upload-artifact@v4 默认不包含隐藏文件
+      # （include-hidden-files 默认 false）。缺了这一行，上面的步骤都成功、
+      # 产物也确实生成了，但上传时找不到文件而失败。
       - uses: actions/upload-artifact@v4
         with:
           name: vsix
           path: ".artifacts/*.vsix"
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 30
