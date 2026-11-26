@@ -131,12 +131,40 @@ yarn watch    # 监听文件改动，自动重新打包
 
 ```bash
 yarn typecheck   # tsc --noEmit
-yarn test        # 与 typecheck 相同
+yarn lint        # eslint src
+yarn test        # node:test，覆盖协议解析、行号映射等纯逻辑
 ```
 
-仓库没有自动化测试，`yarn lint` 目前因为没有 ESLint 配置文件而不可用。改动后需要手工验证上面的流程。
+交付前这三条都要过，而且 `yarn package` 必须能出 vsix。
 
 类型检查只走 `tsc --noEmit`，不要把 tsc 的产物写到磁盘；构建统一用 esbuild。
+
+### 测试
+
+测试在 `test/`，用 Node 内置的 `node:test`，零额外依赖。`yarn test` 会调 `scripts/run-tests.mjs`：先用 esbuild 把每个 `.test.ts` 打成 CJS 放到临时目录，再交给 `node --test`。
+
+之所以要预打包而不是直接跑 TS：Node 22 的 `--experimental-strip-types` 不支持构造函数参数属性（`constructor(private readonly x)`）这类语法。用 esbuild 是现有依赖，比引入 ts-node 或给测试单配一套 tsconfig 都简单。
+
+**能测的前提是 module 不 import `vscode`。** `debugChannel.ts`、`luaProtocol.ts`、`lineMapping.ts`、`luaValue.ts`、`testAutomation.ts`、`emulatorBundle.ts` 都遵守这条，所以在普通 Node 里就能跑。要在这些文件里用编辑器能力时，从参数注入结构类型（参考 `emulatorBundle.ts` 的 `ProgressSink` / `Cancellation`），不要 import `vscode`。
+
+### 为什么 TypeScript 停在 5.9.3
+
+`typescript` 目前锁在 **5.9.3**，而 npm 上的 `latest` 已经是 7.x。这是有意停住的，不要当成遗漏。
+
+TypeScript 7 是原生重写版，通过平台二进制分发。它在 `package.json` 里只声明 `"./lib/version.cjs"` 作为主入口，**`require("typescript")` 因此只返回 `{ version, versionMajorMinor }`** —— 编译 API 全在 `./unstable/*` 下，没有稳定的 `createSourceFile` / `Program`。
+
+`@typescript-eslint` 启动时要 `require("typescript")` 拿完整 API，所以直接升 TS 7 会让 `yarn lint` 抛 `typescript-eslint does not support TS 7.0`。官方推荐的共存办法是把 `typescript` 指向 TS 6 的兼容包、TS 7 用别名提供 `tsc`：
+
+```json
+"@typescript/native": "npm:typescript@^7.0.2",
+"typescript": "npm:@typescript/typescript6@^6.0.2"
+```
+
+**这套方案在 npm 下验证可用**（`tsc` 跑 7.0.2，eslint 用 TS 6 API，两者都正常、无 peer 冲突），但 **yarn 1 不支持 npm alias 语法** —— 在空白项目上也会报 `Received malformed response from registry for undefined`。
+
+所以现状是：升 TS 7 必须同时换包管理器（yarn 4 或 npm）。而 TS 7 的收益主要是 `tsc` 提速，这里 `yarn typecheck` 本来只要 1.4 秒，感知不到；丢掉 lint 的代价却是实打实的。等哪天某个依赖真的要求 TS 7，再连同包管理器一起换更划算。
+
+要在 5.9.3 上继续：`@typescript-eslint@8` 的 peer 范围是 `typescript >=4.8.4 <6.1.0`，5.9.3 在里面，lint 可以正常用。
 
 ## 打包
 
