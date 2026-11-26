@@ -1,3 +1,12 @@
+### 1.1.0 (2026-11-26)
+
+* Changed:
+  * The ColoX emulator is no longer bundled with the extension. It is downloaded once on first run into the extension's global storage, taking the VSIX from 34.5 MB down to 8.3 MB. Offline users can point `clx-language.debuggerCustomPath` at a local copy of the emulator instead.
+  * The bundled emulator has been updated from the 2024 build to the official 2026-11-19 release.
+  * Device specifications are no longer enumerated by the extension. New ones such as `coloX-PICO8` work without an extension update.
+  * The `Nature` debugger option is deprecated: Nature is no longer published separately and is handled by the same binary. Selecting it behaves like `Default`.
+  * README images moved to `static/readme/` and are no longer packaged.
+
 ### 1.0.18 (2026-11-25)
 
 * Bug Fixed:

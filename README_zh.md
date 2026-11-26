@@ -17,12 +17,37 @@
 
 ## 配置项
 
-* Select debugger，本插件内置了ColoPlay和Nature两种模拟器程序
-  * Default，本插件会根据文件首行标识的设备规格选择（推荐）
-  * Nature，会无条件使用Nature模拟器程序（win32暂不支持)
-  * Custom，根据配置项Custom debugger path使用用户指定的程序（一般用户无需使用）
-* Custom debugger path，用户指定模拟器程序路径
+* Select debugger
+  * Default，使用插件按需下载的模拟器（推荐）
+  * Nature，已废弃。官方不再单独发布 Nature 模拟器，选中后等同于 Default
+  * Custom，使用 `Custom debugger path` 指定的程序，不下载
+* Custom debugger path，用户指定模拟器程序路径，仅在 Select debugger 为 Custom 时生效
 * JAVA_HOME，上述运行环境中提到的自定义配置项
+
+## 模拟器下载
+
+从 1.1.0 开始，模拟器程序不再随插件一起安装，而是在首次运行时按需下载一次（约 5MB），之后复用本机缓存。
+
+**首次点击运行时插件会先询问是否下载，确认后显示下载进度。** 下载完成后模拟器存放在 VS Code 的扩展全局存储目录里，所有工作区共用，卸载插件时一并清理。
+
+设备规格（`coloX-4P`、`coloX-16`、`coloX-PICO8`、`coloX-32` 等）由模拟器自己识别，插件不再维护规格列表。
+
+### 无法联网时
+
+如果您的网络无法访问 GitHub Releases（例如内网环境），可以自行获取模拟器程序，然后在设置中把 `clx-language.debugger` 设为 `Custom`，`clx-language.debuggerCustomPath` 设为模拟器可执行文件的完整路径：
+
+* macOS，指向 `coloXtool.app/Contents/MacOS/coloXtool`，整个 `.app` 目录需一并保留
+* Windows，指向 `coloXtool.exe`，同级的 dll 需一并保留
+
+模拟器程序可从 [ColoX 文档的下载页](https://x.cololight.com/mweb/docs/examples) 获取。
+
+**macOS 提示"无法打开，因为无法验证开发者"时**，说明文件被系统加上了隔离属性。在终端里执行一次：
+
+```bash
+xattr -d com.apple.quarantine /path/to/coloXtool.app
+```
+
+插件自己下载的模拟器不会有这个问题。
 
 ## 使用
 

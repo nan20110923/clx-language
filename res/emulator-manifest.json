@@ -1,0 +1,25 @@
+{
+  "release": "emu-2026-11-19",
+  "baseUrl": "https://github.com/nan20110923/clx-language/releases/download",
+  "bundles": [
+    {
+      "product": "ColoPlay",
+      "platform": "darwin",
+      "date": "2026-11-19",
+      "asset": "coloplay-darwin-2026-11-19.tar.gz",
+      "size": 5427259,
+      "sha256": "e0788a0fcddb4ea9547361b6a8dd4bb505cf69e4b6a80b658a4cbbc7b1e1b347",
+      "executable": "Contents/MacOS/coloXtool",
+      "libraryPath": "Contents/Frameworks"
+    },
+    {
+      "product": "ColoPlay",
+      "platform": "win32",
+      "date": "2026-11-19",
+      "asset": "coloplay-win32-2026-11-19.tar.gz",
+      "size": 5947849,
+      "sha256": "99864b1fad783f6ab8b6f6af77cc88dbe560a660f728de63b83c462cd2afcf7b",
+      "executable": "coloXtool.exe"
+    }
+  ]
+}

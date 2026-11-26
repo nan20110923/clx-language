@@ -17,12 +17,37 @@ This extension currently only supports Win32 and OSX environments, and you need 
 
 ## Configuration items
 
-* **Select debugger**，this plugin has two built-in emulator programs, ColoPlay and Nature.
-  * **Default**, this plugin will select the device specification according to the first line of the file (recommended)
-  * **Nature**, will unconditionally use the Nature emulator program (win32 is not supported for the time being)
-  * **Custom**, according to the configuration item Custom debugger path to use the user-specified program (general users do not need to use)
-* **Custom debugger path**, user-specified emulator program path
+* **Select debugger**
+  * **Default**, use the emulator downloaded on demand by the extension (recommended)
+  * **Nature**, deprecated. Nature is no longer published separately; this behaves like Default
+  * **Custom**, use the program at **Custom debugger path** and never download
+* **Custom debugger path**, user-specified emulator program path, only used when **Select debugger** is `Custom`
 * **JAVA_HOME**, the custom configuration item mentioned in the above runtime environment.
+
+## Emulator download
+
+Starting with 1.1.0 the emulator is no longer installed together with the extension. It is downloaded once on first run (about 5 MB) and reused from a local cache afterwards.
+
+**The first time you run a file, the extension asks whether to download it and then shows the download progress.** The emulator is stored in VS Code's extension global storage, shared by every workspace, and removed when the extension is uninstalled.
+
+Device specifications (`coloX-4P`, `coloX-16`, `coloX-PICO8`, `coloX-32`, …) are recognised by the emulator itself; the extension no longer keeps a list of them.
+
+### Without internet access
+
+If your network cannot reach GitHub Releases (an intranet, for example), obtain the emulator yourself, set `clx-language.debugger` to `Custom`, and point `clx-language.debuggerCustomPath` at the emulator executable:
+
+* macOS: point at `coloXtool.app/Contents/MacOS/coloXtool`; keep the whole `.app` directory
+* Windows: point at `coloXtool.exe`; keep the sibling dlls
+
+The emulator can be obtained from the [ColoX documentation download page](https://x.cololight.com/mweb/docs/examples).
+
+**If macOS refuses to open it ("cannot be opened because the developer cannot be verified")**, the file carries a quarantine attribute. Remove it once in Terminal:
+
+```bash
+xattr -d com.apple.quarantine /path/to/coloXtool.app
+```
+
+An emulator downloaded by the extension does not have this problem.
 
 ## Usage
 

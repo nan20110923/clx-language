@@ -44,12 +44,11 @@ syntaxes/.tmLanguage.json       TextMate 语法
 snippets/snippets.json          代码片段
 language-configuration.json     语言配置
 res/                            图标和标准库存根：std 是英文，std_zh 是中文
+res/emulator-manifest.json      模拟器包清单，指向 GitHub Releases
 server/lua_ls.jar               语言服务器，基于 EmmyLua-LanguageServer 修改
-debugger/                       内置的 ColoX 模拟器
-  osx/                          macOS，ColoPlay
-  nature/osx/                   macOS，Nature
-  win32/                        Windows，ColoPlay
-docs/                           开发与部署文档
+scripts/pack-emulator.mjs       模拟器打包脚本
+static/readme/                  README 图片，不进插件包
+docs/                           开发、部署文档和决策记录
 dist/                           esbuild 打包产物，不入库
 out/                            早期的编译产物，已入库，运行时不使用
 ```
@@ -67,10 +66,38 @@ yarn watch    # 监听文件改动，自动重新打包
 
 - **语言服务器**：`server/lua_ls.jar` 用 Java 启动。Java 的查找顺序是设置项 `clx-language.JAVA_HOME`、环境变量 `JAVA_HOME`、`PATH`。标准库存根按 VS Code 的界面语言选择：中文用 `res/std_zh`，其他语言用 `res/std`。
 - **模拟器的启动方式**：用 `child_process.spawn` 传参数数组，`coloXtool -d <目录>/ -r <文件>`，调试时加 `-x`。不要改回拼接 shell 字符串的写法：Windows 的 cmd.exe 不认单引号，路径里的引号会被当成路径的一部分，表现是 `EIE:open file err`。
-- **模拟器的选择**：由设置 `clx-language.debugger` 和文件首行的设备规格决定。首行匹配 `coloX-32…` 时用 Nature，`coloX-4/16/32…` 和 `X-<宽>x<高>` 用 ColoPlay；设置成 `Custom` 时用 `clx-language.debuggerCustomPath`；Windows 只有 ColoPlay。
+- **模拟器不再随包分发**：1.1.0 起按需下载到 `context.globalStorageUri/emulators/ColoPlay-<platform>-<date>-<sha前8位>/`，由 `src/emulator.ts` 管理。首次下载前弹一次确认，之后静默复用缓存。缓存目录里写 `.complete` 标记，缺失或可执行文件不在就整个重下。
+
+  归档来源是官方发布页 <https://x.cololight.com/mweb/docs/examples>。发布新模拟器包的流程：
+
+  ```bash
+  # 1. 从官方页下载 zip，解压到临时目录（macOS 要保留整个 coloXtool.app）
+  #    页面的 Last-Modified 就是这里的 --date
+
+  # 2. 打包（自动算 sha256 和体积）
+  node scripts/pack-emulator.mjs --product ColoPlay --platform darwin \
+    --dir /tmp/mac/coloXtool.app --exe Contents/MacOS/coloXtool \
+    --library Contents/Frameworks --date 2026-11-19
+
+  node scripts/pack-emulator.mjs --product ColoPlay --platform win32 \
+    --dir /tmp/win/coloXtool_win32 --exe coloXtool.exe --date 2026-11-19
+
+  # 3. 上传到新的 Release（tag 用清单里的 release 字段）
+  gh release create emu-2026-11-19 .artifacts/*.tar.gz
+
+  # 4. 把 .artifacts/*.json 的内容合并进 res/emulator-manifest.json，
+  #    同时改 release 字段，然后提升 package.json 版本并发布扩展
+  ```
+
+  **已发布的 asset 永久不删。** 清单编译在插件里，旧版扩展会一直指向它发布时的那个 tag。
+
+  **不要用仓库历史里的 `debugger/` 二进制**。那批是 2023/2024 的，官方此后改了三件事：不再单独发布 Nature、macOS 改成 `.app` bundle、字体编译进可执行文件。用旧包会得到与官方不一致的行为。
+- **模拟器的选择**：只有两条路。`clx-language.debugger` 为 `Custom` 且填了 `debuggerCustomPath` 时完全接管，不下载也不回落；否则用下载的官方包。`Nature` 选项已废弃，等价于 `Default`。
+- **设备规格不枚举**：首行只要匹配 `coloX-<字母数字>` 或 `X-<宽>x<高>` 就交给模拟器判断。不要重新引入 `(4|16|32)` 白名单，官方会加新规格。
 - **调试适配器是内联的**：`src/debugger/activeDebug.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0].program` 指向的 `out/debugger/ClxDebugAdapter.js` 并不存在，这是遗留配置，不需要补这个文件。
 - **调试通道**：本机 TCP 3563，只允许一个客户端连接。启动调试会在工作区里生成 `debug_temp.clx`。
 - **运行成功与否的判断**：看文件同级目录是否出现 `.rom`，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。
+- **macOS Gatekeeper**：官方 macOS 包是 ad-hoc 签名、未公证。插件通过 `https` 下载的文件不带 quarantine 属性，能直接跑；手工下载再指定路径的情形会被拦，需要 `xattr -d com.apple.quarantine`。
 
 ## 本地调试扩展
 
@@ -115,7 +142,7 @@ yarn package
 unzip -l clx-language-*.vsix | head -40
 ```
 
-`debugger/` 下 macOS 的可执行文件（`coloXtool` 和部分 dylib）在 git 里是 `100755`。替换这些文件时保持可执行位（`git update-index --chmod=+x <path>`），否则用户安装后模拟器无法启动。Windows 上打包会丢失文件权限位，所以发布只在 Linux runner 上进行。
+模拟器归档里的可执行位由 `src/emulator.ts` 按 tar 头的 mode 还原，所以打包脚本必须在 macOS/Linux 上运行（保持源文件权限），不要用会丢权限的工具重新压缩。`scripts/pack-emulator.mjs` 会拒绝 symlink 和非普通文件。
 
 ## 发布
 

@@ -5,3 +5,9 @@
 AGENTS.md
 docs/**
 vsc-extension-quickstart.md
+
+# 只在仓库里用，不分发给用户
+scripts/**
+static/**
+GLOSSARY.md
+.artifacts/**

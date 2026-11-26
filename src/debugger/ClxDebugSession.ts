@@ -40,7 +40,14 @@ export class ClxDebugSession extends LoggingDebugSession {
         var coloXToolExists = await tryConnectColoXTool()
 
         if (!coloXToolExists && !isColoXToolRunning()) {
-            runColoXTool(null, true);
+            // 先等模拟器就绪（可能要下载），再开始轮询调试端口
+            const started = await runColoXTool(null, true);
+            if (!started) {
+                response.success = false;
+                response.message = 'The CLX emulator could not be started.';
+                this.sendResponse(response);
+                return;
+            }
             var connect: boolean = false;
             for (let i = 0; i < 10; i++) {
                 await delay(1000);

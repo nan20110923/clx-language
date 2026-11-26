@@ -30,6 +30,7 @@ Node.js 22 或更高，包管理器只使用 yarn 1。
 
 ```text
 src/extension.ts              扩展入口，esbuild 打包成 dist/extension.js（package.json 的 main）
+src/emulator.ts               模拟器包：清单、缓存、下载、sha256 校验、解压
 src/debugger/                 调试功能
   ClxDebugSession.ts          调试会话，和模拟器的调试通道通信
   ClxDebugProvider.ts         解析 launch 配置，显示“等待连接”提示
@@ -39,9 +40,11 @@ src/findJava.ts               查找 Java
 syntaxes/.tmLanguage.json     TextMate 语法
 snippets/snippets.json        代码片段
 res/std、res/std_zh            标准库存根，英文和中文
+res/emulator-manifest.json    模拟器包清单，指向 GitHub Releases 的 asset
 server/lua_ls.jar             语言服务器
-debugger/                     内置模拟器：osx（ColoPlay）、nature/osx、win32
-docs/                         开发与部署文档，不进插件包
+scripts/pack-emulator.mjs     把模拟器目录打成 tar.gz 并生成清单条目
+static/readme/                README 用的图片，不进插件包
+docs/                         开发、部署和决策记录，不进插件包
 dist/                         打包产物，不入库
 out/                          早期的编译产物，已入库
 ```
@@ -50,16 +53,22 @@ out/                          早期的编译产物，已入库
 
 - **构建**：`vsce package` 和 `vsce publish` 会自动执行 `vscode:prepublish` 脚本，把 `src/extension.ts` 压缩打包到 `dist/extension.js`。
 - **语言服务器**：`server/lua_ls.jar` 是 EmmyLua-LanguageServer 的修改版，用 Java 启动，需要 Java 11 或更高。标准库存根按 VS Code 的界面语言选择，中文用 `res/std_zh`，其他语言用 `res/std`。
+- **模拟器不再随包分发**：1.1.0 起模拟器按需下载到 `context.globalStorageUri`，由 `src/emulator.ts` 管理。清单 `res/emulator-manifest.json` 指向 GitHub Releases 的 asset。**已发布的 asset 永久不删**，否则旧版扩展在冷缓存时会失能。详见 `docs/adr/0001-emulator-bundles-outside-vsix.md`。
+- **归档源自官方发布**：模拟器二进制来自 <https://x.cololight.com/mweb/docs/examples> 的 zip，用 `scripts/pack-emulator.mjs` 重新打成 tar.gz。**不要用仓库里历史上那批 2023/2024 的 `debugger/` 二进制**：官方已不再单独发布 Nature，`coloX-32` 等规格改由同一个二进制处理，macOS 也改成了 `.app` bundle 布局，字体则编译进了可执行文件。
 - **模拟器的启动方式**：用 `child_process.spawn` 传参数数组，`coloXtool -d <目录>/ -r <文件>`，调试时加 `-x`。不要改回拼接 shell 字符串的写法：Windows 的 cmd.exe 不认单引号，路径里的引号会被当成路径的一部分。
-- **模拟器的选择**：由设置 `clx-language.debugger` 和文件首行的设备规格决定。首行是 `coloX-32…` 用 Nature，其余用 ColoPlay；设置成 `Custom` 时用 `clx-language.debuggerCustomPath`；Windows 只有 ColoPlay。
+- **模拟器的选择**：只有两条路。设置了 `clx-language.debugger` = `Custom` 且填了 `debuggerCustomPath` 时完全接管，不下载也不回落；否则用下载的官方包。`Nature` 选项已废弃（等价于 Default）。
+- **设备规格不枚举**：首行只要匹配 `coloX-<字母数字>` 或 `X-<宽>x<高>` 就交给模拟器自己判断。不要重新引入 `(4|16|32)` 这类白名单，官方会加新规格（`coloX-PICO8` 就是这么出现的）。
 - **调试适配器是内联的**：`src/debugger/activeDebug.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0].program` 指向的 `out/debugger/ClxDebugAdapter.js` 并不存在，这是遗留配置，不需要补这个文件。
-- **调试通道**：本机 TCP 3563，只允许一个客户端连接。启动调试会在工作区里生成 `debug_temp.clx`。
+- **调试通道**：本机 TCP 3563，只允许一个客户端连接。启动调试会在工作区里生成 `debug_temp.clx`。启动前必须先等模拟器就绪（可能要下载），再开始轮询端口。
 
 ## 约定
 
-- `dist/` 和 `*.vsix` 不入库。
+- `dist/`、`*.vsix` 和 `.artifacts/` 不入库。
 - `out/` 是早期遗留的编译产物，会随包发布，但运行时不使用。除非任务明确要求，不要清理或重新生成它。
-- `debugger/` 下 macOS 的可执行文件（`coloXtool` 和部分 dylib）在 git 里是 `100755`。替换这些文件时保持可执行位（`git update-index --chmod=+x <path>`），否则用户安装后模拟器无法启动。
+- 模拟器归档里的可执行位必须保留。`src/emulator.ts` 解压时按 tar 头里的 mode 还原权限；打包脚本拒绝 symlink 和非普通文件。
+- 三个平台的模拟器二进制都只有 x86_64（macOS 靠 Rosetta 2）。归档按 **platform** 命名，**不要**带 `process.arch`，否则 Apple Silicon 会去找不存在的 arm64 包。
+- macOS 的 `.app` 结构不能压平：可执行文件用 `@executable_path/../Frameworks` 加载 SDL2，清单里的 `executable` 和 `libraryPath` 缺一不可。
+- 官方 macOS 包是 ad-hoc 签名、未公证。插件自己下载的文件不带 quarantine 属性所以能直接跑；用户手动下载的会被 Gatekeeper 拦，README 里给了 `xattr -d com.apple.quarantine`。
 - 代码风格跟随所在文件现有的缩进和写法，不要顺手格式化整个文件。注释里中英文都有，保持原样即可。
 - 工作区设置把 `main` 设为受保护分支（`.vscode/settings.json`），在 VS Code 里直接提交到 `main` 会提示新建分支。
 
@@ -67,8 +76,9 @@ out/                          早期的编译产物，已入库
 
 插件包的内容由 `.vscodeignore` 控制。下面这些必须留在排除列表里：
 
-- `AGENTS.md` 和 `docs/**`：只需要给开发者看，不需要分发给用户。
+- `AGENTS.md`、`GLOSSARY.md` 和 `docs/**`：只需要给开发者看，不需要分发给用户。
 - `.github/**`：vsce 内置的 `.github` 排除项匹配不到目录下的文件，必须显式写。
+- `scripts/**`、`static/**`、`.artifacts/**`：构建和文档素材，不进插件包。
 
 根目录的 `README.md` 就是插件市场的 DETAILS 页面，打包时会被改名成 `extension/readme.md`，所以不要把它加进排除列表。`README_zh.md` 也会随包发布，供插件内跳转使用。
 

@@ -8,6 +8,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      pre_release:
+        description: "Publish as a pre-release (users must opt in to install it)"
+        type: boolean
+        default: false
 
 jobs:
   publish:
@@ -33,4 +38,12 @@ jobs:
             exit 1
           fi
 
-      - run: npx @vscode/vsce publish --oidc
+      # A pre-release and a regular release can never share a version number,
+      # so a version published as pre-release needs a different one to go stable.
+      - name: Publish pre-release
+        if: inputs.pre_release
+        run: npx @vscode/vsce publish --oidc --pre-release
+
+      - name: Publish release
+        if: ${{ !inputs.pre_release }}
+        run: npx @vscode/vsce publish --oidc
