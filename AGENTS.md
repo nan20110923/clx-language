@@ -57,6 +57,11 @@ dist/                         esbuild 打包产物（extension.js），不入库
 ## 运行时要点
 
 - **构建**：`vsce package` 和 `vsce publish` 会自动执行 `vscode:prepublish` 脚本，把 `src/extension.ts` 压缩打包到 `dist/extension.js`。
+- **依赖分两层，别放错**：运行时用到的三个包（`@vscode/debugadapter`、`@vscode/debugprotocol`、`vscode-languageclient`）放在 `dependencies`，其余全在 `devDependencies`。esbuild 会把它们全部内联进 `dist/extension.js`，所以打包时必须带 `--no-dependencies` —— 否则 vsce 会把整个 `node_modules` 再塞一遍（56 文件变 409、8.28MB 变 8.82MB）。`package` 脚本和两个 `vsce publish` 命令都已带这个标记。
+- **`@vscode/debugprotocol` 只提供类型**：`import { DebugProtocol }` 被 tsc 完全擦除，esbuild 不会把它打进 bundle。这是正常的，不要因为 bundle 里找不到它就以为少了依赖。
+- **两个 id 别搞混**：`clx` 是 language id（`contributes.languages[].id`），`clx_debug` 是 debugger type（`contributes.debuggers[].type`）。语言类 provider（inline values、语言配置）用前者，调试类（配置提供者、适配器工厂）用后者。inline values 曾错注册到 `clx_debug`，因此从未触发。
+- **设置命名空间统一在 `clx-language`**：注解颜色是 `clx-language.colors.*`（在 `package.json` 声明）。历史上代码读的是 `clx.colors.*` 和 `emmylua.source.roots` 这两个未声明的命名空间，用户既发现不了也改不动。
+- **`activationEvents` 按需声明**：`onLanguage:clx` 覆盖语法、补全、注解和 Run；`onDebugResolve:clx_debug` 覆盖调试。不要再写 `onDebug` —— 那会让任意工作区的调试都拉起本扩展的 Java 语言服务器。
 - **语言服务器**：`server/lua_ls.jar` 是 EmmyLua-LanguageServer 的修改版，用 Java 启动，需要 Java 11 或更高。标准库存根按 VS Code 的界面语言选择，中文用 `res/std_zh`，其他语言用 `res/std`。
 - **模拟器不再随包分发**：1.1.0 起模拟器按需下载到 `context.globalStorageUri`，由 `src/emulator.ts`（VS Code 适配）和 `src/emulatorBundle.ts`（纯逻辑）共同管理。清单 `res/emulator-manifest.json` 指向 GitHub Releases 的 asset。**已发布的 asset 永久不删**，否则旧版扩展在冷缓存时会失能。详见 `docs/adr/0001-emulator-bundles-outside-vsix.md`。
 - **归档源自官方发布**：模拟器二进制来自 <https://x.cololight.com/mweb/docs/examples> 的 zip，用 `scripts/pack-emulator.mjs` 重新打成 tar.gz。**不要用仓库里历史上那批 2023/2024 的 `debugger/` 二进制**：官方已不再单独发布 Nature，`coloX-32` 等规格改由同一个二进制处理，macOS 也改成了 `.app` bundle 布局，字体则编译进了可执行文件。

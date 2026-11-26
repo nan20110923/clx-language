@@ -135,6 +135,8 @@ yarn package
 
 `dist/` 和 `.artifacts/` 的分工：`dist/` 放**会被装进插件包**的构建产物（`extension.js`），`.artifacts/` 放**交出去**的东西（模拟器 tar.gz、vsix）。不要把 vsix 放进 `dist/`：`vscode:prepublish` 每次先 `rimraf dist`，上一份产物会被一起删掉。
 
+依赖分两层：运行时用到的 `@vscode/debugadapter`、`@vscode/debugprotocol`、`vscode-languageclient` 在 `dependencies`，其余在 `devDependencies`。esbuild 把它们全部内联进 `dist/extension.js`，所以打包要带 `--no-dependencies`，不然 vsce 会额外塞一份 `node_modules`（56 文件 → 409 文件）。`yarn package` 已带这个标记。
+
 插件包的内容由 `.vscodeignore` 控制。下面这些必须留在排除列表里：
 
 - `AGENTS.md` 和 `docs/**`：只需要给开发者看，不需要分发给用户。

@@ -42,9 +42,9 @@ export interface LaunchRequest {
  * 注意这是破坏性的探测：这个模拟器只接受一个客户端，连上去再断开可能
  * 把别人正在用的会话挤掉。只在确实要知道"能不能直接连"时调用。
  */
-export function probeDebugChannel(): Promise<boolean> {
+export function probeDebugChannel(host = DEBUG_HOST, port = DEBUG_PORT): Promise<boolean> {
 	return new Promise(resolve => {
-		const socket = net.connect({ port: DEBUG_PORT, host: DEBUG_HOST })
+		const socket = net.connect({ port, host })
 			.on('connect', () => {
 				socket.destroy()
 				resolve(true)
@@ -54,18 +54,18 @@ export function probeDebugChannel(): Promise<boolean> {
 }
 
 /** 建立一个到调试通道的客户端连接。调用方负责在结束时 destroy。 */
-export function connectDebugChannel(): net.Socket {
-	return net.connect({ port: DEBUG_PORT, host: DEBUG_HOST })
+export function connectDebugChannel(host = DEBUG_HOST, port = DEBUG_PORT): net.Socket {
+	return net.connect({ port, host })
 }
 
 /**
  * 等调试通道就绪。模拟器加载失败时也会继续监听端口，所以这个函数只说明
  * "端口能连上了"，不说明文件加载成功 —— 后者要看 .rom 文件。
  */
-export async function waitForDebugChannel(timeoutMs: number, intervalMs = 1000): Promise<boolean> {
+export async function waitForDebugChannel(timeoutMs: number, host = DEBUG_HOST, port = DEBUG_PORT, intervalMs = 1000): Promise<boolean> {
 	const deadline = Date.now() + timeoutMs;
 	for (;;) {
-		if (await probeDebugChannel()) {
+		if (await probeDebugChannel(host, port)) {
 			return true;
 		}
 		if (Date.now() >= deadline) {

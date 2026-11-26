@@ -32,7 +32,11 @@
         },
         "clx-language.debugger": {
           "type": "string",
-          "enum": ["Default", "Nature", "Custom"],
+          "enum": [
+            "Default",
+            "Nature",
+            "Custom"
+          ],
           "enumDescriptions": [
             "Use the emulator downloaded by the extension.",
             "Deprecated: the Nature emulator is no longer published separately; behaves like Default.",
@@ -45,6 +49,31 @@
           "type": "string",
           "default": "",
           "description": "Path to a local ColoX emulator. Only used when 'clx-language.debugger' is 'Custom'."
+        },
+        "clx-language.colors.parameter": {
+          "type": "string",
+          "default": "#9CDCFE",
+          "description": "Parameter name colour (clx annotator)."
+        },
+        "clx-language.colors.global": {
+          "type": "string",
+          "default": "#4FC1FF",
+          "description": "Global variable colour (clx annotator)."
+        },
+        "clx-language.colors.doc_type": {
+          "type": "string",
+          "default": "#4EC9B0",
+          "description": "Type name colour (clx annotator)."
+        },
+        "clx-language.colors.upvalue": {
+          "type": "string",
+          "default": "",
+          "description": "Upvalue underline colour (clx annotator). Empty disables the underline."
+        },
+        "clx-language.colors.not_use": {
+          "type": "string",
+          "default": "#808080",
+          "description": "Unused variable colour (clx annotator)."
         }
       }
     },
@@ -76,7 +105,7 @@
         "title": "CLX: Restart Lua Server"
       }
     ],
-    "keybindings":[
+    "keybindings": [
       {
         "command": "extension.clx-language.run",
         "key": "f5",
@@ -95,49 +124,45 @@
         "type": "clx_debug",
         "label": "CLX Debugger",
         "configurationAttributes": {
-            "launch": {
-                "required": [
-                    "host",
-                    "port"
-                ],
-                "properties": {
-                    "host": {
-                        "type": "string",
-                        "description": "host",
-                        "default": "localhost"
-                    },
-                    "port": {
-                        "type": "number",
-                        "description": "port",
-                        "default": 3563
-                    }
-                }
+          "launch": {
+            "properties": {
+              "host": {
+                "type": "string",
+                "description": "Debug channel host. Defaults to 127.0.0.1.",
+                "default": "127.0.0.1"
+              },
+              "port": {
+                "type": "number",
+                "description": "Debug channel port. Defaults to 3563.",
+                "default": 3563
+              }
             }
+          }
         },
         "initialConfigurations": [
-            {
-                "type": "clx_debug",
-                "request": "launch",
-                "name": "CLX Debugger",
-                "host": "localhost",
-                "port": 3563
-            }
+          {
+            "type": "clx_debug",
+            "request": "launch",
+            "name": "CLX Debugger",
+            "host": "127.0.0.1",
+            "port": 3563
+          }
         ],
         "configurationSnippets": [
-            {
-                "label": "CLX Debugger",
-                "description": "CLX Debugger",
-                "body": {
-                    "type": "clx_debug",
-                    "request": "launch",
-                    "name": "CLX Debugger",
-                    "host": "localhost",
-                    "port": 3563
-                }
+          {
+            "label": "CLX Debugger",
+            "description": "CLX Debugger",
+            "body": {
+              "type": "clx_debug",
+              "request": "launch",
+              "name": "CLX Debugger",
+              "host": "127.0.0.1",
+              "port": 3563
             }
+          }
         ],
         "languages": [
-            "clx"
+          "clx"
         ]
       }
     ],
@@ -177,37 +202,31 @@
     "esbuild-base": "esbuild ./src/extension.ts --bundle --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node --outfile=dist/extension.js",
     "watch": "npm run -S esbuild-base -- --sourcemap --sources-content=false --watch",
     "build": "npm run -S esbuild-base -- --sourcemap --sources-content=false",
-    "package": "node -e \"require('fs').mkdirSync('.artifacts',{recursive:true})\" && vsce package --out .artifacts/",
+    "package": "node -e \"require('fs').mkdirSync('.artifacts',{recursive:true})\" && vsce package --no-dependencies --out .artifacts/",
     "publish": "vsce publish",
     "publish-pre-release": "vsce publish --pre-release",
     "vscode:prepublish": "rimraf dist && npm run -S esbuild-base -- --minify",
     "test": "npm run typecheck"
   },
+  "dependencies": {
+    "@vscode/debugadapter": "1.61.0",
+    "@vscode/debugprotocol": "1.61.0",
+    "vscode-languageclient": "8.0.2"
+  },
   "devDependencies": {
-    "@types/glob": "^7.2.0",
-    "@types/mocha": "^9.1.0",
     "@types/node": "^20.5.9",
     "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^5.17.0",
     "@typescript-eslint/parser": "^5.17.0",
-    "@vscode/debugadapter": "^1.56.0",
-    "@vscode/debugadapter-testsupport": "^1.56.0",
     "@vscode/vsce": "^4.1.1",
-    "await-notify": "^1.0.1",
-    "base64-js": "^1.5.1",
     "esbuild": "^0.14.29",
     "eslint": "^8.12.0",
-    "events": "^3.3.0",
-    "glob": "^7.2.0",
-    "mocha": "^9.2.2",
-    "path-browserify": "^1.0.1",
     "rimraf": "^3.0.2",
-    "typescript": "^4.6.3",
-    "url": "^0.11.0",
-    "vscode-languageclient": "8.0.2"
+    "typescript": "^4.6.3"
   },
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onDebug"
+    "onLanguage:clx",
+    "onDebugResolve:clx_debug"
   ]
 }

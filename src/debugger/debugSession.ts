@@ -5,6 +5,8 @@ import { Uri, ViewColumn, commands, window, workspace } from "vscode";
 import { basename } from "path";
 import * as readline from "readline";
 import {
+	DEBUG_HOST,
+	DEBUG_PORT,
 	connectDebugChannel,
 	isEmulatorRunning,
 	probeDebugChannel,
@@ -60,7 +62,12 @@ export class DebugSession extends LoggingDebugSession {
     }
 
     protected async launchRequest(response: DebugProtocol.LaunchResponse, args: DebugProtocol.LaunchRequestArguments, request?: DebugProtocol.Request | undefined): Promise<void> {
-        var coloXToolExists = await probeDebugChannel()
+        // launch.json 里的 host/port 在这里生效（ConfigurationProvider 已经补过默认值）
+        const launchArgs = args as { host?: string; port?: number };
+        const host = launchArgs.host || DEBUG_HOST;
+        const port = launchArgs.port || DEBUG_PORT;
+
+        var coloXToolExists = await probeDebugChannel(host, port)
 
         if (!coloXToolExists && !isEmulatorRunning()) {
             // 先等模拟器就绪（可能要下载），再开始轮询调试端口
@@ -79,7 +86,7 @@ export class DebugSession extends LoggingDebugSession {
                 return;
             }
             // 最多等 10 秒。注意端口能连上不代表文件加载成功 —— 那要看 .rom
-            if (!(await waitForDebugChannel(10_000))) {
+            if (!(await waitForDebugChannel(10_000, host, port))) {
                 // 必须回 response，否则 VS Code 的 launch 请求永远挂起
                 response.success = false;
                 response.message = 'Timed out waiting for the CLX emulator debug channel.';
@@ -88,7 +95,7 @@ export class DebugSession extends LoggingDebugSession {
             }
         }
 
-        const client = connectDebugChannel().on('connect', () => {
+        const client = connectDebugChannel(host, port).on('connect', () => {
             this.sendResponse(response);
             this.onConnect(client);
         }).on('error', err => {
@@ -347,11 +354,45 @@ export class DebugSession extends LoggingDebugSession {
         }
     }
 
+    /**
+     * 求值。两种来源：
+     * - REPL 里用户敲的任意代码 → 用 `r` 在停下的帧里执行，不等应答，输出走 OutputEvent
+     * - inline values / 悬停要的是变量值 → 用 `p <名字>` 取回，必须等应答
+     *
+     * 必须等模拟器应答再 response，否则 inline values 拿不到值 —— 这是它
+     * 之前一直没效果的原因（基类只回空 success）。
+     */
     protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments, request?: DebugProtocol.Request | undefined): void {
-        if (args.context == 'repl') {
+        const session = this
+
+        if (args.context === 'repl') {
             this.sendMessage(args.expression)
+            response.body = { result: '', variablesReference: 0 }
+            this.sendResponse(response)
+            return
         }
-        super.evaluateRequest(response, args, request)
+
+        let settled = false
+        const settle = (value: string) => {
+            if (settled) {
+                return
+            }
+            settled = true
+            clearTimeout(timer)
+            response.body = { result: value, variablesReference: 0 }
+            session.sendResponse(response)
+        }
+
+        const timer = setTimeout(() => settle(''), 3000)
+
+        // p 的应答体就是值的文本（可能是多行）
+        this.hookMsg(this.getFilterMsgHook('p', function (stat, info) {
+            if (stat === 2) {
+                settle(info.join('\n').trim())
+            }
+        }, false, false))
+
+        this.sendMessage(`p ${args.expression}`)
     }
 
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {

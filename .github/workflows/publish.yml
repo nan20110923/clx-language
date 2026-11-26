@@ -42,8 +42,8 @@ jobs:
       # so a version published as pre-release needs a different one to go stable.
       - name: Publish pre-release
         if: inputs.pre_release
-        run: npx @vscode/vsce publish --oidc --pre-release
+        run: npx @vscode/vsce publish --no-dependencies --oidc --pre-release
 
       - name: Publish release
         if: ${{ !inputs.pre_release }}
-        run: npx @vscode/vsce publish --oidc
+        run: npx @vscode/vsce publish --no-dependencies --oidc
