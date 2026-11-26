@@ -71,7 +71,9 @@ export async function waitForDebugChannel(timeoutMs: number, host = DEBUG_HOST, 
 		if (Date.now() >= deadline) {
 			return false;
 		}
-		await new Promise<void>(resolve => setTimeout(resolve, intervalMs));
+		await new Promise<void>(resolve => {
+			setTimeout(resolve, intervalMs);
+		});
 	}
 }
 

@@ -9,7 +9,7 @@
  */
 
 import * as vscode from 'vscode';
-import { DEBUG_HOST, DEBUG_PORT } from '../emulatorProcess';
+import { DEBUG_HOST, DEBUG_PORT } from '../emulator/emulatorProcess';
 
 export interface DebugLocalConfiguration extends vscode.DebugConfiguration {
     host: string;

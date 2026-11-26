@@ -13,9 +13,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ensureEmulator, EmulatorError } from './emulator';
-import { EmulatorLaunch } from './emulatorBundle';
-import { startEmulator, type LaunchOutcome } from './emulatorProcess';
+import { ensureEmulator, EmulatorError } from './emulator/emulator';
+import { EmulatorLaunch } from './emulator/emulatorBundle';
+import { startEmulator, type LaunchOutcome } from './emulator/emulatorProcess';
 
 /**
  * 启动模拟器运行指定的 CLX 文件。
@@ -67,7 +67,7 @@ async function readDeviceSpec(file: vscode.Uri): Promise<string | undefined> {
 	const contentStr = new TextDecoder().decode(content);
 	const lines = contentStr.split(/\r?\n/);
 
-	if (lines.length == 0) {
+	if (lines.length === 0) {
 		vscode.window.showErrorMessage('CLX file no content!!');
 		return undefined;
 	}
@@ -88,7 +88,7 @@ function selectCustomEmulator(): string | null {
 	const config = vscode.workspace.getConfiguration('clx-language');
 	const type = config.get<string>('debugger');
 	const customPath = config.get<string>('debuggerCustomPath');
-	if (type == 'Custom' && customPath && customPath.length > 0) {
+	if (type === 'Custom' && customPath && customPath.length > 0) {
 		return customPath;
 	}
 	return null;

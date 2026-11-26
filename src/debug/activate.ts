@@ -14,7 +14,7 @@
 import * as vscode from 'vscode';
 import { DebugSession, StartEmulator } from './debugSession';
 import { ConfigurationProvider } from './configurationProvider';
-import { LANGUAGE_ID } from '../languageServer';
+import { LANGUAGE_ID } from '../ids';
 
 /** debugger type，必须与 package.json 的 contributes.debuggers[].type 一致 */
 const DEBUG_TYPE = 'clx_debug';

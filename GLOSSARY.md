@@ -12,9 +12,37 @@ ColoX 的可执行程序，当前唯一的产品形态是 `coloXtool`（macOS �
 
 ## 调试适配器 (debug adapter)
 
-把 VS Code 的 DAP 请求翻译成模拟器自带调试通道（本机 TCP 3563）协议的那层代码，位于 `src/debugger/`。
+把 VS Code 的 DAP 请求翻译成调试通道协议的那层代码，位于 `src/debug/debugSession.ts`。
 
-不叫 "debugger"，以区别于上面的模拟器。
+不叫 "debugger"，以区别于上面的模拟器。它不含协议细节 —— 那些在调试通道里。
+
+## 调试通道 (debug channel)
+
+模拟器自带的行协议：本机 TCP 3563，一行一条命令，应答用 `>-><token>` / `<-<<token>` 分帧。位于 `src/debug/debugChannel.ts`。
+
+它和调试适配器是两件事：适配器讲 DAP，通道讲模拟器的方言。两者之间的 seam 是这次重构的重点 —— 把协议知识集中到一处，才可能脱离 VS Code 测试。
+
+不叫 "debugger"，也不叫 "debug server"（那个词属于模拟器侧）。
+
+## 停止帧 (stop frame)
+
+调试通道里的异步应答，token 是 `@`，形状是 `>->@ … <-<@`。它不属于任何请求，可能在任何时刻到达，内容是 `func at source:line` 加一行的源码。
+
+调试适配器据此发 DAP 的 StoppedEvent。
+
+## 测试自动化 (test automation)
+
+通过调试通道操控被调试程序的那组命令：`btn` / `padset` / `mouse` / `key` 注入输入，`shot` 截图，`input?` 查询，`vmlist` / `vm` 管多 VM。
+
+和"看变量、走断点"是两件事，所以走 `src/debug/testAutomation.ts`，不并进调试通道。
+
+## 行号映射 (line mapping)
+
+`.clx` 源文件行号与模拟器 `__lua__` 缓冲区行号之间的对应关系，位于 `src/debug/lineMapping.ts`。
+
+需要它是因为 `#include` 会把被包含文件的字节直接拼进缓冲区，两者不再等差。校准以 `src __lua__` 返回的实际内容为准，`#include` 的行数解析只做交叉校验。
+
+有它才能把断点打在用户的原始文件上，而不必生成源码副本。
 
 ## 设备规格 (device specification)
 

@@ -4,23 +4,24 @@
  * 扩展入口：只做装配。
  *
  * 具体的活都在各自的 module 里：
- * - languageServer.ts  语言服务器（Java 子进程）
+ * - language/          语言服务器（Java 子进程）、注解、语言配置
+ * - emulator/          模拟器包的获取与进程生命周期
+ * - debug/             调试适配器（DAP）与调试通道
  * - runClxFile.ts      选模拟器并启动，运行/调试都走它
- * - emulator*.ts       模拟器包的获取与进程生命周期
- * - debugger/          调试适配器（DAP）
- * - annotations.ts     注解的接线
+ * - ids.ts             两个 id 与设置命名空间
  *
  * 这里不持有业务状态，只把它们的生命周期挂到 context.subscriptions 上。
  */
 
 import * as vscode from 'vscode';
-import { ClxLanguageConfiguration } from './languageConfiguration';
-import { ClxLanguageServer } from './languageServer';
-import { Annotations, disposeAnnotations, onAnnotationsConfigurationChanged } from './annotations';
+import { LANGUAGE_ID } from './ids';
+import { clxLanguageConfiguration } from './language/languageConfiguration';
+import { ClxLanguageServer } from './language/languageServer';
+import { Annotations, disposeAnnotations, onAnnotationsConfigurationChanged } from './language/annotations';
 import { runClxFile } from './runClxFile';
-import { activateDebug } from './debugger/activate';
-import { disposeEmulatorOutput } from './emulator';
-import { isEmulatorRunning, probeDebugChannel } from './emulatorProcess';
+import { activateDebug } from './debug/activate';
+import { disposeEmulatorOutput } from './emulator/emulator';
+import { isEmulatorRunning, probeDebugChannel } from './emulator/emulatorProcess';
 
 let languageServer: ClxLanguageServer | undefined;
 let annotations: Annotations | undefined;
@@ -30,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
 	annotations = new Annotations(() => languageServer?.client);
 
 	context.subscriptions.push(
-		vscode.languages.setLanguageConfiguration('clx', new ClxLanguageConfiguration()),
+		vscode.languages.setLanguageConfiguration(LANGUAGE_ID, clxLanguageConfiguration),
 		annotations,
 		vscode.commands.registerCommand('extension.clx-language.run', async (resource: vscode.Uri) => {
 			const busy = (await probeDebugChannel()) || isEmulatorRunning();

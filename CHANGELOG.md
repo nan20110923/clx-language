@@ -1,3 +1,25 @@
+### 1.2.0 (2026-11-26)
+
+* Breaking:
+  * The minimum supported VS Code version is now 1.91.0, raised from 1.80.0. Users on 1.80–1.90 will stay on 1.1.0; the Marketplace does not offer them this version.
+* Changed:
+  * Debugging now sets breakpoints on your original `.clx` file instead of generating a `debug_temp.clx` copy. Line numbers are calibrated against the source the emulator actually loaded, so they stay correct even with `#include`.
+  * Source layout reorganized into `src/language/`, `src/emulator/` and `src/debug/`.
+* New:
+  * The call stack is read from the emulator, so stack frames and frame selection work.
+  * Conditional breakpoints are supported.
+  * The Debug Console forwards input to the emulator, and the Globals scope is populated.
+  * `yarn test` now runs real tests over the debug protocol parsing and line mapping.
+  * `yarn lint` works (the repository previously had no ESLint configuration).
+* Dependencies:
+  * `vscode-languageclient` 8.0.2 → 11.0.1, `@vscode/debugadapter` and `@vscode/debugprotocol` 1.61.0 → 1.68.0, `typescript` 4.9.5 → 5.9.3, `esbuild` 0.14.54 → 0.28.2, `eslint` 8.49.0 → 10.15.0.
+  * `tsconfig.json` now uses `module`/`moduleResolution` `node16`, required by the language client's package exports.
+* Bug Fixed:
+  * The annotation renderer could append to an undefined range list for an unexpected annotator type.
+  * Stopping a debug session now actually terminates the emulator; previously the process was left running.
+* Known limitation:
+  * The Locals scope cannot be populated: the emulator's `i local` command reports the wrong stack frame. Use `p <name>` in the Debug Console, which resolves locals and upvalues correctly.
+
 ### 1.1.0 (2026-11-26)
 
 * Changed:

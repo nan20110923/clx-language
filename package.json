@@ -4,13 +4,13 @@
   "publisher": "LifeSmart",
   "description": "Development tool for coloX",
   "icon": "res/icon.png",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/nan20110923/clx-language"
   },
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.91.0"
   },
   "categories": [
     "Programming Languages",
@@ -197,7 +197,7 @@
     ]
   },
   "scripts": {
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node --outfile=dist/extension.js",
     "watch": "npm run -S esbuild-base -- --sourcemap --sources-content=false --watch",
@@ -206,23 +206,23 @@
     "publish": "vsce publish",
     "publish-pre-release": "vsce publish --pre-release",
     "vscode:prepublish": "rimraf dist && npm run -S esbuild-base -- --minify",
-    "test": "npm run typecheck"
+    "test": "node scripts/run-tests.mjs"
   },
   "dependencies": {
-    "@vscode/debugadapter": "1.61.0",
-    "@vscode/debugprotocol": "1.61.0",
-    "vscode-languageclient": "8.0.2"
+    "@vscode/debugadapter": "1.68.0",
+    "@vscode/debugprotocol": "1.68.0",
+    "vscode-languageclient": "11.0.1"
   },
   "devDependencies": {
-    "@types/node": "^20.5.9",
-    "@types/vscode": "^1.80.0",
-    "@typescript-eslint/eslint-plugin": "^5.17.0",
-    "@typescript-eslint/parser": "^5.17.0",
+    "@types/node": "^20.19.43",
+    "@types/vscode": "^1.91.0",
+    "@typescript-eslint/eslint-plugin": "^8.74.0",
+    "@typescript-eslint/parser": "^8.74.0",
     "@vscode/vsce": "^4.1.1",
-    "esbuild": "^0.14.29",
-    "eslint": "^8.12.0",
-    "rimraf": "^3.0.2",
-    "typescript": "^4.6.3"
+    "esbuild": "^0.28.2",
+    "eslint": "^10.15.0",
+    "rimraf": "^6.1.4",
+    "typescript": "5.9.3"
   },
   "main": "./dist/extension.js",
   "activationEvents": [

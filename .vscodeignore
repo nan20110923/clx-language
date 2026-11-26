@@ -9,10 +9,12 @@ vsc-extension-quickstart.md
 # 只在仓库里用，不分发给用户
 scripts/**
 static/**
+test/**
 GLOSSARY.md
 .artifacts/**
 
 # 源码由 esbuild 打包成 dist/extension.js，运行时没有读者。
-# 漏掉这两条会把 13 个 .ts 和一份会过期的 tsconfig.json 一起发出去。
+# 漏掉这些会把 .ts 源码、测试、lint 配置和一份会过期的 tsconfig.json 一起发出去。
 src/**
 tsconfig.json
+eslint.config.mjs

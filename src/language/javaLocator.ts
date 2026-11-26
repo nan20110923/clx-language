@@ -15,7 +15,7 @@ import * as vscode from 'vscode';
  */
 export function substituteFolder(originalPath: string): string {
 	let result = originalPath;
-	const pattern = /(?:\$\{workspaceFolder(?:\:([^\.]+))?\})/;
+	const pattern = /(?:\$\{workspaceFolder(?:[:]([^.]+))?\})/;
 	const match = pattern.exec(originalPath);
 	if (match !== null) {
 		const folder = findWorkspaceFolderByName(match[1]);

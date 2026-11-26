@@ -10,7 +10,7 @@
 
 import * as vscode from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
-import { LANGUAGE_ID } from './languageServer';
+import { LANGUAGE_ID } from '../ids';
 
 // ---------------------------------------------------------------------------
 // 语言服务器的 emmy/annotator 报文
@@ -50,10 +50,10 @@ let D_UPVALUE: vscode.TextEditorDecorationType;
 let D_NOTUSE: vscode.TextEditorDecorationType;
 
 function createDecoration(key: string | undefined, config: vscode.DecorationRenderOptions = {}): vscode.TextEditorDecorationType {
-    if (key == undefined) {
+    if (key === undefined) {
         return vscode.window.createTextEditorDecorationType(config);
     }
-    let color = vscode.workspace.getConfiguration("clx-language").get(key);
+    const color = vscode.workspace.getConfiguration("clx-language").get(key);
     if (typeof (color) === 'string') {
         config.light = { color: color };
         config.dark = { color: color };
@@ -75,8 +75,8 @@ function updateDecorations() {
     D_GLOBAL = createDecoration("colors.global");
     D_DOC_TYPE = createDecoration("colors.doc_type");
 
-    let upvalueColor = vscode.workspace.getConfiguration("clx-language").get("colors.upvalue");
-    if (upvalueColor && upvalueColor != "") {
+    const upvalueColor = vscode.workspace.getConfiguration("clx-language").get("colors.upvalue");
+    if (upvalueColor && upvalueColor !== "") {
         D_UPVALUE = createDecoration(undefined, {
             textDecoration: `underline;text-decoration-color:${upvalueColor};`
         });
@@ -120,9 +120,9 @@ function requestAnnotatorsImpl(editor: vscode.TextEditor, client: LanguageClient
         updateDecorations();
     }
 
-    let params: AnnotatorParams = { uri: editor.document.uri.toString() };
+    const params: AnnotatorParams = { uri: editor.document.uri.toString() };
     client.sendRequest<IAnnotator[]>("emmy/annotator", params).then(list => {
-        let map: Map<AnnotatorType, RenderRange[]> = new Map();
+        const map: Map<AnnotatorType, RenderRange[]> = new Map();
         map.set(AnnotatorType.DocType, []);
         map.set(AnnotatorType.Param, []);
         map.set(AnnotatorType.Global, []);
@@ -133,11 +133,11 @@ function requestAnnotatorsImpl(editor: vscode.TextEditor, client: LanguageClient
         }
 
         list.forEach(data => {
-            let uri = vscode.Uri.parse(data.uri);
-            let uriSet = new Set<string>();
+            const uri = vscode.Uri.parse(data.uri);
+            const uriSet = new Set<string>();
             // 而vscode 在diff，分屏以及其他一些情况下可以获得多个相同的uri
             vscode.window.visibleTextEditors.forEach((editor) => {
-                let docUri = editor.document.uri;
+                const docUri = editor.document.uri;
                 if (uriSet.has(docUri.path)) {
                     return;
                 }

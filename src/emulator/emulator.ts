@@ -26,9 +26,10 @@ import {
 	provision
 } from './emulatorBundle';
 
+// EmulatorError 需要再导出：runClxFile 用它区分"清单/下载失败"和普通异常，
+// 而它属于 emulatorBundle 的词汇。其余类型消费者直接去 emulatorBundle 取，
+// 不在这里做第二道贩子（历史上四个 type re-export 有两个是无人使用的）。
 export { EmulatorError } from './emulatorBundle';
-export type { EmulatorLaunch, EmulatorPlatform } from './emulatorBundle';
-export type { EmulatorBundle, EmulatorManifest } from './emulatorBundle';
 
 const MANIFEST_PATH = ['res', 'emulator-manifest.json'];
 const DOWNLOAD_CONFIRMED_KEY = 'emulatorDownloadConfirmed';
