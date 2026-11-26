@@ -55,6 +55,45 @@ export interface Cancellation {
 	onCancellationRequested(listener: () => void): { dispose(): void };
 }
 
+/**
+ * 下载用的 HTTP 传输。是 `node:http` / `node:https` 的 `get` 的结构子集。
+ *
+ * 单独抽出来是为了可测：`download()` 里的重定向、sha256 校验、取消、
+ * 进度上报都是真实逻辑，但它们此前只能靠真的联网验证。注入一个假传输就能
+ * 在普通 Node 里跑完整分支。
+ */
+export interface HttpTransport {
+	get(
+		url: URL,
+		options: { headers: Record<string, string> },
+		onResponse: (response: HttpTransportResponse) => void
+	): HttpTransportRequest;
+}
+
+/** 应答对象用到的部分（IncomingMessage 的子集）。 */
+export interface HttpTransportResponse {
+	statusCode?: number;
+	headers: Record<string, string | string[] | undefined>;
+	on(event: 'data', listener: (chunk: Buffer) => void): void;
+	on(event: 'error', listener: (error: Error) => void): void;
+	resume(): void;
+	pipe(destination: NodeJS.WritableStream): void;
+}
+
+/** 请求对象用到的部分（ClientRequest 的子集）。 */
+export interface HttpTransportRequest {
+	on(event: 'error', listener: (error: Error) => void): void;
+	destroy(): void;
+}
+
+/** 默认传输：按 URL 协议选 http 或 https。 */
+const defaultTransport: HttpTransport = {
+	get(url, options, onResponse) {
+		const transport = url.protocol === 'http:' ? http : https;
+		return transport.get(url, options, onResponse as never) as unknown as HttpTransportRequest;
+	}
+};
+
 /** vscode.Progress 的结构子集，同理。 */
 export interface ProgressSink {
 	report(value: { message?: string; increment?: number }): void;
@@ -130,10 +169,13 @@ export function locateBundle(cacheRoot: string, bundle: EmulatorBundle): BundleI
  * 让 request.directory 里有一份可用的包：下载、校验、解压、原子替换。
  * 用户取消时返回 null —— 这不是错误，调用方应静默退出。
  */
-export async function provision(request: ProvisionRequest): Promise<EmulatorLaunch | null> {
+export async function provision(
+	request: ProvisionRequest,
+	transport: HttpTransport = defaultTransport
+): Promise<EmulatorLaunch | null> {
 	const url = assetUrl(request.manifest, request.bundle);
 	try {
-		return await install(request, url);
+		return await install(request, url, transport);
 	} catch (e) {
 		if (e instanceof CancelledError) {
 			request.log?.('Download cancelled.');
@@ -171,7 +213,7 @@ function launchFor(directory: string, bundle: EmulatorBundle): EmulatorLaunch {
 	return launch;
 }
 
-async function install(request: ProvisionRequest, url: string): Promise<EmulatorLaunch> {
+async function install(request: ProvisionRequest, url: string, transport: HttpTransport): Promise<EmulatorLaunch> {
 	const { bundle, directory, log, progress, cancellation } = request;
 	const parent = path.dirname(directory);
 	fs.mkdirSync(parent, { recursive: true });
@@ -184,7 +226,7 @@ async function install(request: ProvisionRequest, url: string): Promise<Emulator
 	log?.(`Downloading ${url}`);
 
 	try {
-		await download(url, archive, bundle.sha256, progress, cancellation);
+		await download(url, archive, bundle.sha256, progress, cancellation, 0, transport);
 	} catch (e) {
 		removeDir(archive, log);
 		if (e instanceof CancelledError) {
@@ -236,7 +278,8 @@ function download(
 	expectedSha256: string,
 	progress: ProgressSink | undefined,
 	cancellation: Cancellation | undefined,
-	redirects = 0
+	redirects = 0,
+	transport: HttpTransport = defaultTransport
 ): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		if (redirects > 5) {
@@ -249,7 +292,6 @@ function download(
 		}
 
 		const target = new URL(url);
-		const transport = target.protocol === 'http:' ? http : https;
 		const request = transport.get(
 			target,
 			{ headers: { 'User-Agent': 'vscode-clx-language', Accept: 'application/octet-stream' } },
@@ -262,7 +304,7 @@ function download(
 						reject(new Error(`Redirect ${status} without a Location header.`));
 						return;
 					}
-					download(new URL(location, target).toString(), destination, expectedSha256, progress, cancellation, redirects + 1)
+					download(new URL(location, target).toString(), destination, expectedSha256, progress, cancellation, redirects + 1, transport)
 						.then(resolve, reject);
 					return;
 				}
