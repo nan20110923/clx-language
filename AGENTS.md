@@ -16,15 +16,17 @@ Node.js 22 或更高，包管理器只使用 yarn 1。
 |---|---|
 | 安装依赖 | `yarn install`，CI 里加 `--frozen-lockfile` |
 | 构建 | `yarn build`，监听改动用 `yarn watch` |
-| 类型检查 | `yarn typecheck`（`yarn test` 是同一个命令） |
+| 类型检查 | `yarn typecheck`（`tsc --noEmit`） |
+| Lint | `yarn lint`（`eslint src`） |
+| 测试 | `yarn test`（`node:test`） |
 | 打包 | `yarn package`，在 `.artifacts/` 生成 `clx-language-<version>.vsix` |
 | 本地运行 | 在 VS Code 里按 `F5`，启动配置是 `Extension` |
 
 不要使用的命令：
 
 - `npm install`、`npm ci`：仓库只用 yarn。npm 会重新生成 `package-lock.json`，并把 `yarn.lock` 改写成 npm 的格式。`npm run <script>` 没有问题。
-- `yarn lint`：仓库里没有 ESLint 配置文件，会直接报错。
 - 直接用 `tsc` 编译到磁盘：类型检查走 `--noEmit`，构建走 esbuild。
+- 把 `typescript` 升到 7.x：见下面「TypeScript 为什么停在 5.9.3」。
 
 ## 目录
 
@@ -100,6 +102,8 @@ dist/                         esbuild 打包产物（extension.js），不入库
 - 官方 macOS 包是 ad-hoc 签名、未公证。插件自己下载的文件不带 quarantine 属性所以能直接跑；用户手动下载的会被 Gatekeeper 拦，README 里给了 `xattr -d com.apple.quarantine`。
 - 代码风格跟随所在文件现有的缩进和写法，不要顺手格式化整个文件。注释里中英文都有，保持原样即可。
 - 工作区设置把 `main` 设为受保护分支（`.vscode/settings.json`），在 VS Code 里直接提交到 `main` 会提示新建分支。
+- **TypeScript 锁在 5.9.3，不要升到 7.x。** TS 7 是原生重写版，`require("typescript")` 只返回 `{ version }`（编译 API 在 `./unstable/*` 下），`@typescript-eslint` 会直接拒绝启动。官方共存方案要把 `typescript` alias 到 `@typescript/typescript6`、TS 7 用别名给 `tsc`，但 **yarn 1 不支持 npm alias**（空白项目上也会失败）。要升就得连包管理器一起换。详细理由见 `docs/development.md`。
+- `@typescript-eslint@8` 的 peer 是 `typescript >=4.8.4 <6.1.0`。换 TS 版本前先确认还落在范围里，否则 `yarn lint` 会挂。
 
 ## 打包规则
 
@@ -116,14 +120,16 @@ dist/                         esbuild 打包产物（extension.js），不入库
 
 ## 验证改动
 
-仓库没有自动化测试。交付前至少做完下面这些：
+交付前至少做完下面这些：
 
-1. `yarn typecheck` 通过。
-2. `yarn package` 成功，产物在 `.artifacts/clx-language-<version>.vsix`。改动涉及打包内容时用 `unzip -l .artifacts/*.vsix` 检查，确认该有的在、不该有的不在（`src/`、`out/`、`tsconfig.json` 都不该出现）。CI 的 `Build VSIX` workflow 会跑同样的断言。
+1. `yarn typecheck`、`yarn lint`、`yarn test` 三条都过。
+2. `yarn package` 成功，产物在 `.artifacts/clx-language-<version>.vsix`。改动涉及打包内容时用 `unzip -l .artifacts/*.vsix` 检查，确认该有的在、不该有的不在（`src/`、`test/`、`out/`、`tsconfig.json`、`eslint.config.mjs` 都不该出现）。CI 的 `Build VSIX` workflow 会跑同样的断言。
 3. 改动涉及运行时行为时，按 `F5` 在 Extension Development Host 里实际验证：
    - 打开一个 `.clx` 文件，语法高亮和补全正常（本机需要 Java 11 或更高）。
-   - 点击编辑器右上角的运行按钮，模拟器启动，并在文件的同级目录生成 `.rom` 文件。
-   - 调试流程：断点应打在原始 `.clx` 文件上并显示为已填充的圆点。对照 `<文件>.clx.rom` 是否生成（模拟器真的加载了文件），**不要**看 3563 端口是否打开 —— 加载失败时它也会监听。
+   - 点击编辑器右上角的运行按钮，模拟器启动，并生成 `<文件名>.clx.rom`。
+   - 调试流程：断点应打在原始 `.clx` 文件上，停下时报告**原文件的行号**，调用栈、Globals、监视都有内容。对照 `<文件名>.clx.rom` 是否生成（模拟器真的加载了文件），**不要**看 3563 端口是否打开 —— 加载失败时它也会监听。
+
+**测试覆盖什么、不覆盖什么**：`test/` 只覆盖不 import `vscode` 的纯逻辑（协议解析、行号映射、值转换、命令构造）。DAP 适配器本身、以及和真实模拟器的交互，只能靠上面的 F5 验证 —— 没有自动化。所以改动 `debugSession.ts` 一定要手工跑一次调试。
 
 验证模拟器时的注意点：
 

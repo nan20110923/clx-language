@@ -25,6 +25,8 @@ jobs:
           cache: yarn
       - run: yarn install --frozen-lockfile
       - run: yarn typecheck
+      - run: yarn lint
+      - run: yarn test
       # vscode:prepublish runs automatically and bundles src/ into dist/
       - run: yarn package
 
@@ -59,7 +61,7 @@ jobs:
             fi
           done
 
-          leaked=$(echo "$listing" | grep -E '^extension/(src/|out/|tsconfig\.json$)' || true)
+          leaked=$(echo "$listing" | grep -E '^extension/(src/|test/|out/|tsconfig\.json$|eslint\.config\.mjs$)' || true)
           if [ -n "$leaked" ]; then
             echo "::error title=Source leaked into vsix::These must be excluded by .vscodeignore:"
             echo "$leaked"
