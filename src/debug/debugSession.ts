@@ -61,6 +61,30 @@ import type { LaunchOutcome } from '../emulator/emulatorProcess';
 /** 启动模拟器的回调。由扩展入口注入，避免 debug/ 反向 import extension。 */
 export type StartEmulator = (debug: boolean) => Promise<LaunchOutcome>;
 
+/**
+ * 建立调试通道的方式。
+ *
+ * 生产用真实的 TCP 连接（默认实现），测试传一个假实现 —— 这样 DAP 层的
+ * 请求处理可以在普通 Node 里驱动，不必启动 VS Code 或模拟器。
+ */
+/**
+ * 检查调试端口是否已经可用。
+ *
+ * 和 ChannelFactory 一样是外部依赖：测试里不能真的去轮询本机 3563，
+ * 所以由调用方注入。返回 true 表示"模拟器已就绪，可以直接连"。
+ */
+export type ChannelProbe = (host: string, port: number) => Promise<boolean>;
+
+export type ChannelFactory = (
+	host: string,
+	port: number,
+	options: {
+		onStop: (event: StopEvent) => void;
+		onOutputLine: (line: string) => void;
+		onClose: () => void;
+	}
+) => DebugChannel;
+
 /** 模拟器把卡带的 Lua 注册在这个固定名字下。不是文件名。 */
 const LUA_SOURCE_NAME = '__lua__';
 
@@ -124,6 +148,24 @@ export class DebugSession extends LoggingDebugSession {
 
 	constructor(
 		private readonly startEmulator: StartEmulator,
+		/**
+		 * 建立到调试通道的连接。
+		 *
+		 * 参数注入而不是在 launchRequest 里直接 `DebugChannel.connect(...)`：
+		 * 这个类是本仓库最容易出 bug 的地方（历史上 terminateRequest 没实现、
+		 * stackTrace 返回过期帧、断点被丢弃，三处都在这里），而"自己 new 依赖"
+		 * 让它在普通 Node 里无法驱动 —— DAP 请求只能靠按 F5 手工验证。
+		 *
+		 * 传一个假 channel 就能直接调 setBreakPointsRequest / terminateRequest，
+		 * 不需要 socket，也不需要 VS Code 的调试宿主。
+		 */
+		private readonly connect: ChannelFactory = (host, port, options) =>
+			DebugChannel.connect(host, port, options),
+		/**
+		 * 探测调试端口是否可用。默认用真实轮询；测试注入一个立即返回 true 的版本，
+		 * 否则每个用例都要空等 waitForDebugChannel 的超时。
+		 */
+		private readonly probe: ChannelProbe = (host, port) => waitForDebugChannel(1_000, host, port),
 		storageRoot?: vscode.Uri
 	) {
 		super('clx.debug.txt');
@@ -163,7 +205,7 @@ export class DebugSession extends LoggingDebugSession {
 		}
 
 		try {
-			this.channel = DebugChannel.connect(host, port, {
+			this.channel = this.connect(host, port, {
 				onStop: event => this.onStop(event),
 				onOutputLine: line => this.sendEvent(new OutputEvent(`${line}\n`)),
 				onClose: () => this.sendEvent(new TerminatedEvent())
@@ -618,7 +660,7 @@ export class DebugSession extends LoggingDebugSession {
 	 * 返回 undefined 表示可以继续；返回字符串是失败原因。
 	 */
 	private async prepareEmulator(host: string, port: number): Promise<string | undefined> {
-		if (isEmulatorRunning() || (await waitForDebugChannel(1_000, host, port))) {
+		if (isEmulatorRunning() || (await this.probe(host, port))) {
 			return undefined;
 		}
 		const outcome = await this.startEmulator(true);

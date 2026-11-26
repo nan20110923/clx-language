@@ -44,6 +44,11 @@ try {
 				'--target=node22',
 				// 解析 .ts 相对导入时按 TS 语义走
 				'--loader:.ts=ts',
+				// 把 `vscode` 指向测试替身。这样 import 了 vscode 的 module
+				// （debugSession）也能在普通 Node 里驱动，不必启动编辑器。
+				// 用打包期别名而不是运行时塞 require.cache：bundle 落在临时目录，
+				// 任何基于源码路径的 require.resolve 都会落空。
+				`--alias:vscode=${join(testDir, 'support', 'vscode-stub.ts')}`,
 				`--outfile=${outfile}`
 			],
 			{ cwd: repoRoot, stdio: 'inherit' }
@@ -57,7 +62,10 @@ try {
 
 	const run = spawnSync(process.execPath, ['--test', ...bundled], {
 		cwd: repoRoot,
-		stdio: 'inherit'
+		stdio: 'inherit',
+		// 护栏测试要检查仓库里的源文件，但测试本身跑在临时目录里，
+		// 拿不到仓库位置，所以显式传进去。
+		env: { ...process.env, CLX_REPO_ROOT: repoRoot }
 	});
 	failed = run.status !== 0;
 } finally {

@@ -236,7 +236,8 @@
     "publish": "vsce publish",
     "publish-pre-release": "vsce publish --pre-release",
     "vscode:prepublish": "rimraf dist && npm run -S esbuild-base -- --minify",
-    "test": "node scripts/run-tests.mjs"
+    "test": "node scripts/run-tests.mjs",
+    "e2e": "node scripts/e2e-smoke.mjs"
   },
   "dependencies": {
     "@vscode/debugadapter": "1.68.0",

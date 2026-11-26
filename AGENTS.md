@@ -19,6 +19,7 @@ Node.js 22 或更高，包管理器只使用 yarn 1。
 | 类型检查 | `yarn typecheck`（`tsc --noEmit`） |
 | Lint | `yarn lint`（`eslint src`） |
 | 测试 | `yarn test`（`node:test`） |
+| 端到端 | `yarn e2e`（需图形界面 + 模拟器，不进 CI） |
 | 打包 | `yarn package`，在 `.artifacts/` 生成 `clx-language-<version>.vsix` |
 | 本地运行 | 在 VS Code 里按 `F5`，启动配置是 `Extension` |
 
@@ -81,14 +82,13 @@ dist/                         esbuild 打包产物（extension.js），不入库
 - **模拟器的选择**：只有两条路。设置了 `clx-language.debugger` = `Custom` 且填了 `debuggerCustomPath` 时完全接管，不下载也不回落；否则用下载的官方包。`Nature` 选项已废弃（等价于 Default）。
 - **设备规格不枚举**：首行只要匹配 `coloX-<字母数字>` 或 `X-<宽>x<高>` 就交给模拟器自己判断。不要重新引入 `(4|16|32)` 这类白名单，官方会加新规格（`coloX-PICO8` 就是这么出现的）。
 - **调试适配器是内联的**：`src/debug/activate.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0].program` 指向一个不存在的路径，这是遗留配置，不需要补这个文件。
-- **调试通道**：本机 TCP 3563，只允许一个客户端连接。端口号和探测/连接逻辑都在 `src/emulator/emulatorProcess.ts`，不要在别处硬编码。启动前必须先等模拟器就绪（可能要下载），再开始轮询端口。协议层（命令字、应答体形状、分帧）全部在 `src/debug/debugChannel.ts` 与 `src/debug/luaProtocol.ts`，**不要在调试适配器里直接拼命令**。
-- **断点打在原始 `.clx` 文件上，不生成源码副本**。模拟器从不读 `debug_temp.clx` —— 它只认内部名为 `__lua__` 的缓冲区。行号换算由 `src/debug/lineMapping.ts` 负责，以 `src __lua__` 返回的实际内容校准；映射建立不起来时**拒绝启动调试**，不要回退到生成副本。详见 `docs/adr/0002-breakpoints-on-the-original-file.md`。
-- **`-x` 启动的模拟器会停在 `XLUADBG wait`**：它打印 `use XLUADBG wait` 后一帧都不画，必须收到 `c` 才动。所以调试会话**必须**覆写 `configurationDoneRequest` 并发 `c` —— 基类只回 success，不覆盖的表现就是调试时窗口里没有画面。同理，声明了 `supportsTerminateRequest` 就必须覆写 `terminateRequest`，否则"停止"只回 success，模拟器进程会一直留着。诊断时可以用协议自带的 `shot` 命令截图，比看窗口可靠。
-- **`src __lua__` 应答里的 `__lua__:N`，N 是行数不是起始行号**，且**比正文行数少 1**（文件末尾空行不计）。别拿它做行号校验，正文是权威。历史上它被误读成"`__lua__` 段在原文件里的起始行"，导致断点整体错位。
-- **`i local` 拿不到真正的局部变量**：模拟器内嵌的 Lua helper 硬编码了 `debug.getlocal(frame + 2, …)` 的 `+2`，帧偏移错，报的是卡带顶层 chunk。同一帧上 `p <名字>` 是正确的。所以 Variables 面板的 Locals 会明确提示改用 `p`，不要试图靠解析 `i local` 的文本凑出局部变量。
-- **测试自动化不能自己连 3563**：注入按键、截图、查输入状态都走活动调试会话的 `clx.testAutomation` 自定义请求。自己开第二条连接会把扩展的调试连接挤掉，表现像插件坏了。截图路径由适配器定向到 `globalStorageUri/screenshots/`，**不要**让模拟器用默认路径 —— 它的工作目录是用户的源码目录，BMP 会落在源码旁边。金图比对不做，只显示像素 md5。
-- **`!` 前缀是控制台的逃生口**：调试控制台里 `!btn LEFT 30` 走测试自动化，其余输入原样转发给模拟器。两者都不解释内容 —— REPL 里用户敲的就是模拟器命令。
-- **协议权威来源**：`msl_naturexd` 仓库的 `c/coloX/src/coloX_dbg.cpp` 是权威实现（文档是摘要，漏掉应答体形状和错误文本），`c/coloX/guide/debug.md` 是官方文档，`dbgtool/` 是手工客户端参考。改协议层前先对照它们；`help` 命令也能从模拟器直接问出全量命令表。
+- **动调试代码前先读 `docs/development.md` 的「调试」一节和 `docs/adr/0002-breakpoints-on-the-original-file.md`。** 协议机制都在那里，这里只列不能违反的约束：
+  - 断点打在用户的**原始 `.clx` 文件**上。不要重新生成源码副本 —— 那会同时引入两份行号语义。
+  - 行号映射建不起来时**拒绝启动调试**，不要猜、不要回退。
+  - **不要开第二条到 3563 的连接。** 测试自动化、命令面板、任何新功能都通过活动调试会话的 `clx.testAutomation` 请求。单客户端意味着第二条连接会踢掉扩展自己的。
+  - 协议的命令字和应答体形状只写在 `debugChannel.ts` / `luaProtocol.ts`。**不要在调试适配器里拼命令**。
+  - 端口号和探测逻辑只在 `src/emulator/emulatorProcess.ts`。
+  - 截图路径由适配器定向到 `globalStorageUri/screenshots/`。模拟器的工作目录是用户源码目录，用默认路径会把 BMP 丢在源码旁边。
 - **`src/debug/` 不许反向 import `extension.ts`**：调试会话需要启动模拟器时，通过 `activateDebug(context, startEmulator)` 注入的回调用；需要的进程状态从 `src/emulator/emulatorProcess.ts` 取。历史上这里是循环依赖，会让调试适配器无法脱离整个扩展测试。
 - **终端用户取消要静默**：`runColoXTool` 返回 `'started' | 'cancelled' | 'failed'`，不是布尔值。用户拒绝下载模拟器时是 `'cancelled'`，调用方不要弹任何错误框。
 
@@ -102,6 +102,7 @@ dist/                         esbuild 打包产物（extension.js），不入库
 - 官方 macOS 包是 ad-hoc 签名、未公证。插件自己下载的文件不带 quarantine 属性所以能直接跑；用户手动下载的会被 Gatekeeper 拦，README 里给了 `xattr -d com.apple.quarantine`。
 - 代码风格跟随所在文件现有的缩进和写法，不要顺手格式化整个文件。注释里中英文都有，保持原样即可。
 - 工作区设置把 `main` 设为受保护分支（`.vscode/settings.json`），在 VS Code 里直接提交到 `main` 会提示新建分支。
+- **提交前钩子跑 lint/typecheck/test**：仓库用 `core.hooksPath=.githooks`（不是 husky）。换机器 clone 后要执行一次 `git config core.hooksPath .githooks`，否则钩子不生效。确实需要跳过时用 `git commit --no-verify`。
 - **TypeScript 锁在 5.9.3，不要升到 7.x。** TS 7 是原生重写版，`require("typescript")` 只返回 `{ version }`（编译 API 在 `./unstable/*` 下），`@typescript-eslint` 会直接拒绝启动。官方共存方案要把 `typescript` alias 到 `@typescript/typescript6`、TS 7 用别名给 `tsc`，但 **yarn 1 不支持 npm alias**（空白项目上也会失败）。要升就得连包管理器一起换。详细理由见 `docs/development.md`。
 - `@typescript-eslint@8` 的 peer 是 `typescript >=4.8.4 <6.1.0`。换 TS 版本前先确认还落在范围里，否则 `yarn lint` 会挂。
 
@@ -127,14 +128,13 @@ dist/                         esbuild 打包产物（extension.js），不入库
 3. 改动涉及运行时行为时，按 `F5` 在 Extension Development Host 里实际验证：
    - 打开一个 `.clx` 文件，语法高亮和补全正常（本机需要 Java 11 或更高）。
    - 点击编辑器右上角的运行按钮，模拟器启动，并生成 `<文件名>.clx.rom`。
-   - 调试流程：断点应打在原始 `.clx` 文件上，停下时报告**原文件的行号**，调用栈、Globals、监视都有内容。对照 `<文件名>.clx.rom` 是否生成（模拟器真的加载了文件），**不要**看 3563 端口是否打开 —— 加载失败时它也会监听。
+   - 调试流程：断点应打在原始 `.clx` 文件上，停下时报告**原文件的行号**，调用栈、Globals、监视都有内容。
 
 **测试覆盖什么、不覆盖什么**：`test/` 只覆盖不 import `vscode` 的纯逻辑（协议解析、行号映射、值转换、命令构造）。DAP 适配器本身、以及和真实模拟器的交互，只能靠上面的 F5 验证 —— 没有自动化。所以改动 `debugSession.ts` 一定要手工跑一次调试。
 
 验证模拟器时的注意点：
 
-- 判断文件有没有加载成功，看 `.rom` 文件，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。
-- 调试会话期间不要另外连接 3563 端口。第二个连接会挤掉扩展自己的连接，看起来像调试功能坏了。
+- 判断文件有没有加载成功，看 `<文件名>.clx.rom`，**不要**看 3563 端口 —— 加载失败时模拟器也会继续监听端口。
 - 模拟器的 stdout 被管道捕获时是全缓冲的，只有它正常退出后才能读到启动时打印的内容。
 
 ## 发布
