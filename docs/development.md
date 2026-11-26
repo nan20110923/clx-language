@@ -47,6 +47,9 @@ src/                            TypeScript 源码，由 esbuild 打包成 dist/e
     debugChannel.ts             调试通道：framing、请求串行化、异步 @ 停止帧（不 import vscode）
     luaProtocol.ts              应答体解析：bt / i local / i b / src / @ 帧 / shot / vmlist（不 import vscode）
     lineMapping.ts              .clx 行号 ↔ __lua__ 行号校准（不 import vscode）
+    luaValue.ts                 DAP 裸文本值 → Lua 字面量（不 import vscode）
+    testAutomation.ts           注入/截图命令的应答解析（不 import vscode）
+    testAutomationCommands.ts   命令面板 adapter
     configurationProvider.ts    解析 launch 配置
     activate.ts                 注册调试适配器工厂和 inline values
 test/                           node:test 用例，覆盖上面三个不 import vscode 的 module

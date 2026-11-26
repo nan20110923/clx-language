@@ -34,7 +34,14 @@ ColoX 的可执行程序，当前唯一的产品形态是 `coloXtool`（macOS �
 
 通过调试通道操控被调试程序的那组命令：`btn` / `padset` / `mouse` / `key` 注入输入，`shot` 截图，`input?` 查询，`vmlist` / `vm` 管多 VM。
 
-和"看变量、走断点"是两件事，所以走 `src/debug/testAutomation.ts`，不并进调试通道。
+和"看变量、走断点"是两件事，所以走 `src/debug/testAutomation.ts`（纯解析），不并进调试通道。
+
+两个 adapter 共享同一个调试会话，不是第二条连接：
+
+- 命令面板的 `CLX Test` 命令，适合一次性动作（截个图）
+- 调试控制台里的 `!` 前缀（`!btn LEFT 30`），适合边跑边一帧一帧试
+
+**不能自己连 3563。** 那条通道只允许一个客户端，多开一条会把扩展自己的连接挤掉。
 
 ## 行号映射 (line mapping)
 

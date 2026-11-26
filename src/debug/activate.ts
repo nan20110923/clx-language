@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import { DebugSession, StartEmulator } from './debugSession';
 import { ConfigurationProvider } from './configurationProvider';
 import { LANGUAGE_ID } from '../ids';
+import { registerTestAutomationCommands } from './testAutomationCommands';
 
 /** debugger type，必须与 package.json 的 contributes.debuggers[].type 一致 */
 const DEBUG_TYPE = 'clx_debug';
@@ -24,20 +25,27 @@ const DEBUG_TYPE = 'clx_debug';
  *   调试会话通过它要一个模拟器，避免 debugger/ 反向 import extension。
  */
 export function activateDebug(context: vscode.ExtensionContext, startEmulator: StartEmulator) {
+	const storageRoot = context.globalStorageUri;
 	context.subscriptions.push(
 		vscode.debug.registerDebugConfigurationProvider(DEBUG_TYPE, new ConfigurationProvider(DEBUG_TYPE)),
-		vscode.debug.registerDebugAdapterDescriptorFactory(DEBUG_TYPE, new InlineDebugAdapterFactory(startEmulator)),
+		vscode.debug.registerDebugAdapterDescriptorFactory(DEBUG_TYPE, new InlineDebugAdapterFactory(startEmulator, storageRoot)),
 		// inline values 是编辑器功能，按 language id 注册
 		vscode.languages.registerInlineValuesProvider(LANGUAGE_ID, new InlineValuesProvider())
 	);
+
+	// 测试自动化的命令面板入口。和 `!cmd` 控制台前缀是同一件事的两个 adapter。
+	registerTestAutomationCommands(context);
 }
 
 class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
-	constructor(private readonly startEmulator: StartEmulator) { }
+	constructor(
+		private readonly startEmulator: StartEmulator,
+		private readonly storageRoot: vscode.Uri
+	) { }
 
 	createDebugAdapterDescriptor(_session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-		return new vscode.DebugAdapterInlineImplementation(new DebugSession(this.startEmulator));
+		return new vscode.DebugAdapterInlineImplementation(new DebugSession(this.startEmulator, this.storageRoot));
 	}
 }
 

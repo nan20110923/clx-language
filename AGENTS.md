@@ -46,6 +46,9 @@ src/debug/                    调试侧
   debugChannel.ts             调试通道：framing 状态机、请求串行化、异步 `@` 停止帧（不 import vscode）
   luaProtocol.ts              应答体的纯解析函数（bt / i local / i b / src / @ 帧 / shot / vmlist）
   lineMapping.ts              .clx 行号 ↔ `__lua__` 行号的校准（不 import vscode）
+  luaValue.ts                 DAP 的裸文本值 → Lua 字面量（`set` 用，不 import vscode）
+  testAutomation.ts           注入/截图类命令的应答解析与命令构造（不 import vscode）
+  testAutomationCommands.ts   命令面板 adapter（另一个 adapter 是控制台的 `!` 前缀）
   configurationProvider.ts    解析 launch 配置
   activate.ts                 注册调试适配器工厂和 inline values
 test/                         node:test 用例，覆盖上面三个不 import vscode 的 module
@@ -81,6 +84,8 @@ dist/                         esbuild 打包产物（extension.js），不入库
 - **`-x` 启动的模拟器会停在 `XLUADBG wait`**：它打印 `use XLUADBG wait` 后一帧都不画，必须收到 `c` 才动。所以调试会话**必须**覆写 `configurationDoneRequest` 并发 `c` —— 基类只回 success，不覆盖的表现就是调试时窗口里没有画面。同理，声明了 `supportsTerminateRequest` 就必须覆写 `terminateRequest`，否则"停止"只回 success，模拟器进程会一直留着。诊断时可以用协议自带的 `shot` 命令截图，比看窗口可靠。
 - **`src __lua__` 应答里的 `__lua__:N`，N 是行数不是起始行号**，且**比正文行数少 1**（文件末尾空行不计）。别拿它做行号校验，正文是权威。历史上它被误读成"`__lua__` 段在原文件里的起始行"，导致断点整体错位。
 - **`i local` 拿不到真正的局部变量**：模拟器内嵌的 Lua helper 硬编码了 `debug.getlocal(frame + 2, …)` 的 `+2`，帧偏移错，报的是卡带顶层 chunk。同一帧上 `p <名字>` 是正确的。所以 Variables 面板的 Locals 会明确提示改用 `p`，不要试图靠解析 `i local` 的文本凑出局部变量。
+- **测试自动化不能自己连 3563**：注入按键、截图、查输入状态都走活动调试会话的 `clx.testAutomation` 自定义请求。自己开第二条连接会把扩展的调试连接挤掉，表现像插件坏了。截图路径由适配器定向到 `globalStorageUri/screenshots/`，**不要**让模拟器用默认路径 —— 它的工作目录是用户的源码目录，BMP 会落在源码旁边。金图比对不做，只显示像素 md5。
+- **`!` 前缀是控制台的逃生口**：调试控制台里 `!btn LEFT 30` 走测试自动化，其余输入原样转发给模拟器。两者都不解释内容 —— REPL 里用户敲的就是模拟器命令。
 - **协议权威来源**：`msl_naturexd` 仓库的 `c/coloX/src/coloX_dbg.cpp` 是权威实现（文档是摘要，漏掉应答体形状和错误文本），`c/coloX/guide/debug.md` 是官方文档，`dbgtool/` 是手工客户端参考。改协议层前先对照它们；`help` 命令也能从模拟器直接问出全量命令表。
 - **`src/debug/` 不许反向 import `extension.ts`**：调试会话需要启动模拟器时，通过 `activateDebug(context, startEmulator)` 注入的回调用；需要的进程状态从 `src/emulator/emulatorProcess.ts` 取。历史上这里是循环依赖，会让调试适配器无法脱离整个扩展测试。
 - **终端用户取消要静默**：`runColoXTool` 返回 `'started' | 'cancelled' | 'failed'`，不是布尔值。用户拒绝下载模拟器时是 `'cancelled'`，调用方不要弹任何错误框。

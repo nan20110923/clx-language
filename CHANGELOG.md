@@ -9,6 +9,9 @@
   * The call stack is read from the emulator, so stack frames and frame selection work.
   * Conditional breakpoints are supported.
   * The Debug Console forwards input to the emulator, and the Globals scope is populated.
+  * Variables and expressions can be edited from the Variables panel and the Debug Console.
+  * Test automation: `CLX Test` commands inject buttons, mouse, and keyboard input, take screenshots, and show the input state. The same commands are available in the Debug Console behind a `!` prefix, for example `!btn LEFT 30`.
+  * Screenshots go to the extension's own storage, never next to your source files, and report the pixel md5 for diffing.
   * `yarn test` now runs real tests over the debug protocol parsing and line mapping.
   * `yarn lint` works (the repository previously had no ESLint configuration).
 * Dependencies:
