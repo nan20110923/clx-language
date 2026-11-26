@@ -45,7 +45,10 @@ class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory 
 	) { }
 
 	createDebugAdapterDescriptor(_session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-		return new vscode.DebugAdapterInlineImplementation(new DebugSession(this.startEmulator, this.storageRoot));
+		// 第三个参数省略，用 DebugSession 的默认实现（真实 TCP 连接）
+		return new vscode.DebugAdapterInlineImplementation(
+			new DebugSession(this.startEmulator, undefined, undefined, this.storageRoot)
+		);
 	}
 }
 

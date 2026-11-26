@@ -22,6 +22,7 @@
 git clone https://github.com/nan20110923/clx-language.git
 cd clx-language
 yarn install
+./scripts/setup-hooks.sh   # 启用 pre-commit（跑 typecheck + lint + test）
 ```
 
 仓库只使用 yarn。不要运行 `npm install` 或 `npm ci`：npm 会重新生成 `package-lock.json`，并把 `yarn.lock` 改写成 npm 的格式。`npm run <script>` 不受影响。
@@ -110,7 +111,9 @@ yarn watch    # 监听文件改动，自动重新打包
 - **调试适配器是内联的**：`src/debug/activate.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0]` 不需要 `program` 字段。
 - **调试通道**：本机 TCP 3563，只允许一个客户端连接。`-x` 启动的模拟器会停在 `XLUADBG wait`，必须收到 `c` 才执行，所以 `configurationDoneRequest` 里要真的发 `c`；同理声明了 `supportsTerminateRequest` 就必须覆写 `terminateRequest`。协议层全部在 `src/debug/debugChannel.ts` 与 `src/debug/luaProtocol.ts`。
 - **断点打在原始 `.clx` 文件上**，不生成 `debug_temp.clx` 副本：模拟器只认内部名为 `__lua__` 的缓冲区。行号换算见 `src/debug/lineMapping.ts`，映射建立不起来时拒绝启动调试。详见 `docs/adr/0002-breakpoints-on-the-original-file.md`。
-- **`i local` 拿不到局部变量**（模拟器侧的帧偏移 bug），用 `p <名字>` 代替。见 `AGENTS.md`。
+- **`i local` 拿不到局部变量**（模拟器侧的帧偏移 bug）。内嵌的 Lua helper 硬编码了 `debug.getlocal(frame + 2, …)` 的 `+2`，帧偏移错，报的是卡带顶层 chunk。同一帧上 `p <名字>` 是正确的，所以 Variables 面板的 Locals 会明确提示改用 `p`。不要试图靠解析 `i local` 的文本凑出局部变量。
+- **`src __lua__` 应答里的 `__lua__:N`，N 是行数不是起始行号**，且**比正文行数少 1**（文件末尾空行不计）。别拿它做行号校验，正文是权威。历史上它被误读成"`__lua__` 段在原文件里的起始行"，导致断点整体错位。
+- **协议权威来源**：`msl_naturexd` 仓库的 `c/coloX/src/coloX_dbg.cpp` 是权威实现（文档是摘要，漏掉应答体形状和错误文本）；`c/coloX/guide/debug.md` 是官方文档；`dbgtool/` 是手工客户端参考。改协议层前先对照它们，`help` 命令也能从模拟器直接问出全量命令表。
 - **运行成功与否的判断**：看文件同级目录是否出现 `.rom`，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。
 - **macOS Gatekeeper**：官方 macOS 包是 ad-hoc 签名、未公证。插件通过 `https` 下载的文件不带 quarantine 属性，能直接跑；手工下载再指定路径的情形会被拦，需要 `xattr -d com.apple.quarantine`。
 
@@ -132,12 +135,28 @@ yarn watch    # 监听文件改动，自动重新打包
 ```bash
 yarn typecheck   # tsc --noEmit
 yarn lint        # eslint src
-yarn test        # node:test，覆盖协议解析、行号映射等纯逻辑
+yarn test        # node:test，覆盖协议解析、行号映射、DAP 请求处理
+yarn e2e         # 需要图形界面和模拟器，见下
 ```
 
 交付前这三条都要过，而且 `yarn package` 必须能出 vsix。
 
 类型检查只走 `tsc --noEmit`，不要把 tsc 的产物写到磁盘；构建统一用 esbuild。
+
+### 端到端冒烟测试
+
+`yarn e2e` 在隔离的 VS Code Extension Development Host 里跑一次真实调试：断点、调用栈、Watch、Globals、`!input?`、截图，并断言不生成 `debug_temp.clx`、不往工作区写 BMP。
+
+**不进 CI**：需要图形界面和模拟器二进制（模拟器没有 Linux 版）。本地改完调试相关代码应该跑一次。
+
+它固化了几条只有手工验证时才会踩的坑：
+
+- `settings.json` 必须在 `<user-data-dir>/User/` 下。放到 `<user-data-dir>/` 根不报错、也没人读，表现是"配置没生效"。
+- 模拟器必须已缓存，或用 `CLX_E2E_EMULATOR` 指本地副本。headless 下首次下载的确认框是模态的，会卡死。
+- `.rom` 的实际文件名是 `<文件名>.clx.rom`。
+- 卡带必须有 `__lua__` 区段，否则模拟器静默回落到 BIOS 菜单，`src __lua__` 返回的是菜单源码。
+
+环境变量：`CLX_E2E_CODE` 指定 VS Code、`CLX_E2E_EMULATOR` 指定模拟器、`CLX_E2E_KEEP=1` 保留临时目录看日志。
 
 ### 测试
 

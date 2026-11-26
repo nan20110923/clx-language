@@ -42,10 +42,19 @@ jobs:
       # .vscodeignore 是唯一决定出厂内容的 interface。历史上它漏过 src/**，把
       # 13 个 .ts 和一份 tsconfig.json 发了出去（1.0.17 里还有整套 out/ 示例），
       # 而这里的检查只 grep 了 emulator-manifest|readme，所以一直没被发现。
-      - name: Check nothing that must not ship is in the package
+      # 出厂内容是**白名单**，不是黑名单。
+      #
+      # 历史上这里是 grep 'src/|out/|tsconfig.json' 的黑名单，两次漏过东西：
+      # 1.0.17 漏了 src/ 和 out/；随后 test/ 和 eslint.config.mjs 又漏了，
+      # 当时的"修法"是把它们补进正则。每次加文件都要记得改正则，一定会再漏。
+      #
+      # 现在反过来断言：extension/ 下只允许下列前缀。新增一个本该发布的目录时
+      # 要显式加到这里，否则 CI 失败 —— 失败点落在新文件上，而不是等到用户
+      # 在插件包里看见源码。
+      - name: Check the package contains only what should ship
         run: |
           vsix=$(ls .artifacts/*.vsix)
-          listing=$(unzip -l "$vsix" | awk '{print $4}')
+          listing=$(unzip -l "$vsix" | awk '{print $4}' | grep -v '^$')
 
           missing=0
           for required in \
@@ -61,15 +70,18 @@ jobs:
             fi
           done
 
-          leaked=$(echo "$listing" | grep -E '^extension/(src/|test/|out/|tsconfig\.json$|eslint\.config\.mjs$)' || true)
-          if [ -n "$leaked" ]; then
-            echo "::error title=Source leaked into vsix::These must be excluded by .vscodeignore:"
-            echo "$leaked"
+          # extension/ 下允许的路径前缀。文件和目录都列出来，别用宽前缀。
+          allowed='^extension/(dist/|res/|server/|syntaxes/|snippets/|language-configuration\.json$|readme\.md$|readme_zh\.md$|README_zh\.md$|changelog\.md$|CHANGELOG\.md$|LICENSE\.txt$|package\.json$)'
+
+          unexpected=$(echo "$listing" | grep '^extension/' | grep -vE "$allowed" || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error title=Unexpected file in vsix::These are not in the allowlist. Either exclude them in .vscodeignore, or add them to the allowlist above if they are meant to ship:"
+            echo "$unexpected"
             missing=1
           fi
 
           [ "$missing" -eq 0 ] || exit 1
-          echo "Package contents are correct." >> "$GITHUB_STEP_SUMMARY"
+          echo "Package contents are correct (allowlist)." >> "$GITHUB_STEP_SUMMARY"
 
       # `.artifacts/` 以点开头，而 upload-artifact@v4 默认不包含隐藏文件
       # （include-hidden-files 默认 false）。缺了这一行，上面的步骤都成功、

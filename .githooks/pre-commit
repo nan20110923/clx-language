@@ -1,0 +1,22 @@
+#!/bin/sh
+# 提交前跑仓库自己的检查。
+#
+# 为什么需要：lint / typecheck / test 三个命令都存在，CI 也会跑，
+# 但本地没有任何东西触发它们 —— 所以一个坏的提交总是先到 CI 才被发现
+# （PR #1 就是这样失败的）。
+#
+# 用 core.hooksPath 指向这个目录（setup 见 docs/development.md），
+# 不需要 husky 之类的额外依赖：单仓库、无 workspace，一个 sh 脚本就够。
+#
+# 想跳过：git commit --no-verify。只在明确知道为什么时用。
+
+set -e
+
+echo "pre-commit: typecheck"
+yarn typecheck
+
+echo "pre-commit: lint"
+yarn lint
+
+echo "pre-commit: test"
+yarn test
