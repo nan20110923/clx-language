@@ -43,6 +43,18 @@ export class DebugSession extends LoggingDebugSession {
         this.sendResponse(response);
     }
 
+    /**
+     * 所有断点设好之后 VS Code 会发这个，表示"可以开始跑了"。
+     *
+     * 模拟器以 -x 启动时会打印 "use XLUADBG wait" 然后停在那儿等指令，
+     * 不收到 c 就一帧都不画。所以这里必须真的发 c —— 基类只回一个 success，
+     * 那会让程序永远停在等调试器的状态，表现就是调试时窗口里没有画面。
+     */
+    protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse, args: DebugProtocol.ConfigurationDoneArguments, request?: DebugProtocol.Request): void {
+        this.sendResponse(response);
+        this.client?.write('c\n');
+    }
+
     protected customRequest(command: string, response: DebugProtocol.Response, args: any, request?: DebugProtocol.Request | undefined): void {
         super.customRequest(command, response, args)
     }
@@ -150,10 +162,17 @@ export class DebugSession extends LoggingDebugSession {
             this.hookMsg(this.getFilterMsgHook('src', async function(stat, info) {
                 if (stat == 2) {
                     if (info.length > 0) {
-                        let pattern = /(__lua__):(\d+)/
-                        let match = pattern.exec(info[0])
-                        if (match) {
-                            info.shift()
+                        // 应答体的形状是：[空行, "__lua__:<行号>", 空行, 源码...]
+                        // 那行 __lua__:N 是头部标记，不是源码，必须去掉，否则
+                        // debug_temp.clx 里会多一行伪代码，行号也会整体错位。
+                        // 它在应答里不一定位于 info[0]（前面可能有空行），所以要找。
+                        //
+                        // 注意 N 是 __lua__ 段在 .clx 文件里的起始行号，但协议里
+                        // `b __lua__:<行号>` 用的是相对这个基准的行号，正好等于
+                        // debug_temp.clx 的行号 —— 所以这里只需要剥掉头部，不需要记 N。
+                        const headerIndex = info.findIndex(line => /^__lua__:\d+$/.test(line.trim()))
+                        if (headerIndex !== -1) {
+                            info.splice(0, headerIndex + 1)
                         }
 
                         // 展示获取到的源码
@@ -292,13 +311,16 @@ export class DebugSession extends LoggingDebugSession {
             this.sendMessage('d');
 
             this.bpLines = args.lines || [];
-            const actualBreakpoints0 = this.bpLines.map(async line => {
-                this.sendMessage(`b __lua__:${line}`)
+            const actualBreakpoints = this.bpLines.map(line => {
+                // debug_temp.clx 是模拟器返回的纯 Lua 源码，它的行号和协议里的
+                // `__lua__:<行号>` 是同一个基准（都相对 __lua__ 段），所以直接透传。
+                // 不要加 __lua__ 标记在 .clx 文件里的绝对行号 —— 那样会全部落空。
+                this.sendMessage(`b __lua__:${line}`);
+
                 const bp = new Breakpoint(true, line) as DebugProtocol.Breakpoint;
                 bp.id = this.bpId++;
                 return bp;
             });
-            const actualBreakpoints = await Promise.all<DebugProtocol.Breakpoint>(actualBreakpoints0);
 
             // send back the actual breakpoint positions
             response.body = {
@@ -310,6 +332,17 @@ export class DebugSession extends LoggingDebugSession {
                 this.sendMessage('pause');
             }
 
+            this.sendResponse(response);
+        } else {
+            // 用户可能在我们还没取回源码（debug_temp.clx 尚未生成）时就设了断点。
+            // 必须回 response，否则 VS Code 的 setBreakpoints 请求会一直挂起。
+            response.body = {
+                breakpoints: (args.lines || []).map(line => {
+                    const bp = new Breakpoint(false, line) as DebugProtocol.Breakpoint;
+                    bp.id = this.bpId++;
+                    return bp;
+                })
+            };
             this.sendResponse(response);
         }
     }
