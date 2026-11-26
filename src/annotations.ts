@@ -1,9 +1,47 @@
+/**
+ * 参数名、全局变量等注解：协议类型、渲染、接线。
+ *
+ * 语言服务器算好注解区间返回，这里只负责在合适的时机去问、再把结果画到编辑器上。
+ * 两个触发源：活动编辑器切换、文档内容变化。都做了 150ms 防抖。
+ *
+ * 注意 activeEditor 只跟踪 .clx 文档：切到其他语言时保留上一个 .clx，
+ * 这样在别处打字不会把注解清掉。
+ */
 
 import * as vscode from 'vscode';
-import { AnnotatorType } from './lspExt';
 import { LanguageClient } from 'vscode-languageclient/node';
-import * as notifications from "./lspExt";
+import { LANGUAGE_ID } from './languageServer';
 
+// ---------------------------------------------------------------------------
+// 语言服务器的 emmy/annotator 报文
+// ---------------------------------------------------------------------------
+
+export interface AnnotatorParams {
+    uri: string;
+}
+
+export enum AnnotatorType {
+    Param,
+    Global,
+    DocType,
+    Upvalue,
+    NotUse
+}
+
+export interface RenderRange {
+    range: vscode.Range;
+    hint: string;
+}
+
+export interface IAnnotator {
+    uri: string;
+    ranges: RenderRange[];
+    type: AnnotatorType;
+}
+
+// ---------------------------------------------------------------------------
+// 装饰类型
+// ---------------------------------------------------------------------------
 
 let D_PARAM: vscode.TextEditorDecorationType;
 let D_GLOBAL: vscode.TextEditorDecorationType;
@@ -50,9 +88,16 @@ function updateDecorations() {
     D_NOTUSE = createDecoration("colors.not_use", {});
 }
 
-export function onDidChangeConfiguration(client: LanguageClient) {
-    updateDecorations();
+/** 释放全部装饰类型。扩展卸载时调用，否则这些资源留给进程收尾。 */
+export function disposeAnnotations() {
+    for (const d of [D_PARAM, D_GLOBAL, D_DOC_TYPE, D_UPVALUE, D_NOTUSE]) {
+        d?.dispose();
+    }
 }
+
+// ---------------------------------------------------------------------------
+// 请求与渲染
+// ---------------------------------------------------------------------------
 
 let timeoutToReqAnn: NodeJS.Timeout;
 
@@ -63,14 +108,21 @@ export function requestAnnotators(editor: vscode.TextEditor, client: LanguageCli
     }, 150);
 }
 
+/** 颜色等设置变化时重建装饰类型。 */
+export function onAnnotationsConfigurationChanged(client: LanguageClient | undefined) {
+    if (client) {
+        updateDecorations();
+    }
+}
+
 function requestAnnotatorsImpl(editor: vscode.TextEditor, client: LanguageClient) {
     if (!D_PARAM) {
         updateDecorations();
     }
 
-    let params: notifications.AnnotatorParams = { uri: editor.document.uri.toString() };
-    client.sendRequest<notifications.IAnnotator[]>("emmy/annotator", params).then(list => {
-        let map: Map<AnnotatorType, notifications.RenderRange[]> = new Map();
+    let params: AnnotatorParams = { uri: editor.document.uri.toString() };
+    client.sendRequest<IAnnotator[]>("emmy/annotator", params).then(list => {
+        let map: Map<AnnotatorType, RenderRange[]> = new Map();
         map.set(AnnotatorType.DocType, []);
         map.set(AnnotatorType.Param, []);
         map.set(AnnotatorType.Global, []);
@@ -108,7 +160,7 @@ function requestAnnotatorsImpl(editor: vscode.TextEditor, client: LanguageClient
     });
 }
 
-function updateAnnotators(editor: vscode.TextEditor, type: AnnotatorType, renderRanges: notifications.RenderRange[]) {
+function updateAnnotators(editor: vscode.TextEditor, type: AnnotatorType, renderRanges: RenderRange[]) {
     switch (type) {
         case AnnotatorType.Param:
             editor.setDecorations(D_PARAM, renderRanges.map(e => e.range));
@@ -125,5 +177,53 @@ function updateAnnotators(editor: vscode.TextEditor, type: AnnotatorType, render
         case AnnotatorType.NotUse:
             editor.setDecorations(D_NOTUSE, renderRanges.map(e => e.range));
             break;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 接线：谁在什么时候来触发
+// ---------------------------------------------------------------------------
+
+export class Annotations implements vscode.Disposable {
+    private readonly disposables: vscode.Disposable[] = [];
+    private activeEditor: vscode.TextEditor | undefined;
+
+    constructor(private readonly client: () => LanguageClient | undefined) {
+        this.disposables.push(
+            vscode.workspace.onDidChangeTextDocument(e => this.onDidChangeTextDocument(e)),
+            vscode.window.onDidChangeActiveTextEditor(e => this.onDidChangeActiveTextEditor(e))
+        );
+    }
+
+    /** 语言服务器起来后补一次：之前可能已经有打开的 .clx 文件了。 */
+    refresh(editor: vscode.TextEditor | undefined): void {
+        this.onDidChangeActiveTextEditor(editor);
+    }
+
+    dispose(): void {
+        for (const d of this.disposables) {
+            d.dispose();
+        }
+    }
+
+    private onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): void {
+        const client = this.client();
+        if (!client) {
+            return;
+        }
+        if (this.activeEditor?.document === event.document && event.document.languageId === LANGUAGE_ID) {
+            requestAnnotators(this.activeEditor, client);
+        }
+    }
+
+    private onDidChangeActiveTextEditor(editor: vscode.TextEditor | undefined): void {
+        const client = this.client();
+        if (!client) {
+            return;
+        }
+        if (editor?.document.languageId === LANGUAGE_ID) {
+            this.activeEditor = editor;
+            requestAnnotators(editor, client);
+        }
     }
 }

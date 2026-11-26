@@ -1,31 +1,37 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { ClxDebugSession } from './ClxDebugSession';
-import { ClxDebugConfigurationProvider } from './ClxDebugProvider';
+import { DebugSession, StartEmulator } from './debugSession';
+import { ConfigurationProvider } from './configurationProvider';
 
-export function activateDebug(context: vscode.ExtensionContext) {
+/**
+ * @param startEmulator 启动模拟器的回调，由扩展入口传入。
+ *   调试会话通过它要一个模拟器，避免 debugger/ 反向 import extension。
+ */
+export function activateDebug(context: vscode.ExtensionContext, startEmulator: StartEmulator) {
 
 	// regiser debug provider
-    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider("clx_debug", new ClxDebugConfigurationProvider('clx_debug', context)));
+    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider("clx_debug", new ConfigurationProvider('clx_debug', context)));
 
 	// regiser debug adapter
-	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('clx_debug', new InlineDebugAdapterFactory()));
+	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('clx_debug', new InlineDebugAdapterFactory(startEmulator)));
 
 	// override VS Code's default implementation of the "inline values" feature"
-	let clxInlineValueProvider = new ClxInlineValuesProvider();
+	let clxInlineValueProvider = new InlineValuesProvider();
 	context.subscriptions.push(vscode.languages.registerInlineValuesProvider('clx_debug', clxInlineValueProvider));
 }
 
 
 class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
+	constructor(private readonly startEmulator: StartEmulator) { }
+
 	createDebugAdapterDescriptor(_session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-		return new vscode.DebugAdapterInlineImplementation(new ClxDebugSession());
+		return new vscode.DebugAdapterInlineImplementation(new DebugSession(this.startEmulator));
 	}
 }
 
-class ClxInlineValuesProvider implements vscode.InlineValuesProvider {
+class InlineValuesProvider implements vscode.InlineValuesProvider {
 
 	provideInlineValues(document: vscode.TextDocument, viewport: vscode.Range, context: vscode.InlineValueContext): vscode.ProviderResult<vscode.InlineValue[]> {
 

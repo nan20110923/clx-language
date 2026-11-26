@@ -1,18 +1,29 @@
 import * as net from "net";
 import { Breakpoint, InitializedEvent, LoggingDebugSession, OutputEvent, Source, StackFrame, StoppedEvent, TerminatedEvent, Thread } from "@vscode/debugadapter";
 import { DebugProtocol } from "@vscode/debugprotocol";
-import { FileUtil } from './FileUtil';
 import { Uri, ViewColumn, commands, window, workspace } from "vscode";
 import { basename } from "path";
 import * as readline from "readline";
-import { runColoXTool, coloxProcess, isColoXToolRunning, terminateColoXTool, tryConnectColoXTool } from "../extension";
-import { delay } from "../util";
+import {
+	connectDebugChannel,
+	isEmulatorRunning,
+	probeDebugChannel,
+	terminateEmulator,
+	waitForDebugChannel,
+	type LaunchOutcome
+} from "../emulatorProcess";
 
 type MsgHook = (line: string) => { line: string | null, isEnd: boolean, state: number };
 type MsgInfoHandler = (stat: number, info: string[]) => void;
 
-export class ClxDebugSession extends LoggingDebugSession {
-    constructor() {
+/**
+ * 启动模拟器的回调。由扩展入口注入，调试会话本身不 import ../extension，
+ * 否则会和入口形成循环依赖，也让这个类没法脱离整个扩展单独测试。
+ */
+export type StartEmulator = (debug: boolean) => Promise<LaunchOutcome>;
+
+export class DebugSession extends LoggingDebugSession {
+    constructor(private readonly startEmulator: StartEmulator) {
         super("clx.debug.txt");
     }
 
@@ -37,37 +48,35 @@ export class ClxDebugSession extends LoggingDebugSession {
     }
 
     protected async launchRequest(response: DebugProtocol.LaunchResponse, args: DebugProtocol.LaunchRequestArguments, request?: DebugProtocol.Request | undefined): Promise<void> {
-        var coloXToolExists = await tryConnectColoXTool()
+        var coloXToolExists = await probeDebugChannel()
 
-        if (!coloXToolExists && !isColoXToolRunning()) {
+        if (!coloXToolExists && !isEmulatorRunning()) {
             // 先等模拟器就绪（可能要下载），再开始轮询调试端口
-            const started = await runColoXTool(null, true);
-            if (!started) {
+            const outcome = await this.startEmulator(true);
+            if (outcome === 'cancelled') {
+                // 用户在下载确认框里选了取消：静默结束，不要报错
+                response.success = false;
+                response.message = 'Launch cancelled.';
+                this.sendResponse(response);
+                return;
+            }
+            if (outcome === 'failed') {
                 response.success = false;
                 response.message = 'The CLX emulator could not be started.';
                 this.sendResponse(response);
                 return;
             }
-            var connect: boolean = false;
-            for (let i = 0; i < 10; i++) {
-                await delay(1000);
-                connect = await tryConnectColoXTool();
-                if (connect) {
-                    break;
-                }
-            }
-            if (!connect) {
-                window.showErrorMessage('Run coloX emulator failed!!')
+            // 最多等 10 秒。注意端口能连上不代表文件加载成功 —— 那要看 .rom
+            if (!(await waitForDebugChannel(10_000))) {
+                // 必须回 response，否则 VS Code 的 launch 请求永远挂起
+                response.success = false;
+                response.message = 'Timed out waiting for the CLX emulator debug channel.';
+                this.sendResponse(response);
                 return;
             }
         }
 
-        coloxProcess?.stdout?.on('data', (data) => this.sendEvent(new OutputEvent(`${data}\n`)))
-
-        const client = net.connect({
-            port: 3563,
-            host: '127.0.0.1'
-        }).on('connect', () => {
+        const client = connectDebugChannel().on('connect', () => {
             this.sendResponse(response);
             this.onConnect(client);
         }).on('error', err => {
@@ -110,8 +119,9 @@ export class ClxDebugSession extends LoggingDebugSession {
                     let pattern = /(.+) at (.+):(?<line>\d+)/
                     let match = pattern.exec(info[0])
                     if (match?.groups?.line) {
-                        session.curBpLineNumber = Number.parseInt(match?.groups?.line);
-                        // console.log(`breakLineNumber: ${session.breakLineNumber}`)
+                        // 协议行号和 debug_temp.clx 的行号同基准，直接可用
+                        session.curBpLineNumber = Number.parseInt(match.groups.line);
+                        // console.log(`breakLineNumber: ${session.curBpLineNumber}`)
                         session.sendEvent(new StoppedEvent("breakpoint", 1));
                     }
                 }
@@ -145,8 +155,9 @@ export class ClxDebugSession extends LoggingDebugSession {
                         if (match) {
                             info.shift()
                         }
+
                         // 展示获取到的源码
-                        session.sourceUri = await FileUtil.createDebugFile('debug_temp.clx', info.join('\n'))
+                        session.sourceUri = await createDebugFile('debug_temp.clx', info.join('\n'))
 
                         if (session.sourceUri) {
                             // 源码文件创建成功，active文件后发送初始化事件
@@ -375,7 +386,7 @@ export class ClxDebugSession extends LoggingDebugSession {
         // Clear all breakpoints then continue to let window running
         this.sendMessage('d')
         this.sendMessage('c')
-        terminateColoXTool()
+        terminateEmulator()
         super.disconnectRequest(response, args, request)
     }
 
@@ -384,4 +395,24 @@ export class ClxDebugSession extends LoggingDebugSession {
         this.sendResponse(response)
     }
 
+}
+
+/**
+ * 把模拟器返回的源码写成工作区里的 debug_temp.clx，让 VS Code 有文件可以显示
+ * 断点和当前执行位置。只写到第一个工作区根目录。
+ */
+async function createDebugFile(fileName: string, content: string): Promise<Uri | undefined> {
+    const folderUri = workspace.workspaceFolders?.[0]?.uri
+    if (!folderUri) {
+        window.showErrorMessage(`Cannot create ${fileName}: no workspace folder is open.`)
+        return undefined
+    }
+    const fileUri = Uri.joinPath(folderUri, fileName)
+    try {
+        await workspace.fs.writeFile(fileUri, new TextEncoder().encode(content))
+        return fileUri
+    } catch (error) {
+        window.showErrorMessage(`Failed to create the file ${fileName}. Error message: ${error}`)
+        return undefined
+    }
 }

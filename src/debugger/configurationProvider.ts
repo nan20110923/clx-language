@@ -3,8 +3,9 @@
 import * as vscode from 'vscode';
 import path = require('path');
 import { DebugConfiguration } from 'vscode';
+import { DEBUG_HOST, DEBUG_PORT } from '../emulatorProcess';
 
-export interface ClxDebugConfiguration extends DebugConfiguration {
+export interface DebugLocalConfiguration extends DebugConfiguration {
     host: string;
     port: number;
 }
@@ -19,7 +20,7 @@ export interface ClxDebugConfiguration extends DebugConfiguration {
 //     return path.isAbsolute(strPath);
 // }
 
-export class ClxDebugConfigurationProvider implements vscode.DebugConfigurationProvider, vscode.Disposable {
+export class ConfigurationProvider implements vscode.DebugConfigurationProvider, vscode.Disposable {
     constructor(
         protected type: string,
         protected context: vscode.ExtensionContext
@@ -75,15 +76,15 @@ export class ClxDebugConfigurationProvider implements vscode.DebugConfigurationP
         return list.concat(config.map(item => { return path.normalize(item); }));
     }
 
-    resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, debugConfiguration: ClxDebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
+    resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, debugConfiguration: DebugLocalConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
         // console.log('resolveDebugConfiguration!!!')
         debugConfiguration.extensionPath = this.context.extensionPath;
         debugConfiguration.sourcePaths = this.getSourceRoots();
         if (!debugConfiguration.request) {
             debugConfiguration.request = "launch";
             debugConfiguration.type = "clx_debug";
-            debugConfiguration.host = 'localhost';
-            debugConfiguration.port = 3563;
+            debugConfiguration.host = DEBUG_HOST;
+            debugConfiguration.port = DEBUG_PORT;
         }
         return debugConfiguration;
     }
