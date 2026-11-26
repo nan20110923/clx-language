@@ -37,6 +37,7 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import { DebugChannel } from './debugChannel';
 import { LineMapping, LineMappingError, buildLineMapping, findIncludes } from './lineMapping';
 import { joinLuaPath, toLuaLiteral } from './luaValue';
+import { parseButtonState, parseShot } from './testAutomation';
 import {
 	VariableNode,
 	parseBreakpointReply,
@@ -113,11 +114,20 @@ export class DebugSession extends LoggingDebugSession {
 	 * （VS Code 不会自动重试），所以先存下来，mapping 建好后补发。
 	 */
 	private pendingBreakpointSet: DebugProtocol.SetBreakpointsArguments | undefined;
+	/**
+	 * 扩展自己的存储根目录，截图落在这里而不是用户工作区。
+	 * 由 activateDebug 注入 —— 调试适配器不持有 ExtensionContext。
+	 */
+	private storageRoot: vscode.Uri | undefined;
 	private readonly containers = new Map<number, VarContainer>();
 	private nextContainer = SCOPE_GLOBALS + 1;
 
-	constructor(private readonly startEmulator: StartEmulator) {
+	constructor(
+		private readonly startEmulator: StartEmulator,
+		storageRoot?: vscode.Uri
+	) {
 		super('clx.debug.txt');
+		this.storageRoot = storageRoot;
 	}
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse): void {
@@ -383,6 +393,101 @@ export class DebugSession extends LoggingDebugSession {
 		return container ? joinLuaPath(container.path, name) : name;
 	}
 
+	/**
+	 * 命中调试器的 customRequest。
+	 *
+	 * 命令面板需要一个不经过 DAP 标准请求的入口来操作测试自动化
+	 * （注入按键、截图、查输入状态）。走这里而不是让命令面板自己连 3563：
+	 * 那种通道只允许一个客户端，第二个连接会把扩展自己的连接挤掉。
+	 */
+	protected async customRequest(
+		command: string,
+		response: DebugProtocol.Response,
+		args: unknown
+	): Promise<void> {
+		if (command !== 'clx.testAutomation') {
+			super.customRequest(command, response, args);
+			return;
+		}
+		const request = args as { command?: string; path?: string } | undefined;
+		const raw = (request?.command ?? '').trim();
+		if (raw.length === 0) {
+			response.success = false;
+			response.message = 'No emulator command was given.';
+			this.sendResponse(response);
+			return;
+		}
+		try {
+			const output = await this.runAutomation(raw, request?.path);
+			response.body = { output };
+		} catch (e) {
+			response.success = false;
+			response.message = `${e}`;
+		}
+		this.sendResponse(response);
+	}
+
+	/**
+	 * 执行一条测试自动化命令，返回要显示给用户的文本。
+	 *
+	 * `shot` 的落盘路径在这里被定向到扩展自己的存储目录 —— 模拟器的 `-d`
+	 * 是用户的源码目录，不指定路径就会把 BMP 写到源码旁边，污染工作区。
+	 */
+	private async runAutomation(command: string, explicitPath?: string): Promise<string> {
+		if (!this.channel) {
+			return 'The debug channel is not connected.';
+		}
+
+		const token = command.split(/\s+/)[0].toLowerCase();
+		const wantsShot = token === 'shot';
+
+		let toSend = command;
+		if (wantsShot && !explicitPath) {
+			const dir = await this.screenShotDirectory();
+			if (dir !== undefined) {
+				toSend = `shot ${dir}/colox-${Date.now()}.bmp`;
+			}
+		}
+
+		const body = await this.channel.raw(toSend).catch((e: Error) => [e.message]);
+
+		if (wantsShot) {
+			const shot = parseShot(body);
+			if (shot) {
+				// 只暴露路径与像素 md5，不做金图比对
+				return [
+					`Screenshot: ${shot.path}`,
+					`${shot.width}x${shot.height} bpp=${shot.bpp} frame=${shot.frame}`,
+					`pixel md5: ${shot.md5}`
+				].join('\n');
+			}
+		}
+
+		const state = token === 'btn' ? parseButtonState(body) : null;
+		if (state !== null) {
+			return `KDown=0x${state.down.toString(16).padStart(2, '0')} ` +
+				`KHeld=0x${state.held.toString(16).padStart(2, '0')} ` +
+				`inj=0x${state.injected.toString(16).padStart(2, '0')} left=${state.left}`;
+		}
+
+		return body.join('\n');
+	}
+
+	/** 截图目录：扩展自己的存储区，不在用户工作区里留文件。 */
+	private async screenShotDirectory(): Promise<string | undefined> {
+		if (this.storageRoot === undefined) {
+			return undefined;
+		}
+		const dir = vscode.Uri.joinPath(this.storageRoot, 'screenshots');
+		try {
+			await vscode.workspace.fs.createDirectory(dir);
+		} catch {
+			// 建不出来就让调用方退回默认路径
+			return undefined;
+		}
+		return dir.fsPath;
+	}
+
 	protected async evaluateRequest(
 		response: DebugProtocol.EvaluateResponse,
 		args: DebugProtocol.EvaluateArguments
@@ -393,9 +498,20 @@ export class DebugSession extends LoggingDebugSession {
 			return;
 		}
 
-		// REPL 里用户敲的是模拟器命令，原样转发；插件不解释内容
 		if (args.context === 'repl') {
-			const body = await this.channel.raw(args.expression).catch((e: Error) => [e.message]);
+			// `!cmd` 前缀走测试自动化（`!btn LEFT 30`、`!shot`）。
+			// 其余原样转发 —— REPL 里用户敲的就是模拟器命令，插件不解释内容。
+			const input = args.expression.trim();
+			if (input.startsWith('!')) {
+				const output = await this.runAutomation(input.slice(1).trim());
+				if (output.length > 0) {
+					this.sendEvent(new OutputEvent(`${output}\n`));
+				}
+				response.body = { result: '', variablesReference: 0 };
+				this.sendResponse(response);
+				return;
+			}
+			const body = await this.channel.raw(input).catch((e: Error) => [e.message]);
 			if (body.length > 0) {
 				this.sendEvent(new OutputEvent(`${body.join('\n')}\n`));
 			}

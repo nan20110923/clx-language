@@ -65,12 +65,41 @@ xattr -d com.apple.quarantine /path/to/coloXtool.app
 
 ### 调试
 
-**模拟器内置了调试器，本插件提供简单的断点及命令行调试功能**
+**模拟器内置了调试器，本插件把它接到 VS Code 上**
 
-1. 左边栏切换到 **Debug**
-2. 点击 **Run and Debug**，会启动模拟器并打开一个名为 **debug_temp.clx** 的新文件，该文件包含lua区域包含的所有代码
-3. 基于 **debug_temp.clx** 文件进行断点调试
-4. 也可以在 **DEBUG CONSOLE** 中进行命令行调试 输入 **help** 可查看使用帮助
+1. 左边栏切换到 **Debug**，点击 **Run and Debug**。模拟器启动并连上。
+2. 断点直接打在**你自己的 `.clx` 文件**上 —— 不再生成副本。
+3. 停下时有调用栈、Globals 作用域（表可以展开）、监视和悬停取值。
+4. 可以在 **DEBUG CONSOLE** 里敲模拟器命令，输入 **help** 查看全部。
+
+读局部变量用调试控制台里的 `p <名字>`。当前模拟器构建无法自行列出局部变量，
+所以 **Locals** 作用域是空的并会说明这一点。
+
+### 测试自动化
+
+调试期间可以用 `CLX Test` 命令注入输入、截图：
+
+| 命令 | 作用 |
+|---|---|
+| **CLX Test: Inject Buttons** | 按住 CLX 键位，可按时长、帧数或一直按到松开 |
+| **CLX Test: Hold a Key** | 按住键盘某键 |
+| **CLX Test: Move or Touch** | 设置鼠标/触摸位置 |
+| **CLX Test: Screenshot** | 存一张 BMP 并打印像素 md5 |
+| **CLX Test: Show Input State** | 打印帧号、按键、鼠标、键盘和各手柄状态 |
+
+同样的命令也能在调试控制台里用 `!` 前缀调用，适合一帧一帧地试输入：
+
+```
+!btn LEFT 1          注入一帧 LEFT
+!btn LEFT A 30       LEFT + A 按 30 帧
+!btn LEFT 500ms      LEFT 按 500 毫秒
+!btn 0               松开
+!shot                截图并打印像素 md5
+!input?              当前输入状态全貌
+```
+
+截图写在扩展自己的存储目录里，**不会**落到你的源码旁边。返回的 `md5` 只覆盖像素
+数据，所以跨平台一致，可以当金图比对的键。
 
 ![debug](https://x.cololight.com/mweb/docs/assets/images/debug-258b9f11b14dfc971b29f6719a4aaba5.gif)
 

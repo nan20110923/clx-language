@@ -103,6 +103,36 @@
       {
         "command": "extension.clx-language.restartServer",
         "title": "CLX: Restart Lua Server"
+      },
+      {
+        "command": "extension.clx-language.injectButtons",
+        "title": "Inject Buttons",
+        "category": "CLX Test",
+        "enablement": "inDebugMode"
+      },
+      {
+        "command": "extension.clx-language.injectKey",
+        "title": "Hold a Key",
+        "category": "CLX Test",
+        "enablement": "inDebugMode"
+      },
+      {
+        "command": "extension.clx-language.injectMouse",
+        "title": "Move or Touch",
+        "category": "CLX Test",
+        "enablement": "inDebugMode"
+      },
+      {
+        "command": "extension.clx-language.screenshot",
+        "title": "Screenshot",
+        "category": "CLX Test",
+        "enablement": "inDebugMode"
+      },
+      {
+        "command": "extension.clx-language.inputState",
+        "title": "Show Input State",
+        "category": "CLX Test",
+        "enablement": "inDebugMode"
       }
     ],
     "keybindings": [

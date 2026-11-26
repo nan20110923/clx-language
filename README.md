@@ -65,12 +65,43 @@ To create a new file with a clx suffix, you can type "template" and the plugin w
 
 ### Debugging
 
-**The simulator has a built-in debugger, and this plugin provides simple breakpoint and command line debugging functions**
+**The simulator has a built-in debugger, and this plugin drives it from VS Code**
 
-1. Switch to **Debug** in the left column.
-2. Clicking on **Run and Debug** will start the simulator and open a new file called **debug_temp.clx**, which contains all the code contained in the lua area.
-3. Debugging with breakpoints based on **debug_temp.clx** file
-4. You can also do command line debugging in **DEBUG CONSOLE**, type **help** to see the help.
+1. Switch to **Debug** in the left column and click **Run and Debug**. The simulator starts and attaches.
+2. Set breakpoints in **your own `.clx` file** — no copy is generated.
+3. While stopped you get the call stack, the Globals scope (tables expand), Watch, and hover values.
+4. Type emulator commands in **DEBUG CONSOLE**. `help` lists them all.
+
+To read a local variable, use `p <name>` in the Debug Console. This emulator build
+cannot list locals by itself, so the **Locals** scope is empty and says so.
+
+### Test automation
+
+While debugging, the `CLX Test` commands inject input and take screenshots:
+
+| Command | What it does |
+|---|---|
+| **CLX Test: Inject Buttons** | Hold CLX buttons for a number of frames, a duration, or until released |
+| **CLX Test: Hold a Key** | Hold a keyboard key |
+| **CLX Test: Move or Touch** | Set the mouse/touch position |
+| **CLX Test: Screenshot** | Save a BMP and print its pixel md5 |
+| **CLX Test: Show Input State** | Print frames, buttons, mouse, keyboard and gamepads |
+
+The same commands work from the Debug Console behind a `!` prefix, which is handy
+for stepping through input frame by frame:
+
+```
+!btn LEFT 1          one frame of LEFT
+!btn LEFT A 30       LEFT + A for 30 frames
+!btn LEFT 500ms      LEFT for 500 ms
+!btn 0               release
+!shot                screenshot; prints the pixel md5
+!input?              everything about the current input state
+```
+
+Screenshots are written to the extension's own storage, never next to your source
+files. The reported `md5` covers pixel data only, so it is stable across platforms
+and usable as a golden-image key.
 
 ![debug](https://x.cololight.com/mweb/docs/assets/images/debug-258b9f11b14dfc971b29f6719a4aaba5.gif)
 
