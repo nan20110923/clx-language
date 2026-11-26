@@ -12,7 +12,7 @@
 | Node.js | 22 或更高 | 打包和发布用的 `@vscode/vsce` 要求 22 以上，CI 使用 24 |
 | yarn | 1.x | 仓库只使用 yarn |
 | JDK | 11 或更高 | 运行语言服务器 `server/lua_ls.jar` |
-| VS Code | 1.80 或更高 | 与 `package.json` 的 `engines.vscode` 一致 |
+| VS Code | 1.91 或更高 | 与 `package.json` 的 `engines.vscode` 一致 |
 
 扩展本身运行在 Windows 和 macOS 上，模拟器没有 Linux 版本。打包和发布在 Linux 的 CI 上进行，那里只需要构建，不需要运行模拟器。
 
@@ -30,16 +30,26 @@ yarn install
 
 ```text
 src/                            TypeScript 源码，由 esbuild 打包成 dist/extension.js
-  extension.ts                  扩展入口：注册命令、启动语言服务器、管理模拟器进程
-  debugger/ClxDebugSession.ts   调试会话，与模拟器的调试通道（TCP 3563）通信
-  debugger/ClxDebugProvider.ts  解析 launch 配置，显示“等待连接”提示
-  debugger/activeDebug.ts       注册调试适配器工厂和 inline values
-  debugger/FileUtil.ts          生成 debug_temp.clx
-  annotator.ts                  参数名等注解
-  findJava.ts                   查找 Java 可执行文件
-  substitution.ts               展开 ${workspaceFolder} 变量
-  languageConfiguration.ts      括号、注释、缩进规则
-  lspExt.ts                     语言服务器相关的类型定义
+  extension.ts                  扩展入口，只做装配：注册命令、把各模块的生命周期挂到 subscriptions
+  ids.ts                        两个 id（LANGUAGE_ID / DEBUG_TYPE）与设置命名空间的唯一住所
+  runClxFile.ts                 选模拟器并启动：自定义路径或按需下载；运行和调试共用这一条
+  language/                     语言侧
+    languageServer.ts           CLX 语言服务器（Java 子进程）启停、按界面语言选标准库
+    javaLocator.ts              查找 Java（设置项 / JAVA_HOME）并展开 ${workspaceFolder}
+    annotations.ts              注解：协议类型、装饰渲染、编辑器和文档变化的接线
+    languageConfiguration.ts    括号、注释、缩进规则
+  emulator/                     模拟器侧
+    emulator.ts                 模拟器包的 VS Code 适配：清单文件、缓存根、确认弹窗、进度条
+    emulatorBundle.ts           模拟器包的纯逻辑：下载、sha256、tar 解压、原子替换（不 import vscode）
+    emulatorProcess.ts          模拟器进程生命周期：spawn、调试通道就绪、终止；3563 只在这里定义
+  debug/                        调试侧
+    debugSession.ts             调试适配器（DAP）：只做协议翻译
+    debugChannel.ts             调试通道：framing、请求串行化、异步 @ 停止帧（不 import vscode）
+    luaProtocol.ts              应答体解析：bt / i local / i b / src / @ 帧 / shot / vmlist（不 import vscode）
+    lineMapping.ts              .clx 行号 ↔ __lua__ 行号校准（不 import vscode）
+    configurationProvider.ts    解析 launch 配置
+    activate.ts                 注册调试适配器工厂和 inline values
+test/                           node:test 用例，覆盖上面三个不 import vscode 的 module
 syntaxes/.tmLanguage.json       TextMate 语法
 snippets/snippets.json          代码片段
 language-configuration.json     语言配置
@@ -49,8 +59,8 @@ server/lua_ls.jar               语言服务器，基于 EmmyLua-LanguageServer 
 scripts/pack-emulator.mjs       模拟器打包脚本
 static/readme/                  README 图片，不进插件包
 docs/                           开发、部署文档和决策记录
-dist/                           esbuild 打包产物，不入库
-out/                            早期的编译产物，已入库，运行时不使用
+dist/                           esbuild 打包产物，不入库；会被装进插件包
+.artifacts/                     模拟器 tar.gz 和 vsix，不入库也不进插件包
 ```
 
 ## 构建
@@ -66,7 +76,7 @@ yarn watch    # 监听文件改动，自动重新打包
 
 - **语言服务器**：`server/lua_ls.jar` 用 Java 启动。Java 的查找顺序是设置项 `clx-language.JAVA_HOME`、环境变量 `JAVA_HOME`、`PATH`。标准库存根按 VS Code 的界面语言选择：中文用 `res/std_zh`，其他语言用 `res/std`。
 - **模拟器的启动方式**：用 `child_process.spawn` 传参数数组，`coloXtool -d <目录>/ -r <文件>`，调试时加 `-x`。不要改回拼接 shell 字符串的写法：Windows 的 cmd.exe 不认单引号，路径里的引号会被当成路径的一部分，表现是 `EIE:open file err`。
-- **模拟器不再随包分发**：1.1.0 起按需下载到 `context.globalStorageUri/emulators/ColoPlay-<platform>-<date>-<sha前8位>/`，由 `src/emulator.ts` 管理。首次下载前弹一次确认，之后静默复用缓存。缓存目录里写 `.complete` 标记，缺失或可执行文件不在就整个重下。
+- **模拟器不再随包分发**：1.1.0 起按需下载到 `context.globalStorageUri/emulators/ColoPlay-<platform>-<date>-<sha前8位>/`，由 `src/emulator/emulator.ts`（VS Code 适配）和 `src/emulator/emulatorBundle.ts`（纯逻辑）共同管理。首次下载前弹一次确认，之后静默复用缓存。缓存目录里写 `.complete` 标记，缺失或可执行文件不在就整个重下。
 
   归档来源是官方发布页 <https://x.cololight.com/mweb/docs/examples>。发布新模拟器包的流程：
 
@@ -94,8 +104,10 @@ yarn watch    # 监听文件改动，自动重新打包
   **不要用仓库历史里的 `debugger/` 二进制**。那批是 2023/2024 的，官方此后改了三件事：不再单独发布 Nature、macOS 改成 `.app` bundle、字体编译进可执行文件。用旧包会得到与官方不一致的行为。
 - **模拟器的选择**：只有两条路。`clx-language.debugger` 为 `Custom` 且填了 `debuggerCustomPath` 时完全接管，不下载也不回落；否则用下载的官方包。`Nature` 选项已废弃，等价于 `Default`。
 - **设备规格不枚举**：首行只要匹配 `coloX-<字母数字>` 或 `X-<宽>x<高>` 就交给模拟器判断。不要重新引入 `(4|16|32)` 白名单，官方会加新规格。
-- **调试适配器是内联的**：`src/debugger/activeDebug.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0].program` 指向的 `out/debugger/ClxDebugAdapter.js` 并不存在，这是遗留配置，不需要补这个文件。
-- **调试通道**：本机 TCP 3563，只允许一个客户端连接。启动调试会在工作区里生成 `debug_temp.clx`。
+- **调试适配器是内联的**：`src/debug/activate.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0]` 不需要 `program` 字段。
+- **调试通道**：本机 TCP 3563，只允许一个客户端连接。`-x` 启动的模拟器会停在 `XLUADBG wait`，必须收到 `c` 才执行，所以 `configurationDoneRequest` 里要真的发 `c`；同理声明了 `supportsTerminateRequest` 就必须覆写 `terminateRequest`。协议层全部在 `src/debug/debugChannel.ts` 与 `src/debug/luaProtocol.ts`。
+- **断点打在原始 `.clx` 文件上**，不生成 `debug_temp.clx` 副本：模拟器只认内部名为 `__lua__` 的缓冲区。行号换算见 `src/debug/lineMapping.ts`，映射建立不起来时拒绝启动调试。详见 `docs/adr/0002-breakpoints-on-the-original-file.md`。
+- **`i local` 拿不到局部变量**（模拟器侧的帧偏移 bug），用 `p <名字>` 代替。见 `AGENTS.md`。
 - **运行成功与否的判断**：看文件同级目录是否出现 `.rom`，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。
 - **macOS Gatekeeper**：官方 macOS 包是 ad-hoc 签名、未公证。插件通过 `https` 下载的文件不带 quarantine 属性，能直接跑；手工下载再指定路径的情形会被拦，需要 `xattr -d com.apple.quarantine`。
 
@@ -103,14 +115,14 @@ yarn watch    # 监听文件改动，自动重新打包
 
 在 VS Code 里按 `F5`，启动配置是 `Extension`，会打开 Extension Development Host。
 
-已知问题：`.vscode/launch.json` 的 `outFiles` 仍然指向 `out/`，而实际产物在 `dist/`。如果在 `src/` 里打的断点绑定不上，把它改成 `${workspaceFolder}/dist/**/*.js`。
+`outFiles` 指向 `dist/`（esbuild 的实际产物）。如果 `src/` 里的断点绑不上，先确认 `yarn build` 跑过、`dist/extension.js` 存在。
 
 在 Development Host 里手工验证的内容：
 
 1. 打开一个 `.clx` 文件，语法高亮和补全正常（本机需要 Java 11 或更高）。
 2. 输入 `template` 能出现模板片段，新建文件后首行带设备规格标识。
 3. 点击编辑器右上角的运行按钮或按 `F5`，模拟器启动，并在文件的同级目录生成 `.rom`。
-4. 左侧切到 Run and Debug 启动调试，以 `debug_temp.clx` 是否出现作为就绪信号。调试期间不要另外连接 3563 端口，第二个连接会挤掉扩展自己的连接，看起来像调试功能坏了。
+4. 左侧切到 Run and Debug 启动调试。断点应显示为已填充的圆点并落在原始 `.clx` 文件上。判断文件是否加载成功看 `<文件名>.clx.rom` 是否生成，不要看 3563 端口 —— 加载失败时它也会监听。调试期间不要另外连接 3563 端口，第二个连接会挤掉扩展自己的连接，看起来像调试功能坏了。
 
 ## 检查
 
@@ -121,7 +133,7 @@ yarn test        # 与 typecheck 相同
 
 仓库没有自动化测试，`yarn lint` 目前因为没有 ESLint 配置文件而不可用。改动后需要手工验证上面的流程。
 
-不要运行 `yarn compile`：那是早期的 tsc 流程，输出到 `out/`，会覆盖已入库的 `out/extension.js` 并产生新的未跟踪文件。现在的构建走 esbuild。
+类型检查只走 `tsc --noEmit`，不要把 tsc 的产物写到磁盘；构建统一用 esbuild。
 
 ## 打包
 
@@ -129,20 +141,37 @@ yarn test        # 与 typecheck 相同
 yarn package
 ```
 
-在根目录生成 `clx-language-<version>.vsix`，已被 git 忽略。打包时会自动执行 `vscode:prepublish`，把 `src/extension.ts` 压缩打包进 `dist/extension.js`。
+在 `.artifacts/` 生成 `clx-language-<version>.vsix`，已被 git 忽略。打包时会自动执行 `vscode:prepublish`，把 `src/extension.ts` 压缩打包进 `dist/extension.js`。
+
+`dist/` 和 `.artifacts/` 的分工：`dist/` 放**会被装进插件包**的构建产物（`extension.js`），`.artifacts/` 放**交出去**的东西（模拟器 tar.gz、vsix）。不要把 vsix 放进 `dist/`：`vscode:prepublish` 每次先 `rimraf dist`，上一份产物会被一起删掉。
+
+依赖分两层：运行时用到的 `@vscode/debugadapter`、`@vscode/debugprotocol`、`vscode-languageclient` 在 `dependencies`，其余在 `devDependencies`。esbuild 把它们全部内联进 `dist/extension.js`，所以打包要带 `--no-dependencies`，不然 vsce 会额外塞一份 `node_modules`（56 文件 → 409 文件）。`yarn package` 已带这个标记。
 
 插件包的内容由 `.vscodeignore` 控制。下面这些必须留在排除列表里：
 
 - `AGENTS.md` 和 `docs/**`：只需要给开发者看，不需要分发给用户。
 - `.github/**`：vsce 内置的 `.github` 排除项匹配不到目录下的文件，必须显式写。
+- `src/**` 和 `tsconfig.json`：`src/` 已经被 esbuild 打成一个 `dist/extension.js`，运行时没有读者。
 
 检查包内容：
 
 ```bash
-unzip -l clx-language-*.vsix | head -40
+unzip -l .artifacts/clx-language-*.vsix
 ```
 
-模拟器归档里的可执行位由 `src/emulator.ts` 按 tar 头的 mode 还原，所以打包脚本必须在 macOS/Linux 上运行（保持源文件权限），不要用会丢权限的工具重新压缩。`scripts/pack-emulator.mjs` 会拒绝 symlink 和非普通文件。
+出厂内容应该只有 `dist/`、`res/`、`server/`、`syntaxes/`、`snippets/`、`language-configuration.json` 和几个 md。出现 `.ts`、`out/` 或 `tsconfig.json` 就说明 `.vscodeignore` 漏了。CI 的 `Build VSIX` workflow 会断言同样的内容。
+
+模拟器归档里的可执行位由 `src/emulator/emulatorBundle.ts` 按 tar 头的 mode 还原，所以打包脚本必须在 macOS/Linux 上运行（保持源文件权限），不要用会丢权限的工具重新压缩。`scripts/pack-emulator.mjs` 会拒绝 symlink 和非普通文件。
+
+`src/emulator/emulatorBundle.ts`、`src/debug/debugChannel.ts`、`src/debug/luaProtocol.ts`、`src/debug/lineMapping.ts` 都不 import `vscode`，所以可以直接在普通 Node 里测试，不必启动 VS Code。跑 `yarn test` 即可（node:test，由 `scripts/run-tests.mjs` 用 esbuild 预打包后执行）：
+
+```bash
+# 单独打包成 CJS 后即可 require，验证 tar 解析和路径穿越防护
+esbuild src/emulatorBundle.ts --bundle --format=cjs --platform=node --outfile=/tmp/eb.js
+node -e "const {extract}=require('/tmp/eb.js'); /* ... */"
+```
+
+它导出的 `parseManifest`、`findBundle`、`locateBundle`、`provision`、`extract` 都是纯函数式的入口；进度和取消通过 `ProgressSink`、`Cancellation` 结构类型注入，测试传假对象即可。新增处理归档字节的逻辑必须留在这个文件里。
 
 ## 发布
 

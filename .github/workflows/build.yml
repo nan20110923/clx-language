@@ -30,16 +30,52 @@ jobs:
 
       - name: Report what went into the package
         run: |
-          vsix=$(ls *.vsix)
-          echo "### $vsix" >> "$GITHUB_STEP_SUMMARY"
+          vsix=$(ls .artifacts/*.vsix)
+          echo "### $(basename "$vsix")" >> "$GITHUB_STEP_SUMMARY"
           unzip -l "$vsix" | tail -2 >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          unzip -l "$vsix" | awk '{print $4}' | grep -E 'emulator-manifest|readme' >> "$GITHUB_STEP_SUMMARY"
+          unzip -l "$vsix" | awk '{print $4}' | grep -E 'emulator-manifest|readme|dist/' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
+      # .vscodeignore 是唯一决定出厂内容的 interface。历史上它漏过 src/**，把
+      # 13 个 .ts 和一份 tsconfig.json 发了出去（1.0.17 里还有整套 out/ 示例），
+      # 而这里的检查只 grep 了 emulator-manifest|readme，所以一直没被发现。
+      - name: Check nothing that must not ship is in the package
+        run: |
+          vsix=$(ls .artifacts/*.vsix)
+          listing=$(unzip -l "$vsix" | awk '{print $4}')
+
+          missing=0
+          for required in \
+            extension/dist/extension.js \
+            extension/res/emulator-manifest.json \
+            extension/server/lua_ls.jar \
+            extension/readme.md \
+            extension/syntaxes/.tmLanguage.json
+          do
+            if ! echo "$listing" | grep -qxF "$required"; then
+              echo "::error title=Missing from vsix::$required is not in the package"
+              missing=1
+            fi
+          done
+
+          leaked=$(echo "$listing" | grep -E '^extension/(src/|out/|tsconfig\.json$)' || true)
+          if [ -n "$leaked" ]; then
+            echo "::error title=Source leaked into vsix::These must be excluded by .vscodeignore:"
+            echo "$leaked"
+            missing=1
+          fi
+
+          [ "$missing" -eq 0 ] || exit 1
+          echo "Package contents are correct." >> "$GITHUB_STEP_SUMMARY"
+
+      # `.artifacts/` 以点开头，而 upload-artifact@v4 默认不包含隐藏文件
+      # （include-hidden-files 默认 false）。缺了这一行，上面的步骤都成功、
+      # 产物也确实生成了，但上传时找不到文件而失败。
       - uses: actions/upload-artifact@v4
         with:
           name: vsix
-          path: "*.vsix"
+          path: ".artifacts/*.vsix"
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 30

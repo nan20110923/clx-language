@@ -3,6 +3,9 @@ node_modules
 yarn-error.log
 dist/
 
+# tsc 只做类型检查（tsconfig 里 noEmit），这里兜底防止误增编译产物
+out/
+
 # 模拟器包从这里打包上传到 GitHub Releases，不入库
 .artifacts/
 

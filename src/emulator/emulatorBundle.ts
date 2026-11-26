@@ -1,22 +1,22 @@
 'use strict';
 
 /**
- * 模拟器包（emulator bundle）的获取与缓存。
+ * 模拟器包（emulator bundle）的获取与安装，不 import vscode。
  *
- * 1.0.19 起模拟器不再随插件包分发，改为按需从 GitHub Releases 下载。
- * 这里负责：读清单、判断缓存是否可用、下载、校验 sha256、解压、原子替换。
+ * 这一层只做确定性的事：解析清单、下载、校验 sha256、解压、原子替换。
+ * 进度、日志、取消都从参数注入，所以可以在普通 Node 进程里直接测 —— 这里是
+ * 仓库中唯一处理不可信输入（下载到的归档字节）的代码，必须能测。
  *
+ * 需要 VS Code 的那一侧（进度通知、确认弹窗、OutputChannel）在 emulator.ts。
  * 术语见 GLOSSARY.md：模拟器（emulator）≠ 调试适配器（debug adapter）。
  */
 
-import * as vscode from 'vscode';
 import * as https from 'https';
 import * as http from 'http';
 import * as crypto from 'crypto';
 import * as zlib from 'zlib';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { URL } from 'url';
 
 export type EmulatorPlatform = 'darwin' | 'win32';
@@ -28,7 +28,7 @@ export interface EmulatorLaunch {
 	libraryDir?: string;
 }
 
-interface EmulatorBundle {
+export interface EmulatorBundle {
 	product: string;
 	platform: string;
 	date: string;
@@ -40,93 +40,40 @@ interface EmulatorBundle {
 	libraryPath?: string;
 }
 
-interface EmulatorManifest {
+export interface EmulatorManifest {
 	release: string;
 	baseUrl: string;
 	bundles: EmulatorBundle[];
 }
 
-const MANIFEST_PATH = ['res', 'emulator-manifest.json'];
-const MARKER_FILE = '.complete';
-const DOWNLOAD_CONFIRMED_KEY = 'emulatorDownloadConfirmed';
-
-/** 同一份模拟器包的并发请求共用一次下载 */
-const inflight = new Map<string, Promise<EmulatorLaunch>>();
-
-let outputChannel: vscode.OutputChannel | undefined;
-
-function channel(): vscode.OutputChannel {
-	if (!outputChannel) {
-		outputChannel = vscode.window.createOutputChannel('CLX Emulator');
-	}
-	return outputChannel;
+/**
+ * vscode.CancellationToken 的结构子集。
+ * 用结构类型而不是 import，这个文件才不需要 vscode，测试传个假对象即可。
+ */
+export interface Cancellation {
+	readonly isCancellationRequested: boolean;
+	onCancellationRequested(listener: () => void): { dispose(): void };
 }
 
-export function disposeEmulatorOutput(): void {
-	outputChannel?.dispose();
-	outputChannel = undefined;
+/** vscode.Progress 的结构子集，同理。 */
+export interface ProgressSink {
+	report(value: { message?: string; increment?: number }): void;
 }
 
-function log(message: string): void {
-	channel().appendLine(message);
+export interface ProvisionRequest {
+	manifest: EmulatorManifest;
+	bundle: EmulatorBundle;
+	/** 最终的安装目录，绝对路径 */
+	directory: string;
+	log?: (message: string) => void;
+	progress?: ProgressSink;
+	cancellation?: Cancellation;
 }
 
-function manifestPath(context: vscode.ExtensionContext): string {
-	return path.join(context.extensionPath, ...MANIFEST_PATH);
-}
-
-function readManifest(context: vscode.ExtensionContext): EmulatorManifest {
-	const file = manifestPath(context);
-	let raw: string;
-	try {
-		raw = fs.readFileSync(file, 'utf8');
-	} catch (e) {
-		throw new EmulatorError(`Cannot read the emulator manifest at ${file}.`, `${e}`);
-	}
-	let parsed: EmulatorManifest;
-	try {
-		parsed = JSON.parse(raw) as EmulatorManifest;
-	} catch (e) {
-		throw new EmulatorError(`The emulator manifest at ${file} is not valid JSON.`, `${e}`);
-	}
-	if (!parsed || !Array.isArray(parsed.bundles) || typeof parsed.baseUrl !== 'string' || typeof parsed.release !== 'string') {
-		throw new EmulatorError(`The emulator manifest at ${file} is malformed.`);
-	}
-	return parsed;
-}
-
-function findBundle(context: vscode.ExtensionContext, platform: string): EmulatorBundle {
-	const manifest = readManifest(context);
-	const bundle = manifest.bundles.find(b => b.platform === platform);
-	if (!bundle) {
-		throw new EmulatorError(`No emulator bundle is available for ${platform}.`);
-	}
-	return bundle;
-}
-
-function cacheRoot(context: vscode.ExtensionContext): string {
-	return path.join(context.globalStorageUri.fsPath, 'emulators');
-}
-
-function versionKey(bundle: EmulatorBundle): string {
-	return `${bundle.product}-${bundle.platform}-${bundle.date}-${bundle.sha256.slice(0, 8)}`;
-}
-
-function bundleDir(context: vscode.ExtensionContext, bundle: EmulatorBundle): string {
-	return path.join(cacheRoot(context), versionKey(bundle));
-}
-
-/** 缓存目录里是否有一份完整可用的包 */
-function isReady(dir: string, bundle: EmulatorBundle): boolean {
-	if (!fs.existsSync(path.join(dir, MARKER_FILE))) {
-		return false;
-	}
-	const executable = path.join(dir, bundle.executable);
-	try {
-		return fs.statSync(executable).isFile();
-	} catch {
-		return false;
-	}
+/** 本地缓存里一份包的位置。launch 为 null 表示还需要下载。 */
+export interface BundleInstall {
+	directory: string;
+	launch: EmulatorLaunch | null;
 }
 
 export class EmulatorError extends Error {
@@ -143,167 +90,143 @@ class CancelledError extends Error {
 	}
 }
 
+const MARKER_FILE = '.complete';
+
 /**
- * 确保本机有一份可用的模拟器包，返回启动所需的路径。
- * 用户取消下载时返回 null（调用方应静默退出，不要重复报错）。
+ * 解析并校验清单。清单坏了没有可用的降级路径，所以直接抛：
+ * 调用方唯一正确的反应是告诉用户。
  */
-export async function ensureEmulator(
-	context: vscode.ExtensionContext
-): Promise<EmulatorLaunch | null> {
-	const platform = os.platform();
-	const bundle = findBundle(context, platform);
-	const dir = bundleDir(context, bundle);
-
-	if (isReady(dir, bundle)) {
-		return launchFor(dir, bundle);
-	}
-
-	const key = versionKey(bundle);
-	let pending = inflight.get(key);
-	if (!pending) {
-		pending = provision(context, bundle, dir);
-		inflight.set(key, pending);
-		const clear = () => inflight.delete(key);
-		pending.then(clear, clear);
-	}
+export function parseManifest(raw: string, source = 'The emulator manifest'): EmulatorManifest {
+	let parsed: EmulatorManifest;
 	try {
-		return await pending;
+		parsed = JSON.parse(raw) as EmulatorManifest;
+	} catch (e) {
+		throw new EmulatorError(`${source} is not valid JSON.`, `${e}`);
+	}
+	if (!parsed || !Array.isArray(parsed.bundles) || typeof parsed.baseUrl !== 'string' || typeof parsed.release !== 'string') {
+		throw new EmulatorError(`${source} is malformed.`);
+	}
+	return parsed;
+}
+
+export function findBundle(manifest: EmulatorManifest, platform: string): EmulatorBundle {
+	const bundle = manifest.bundles.find(b => b.platform === platform);
+	if (!bundle) {
+		throw new EmulatorError(`No emulator bundle is available for ${platform}.`);
+	}
+	return bundle;
+}
+
+/** 本地缓存里该包的位置，以及它是否已经可用。 */
+export function locateBundle(cacheRoot: string, bundle: EmulatorBundle): BundleInstall {
+	const directory = path.join(cacheRoot, versionKey(bundle));
+	return {
+		directory,
+		launch: isReady(directory, bundle) ? launchFor(directory, bundle) : null
+	};
+}
+
+/**
+ * 让 request.directory 里有一份可用的包：下载、校验、解压、原子替换。
+ * 用户取消时返回 null —— 这不是错误，调用方应静默退出。
+ */
+export async function provision(request: ProvisionRequest): Promise<EmulatorLaunch | null> {
+	const url = assetUrl(request.manifest, request.bundle);
+	try {
+		return await install(request, url);
 	} catch (e) {
 		if (e instanceof CancelledError) {
+			request.log?.('Download cancelled.');
 			return null;
 		}
 		throw e;
 	}
 }
 
-function launchFor(dir: string, bundle: EmulatorBundle): EmulatorLaunch {
-	const executable = path.join(dir, bundle.executable);
-	const launch: EmulatorLaunch = { executable };
+function assetUrl(manifest: EmulatorManifest, bundle: EmulatorBundle): string {
+	return `${manifest.baseUrl.replace(/\/+$/, '')}/${manifest.release}/${bundle.asset}`;
+}
+
+function versionKey(bundle: EmulatorBundle): string {
+	return `${bundle.product}-${bundle.platform}-${bundle.date}-${bundle.sha256.slice(0, 8)}`;
+}
+
+/** 缓存目录里是否有一份完整可用的包 */
+function isReady(directory: string, bundle: EmulatorBundle): boolean {
+	if (!fs.existsSync(path.join(directory, MARKER_FILE))) {
+		return false;
+	}
+	try {
+		return fs.statSync(path.join(directory, bundle.executable)).isFile();
+	} catch {
+		return false;
+	}
+}
+
+function launchFor(directory: string, bundle: EmulatorBundle): EmulatorLaunch {
+	const launch: EmulatorLaunch = { executable: path.join(directory, bundle.executable) };
 	if (bundle.libraryPath) {
-		launch.libraryDir = path.join(dir, bundle.libraryPath);
+		launch.libraryDir = path.join(directory, bundle.libraryPath);
 	}
 	return launch;
 }
 
-async function provision(
-	context: vscode.ExtensionContext,
-	bundle: EmulatorBundle,
-	dir: string
-): Promise<EmulatorLaunch> {
-	const manifest = readManifest(context);
-	const url = `${manifest.baseUrl.replace(/\/+$/, '')}/${manifest.release}/${bundle.asset}`;
-
-	if (!(await confirmDownload(context, bundle))) {
-		throw new CancelledError();
-	}
-
-	const token = new vscode.CancellationTokenSource();
-	return vscode.window.withProgress(
-		{
-			location: vscode.ProgressLocation.Notification,
-			title: `Downloading the CLX emulator (${bundle.product})`,
-			cancellable: true
-		},
-		async (progress, cancelToken) => {
-			const registration = cancelToken.onCancellationRequested(() => token.cancel());
-			try {
-				return await downloadAndInstall(bundle, url, dir, progress, token.token);
-			} finally {
-				registration.dispose();
-				token.dispose();
-			}
-		}
-	);
-}
-
-/** 首次下载前确认一次，之后不再打扰 */
-async function confirmDownload(context: vscode.ExtensionContext, bundle: EmulatorBundle): Promise<boolean> {
-	if (context.globalState.get<boolean>(DOWNLOAD_CONFIRMED_KEY)) {
-		return true;
-	}
-	const download = 'Download';
-	const chooseManually = 'Choose a Local Copy';
-	const answer = await vscode.window.showInformationMessage(
-		`The CLX emulator (${bundle.product}) is not bundled with this extension and has to be downloaded once (about ${formatBytes(bundle.size)}). Continue?`,
-		{ modal: true },
-		download,
-		chooseManually
-	);
-	if (answer === download) {
-		await context.globalState.update(DOWNLOAD_CONFIRMED_KEY, true);
-		return true;
-	}
-	if (answer === chooseManually) {
-		await vscode.commands.executeCommand('workbench.action.openSettings', 'clx-language.debuggerCustomPath');
-	}
-	return false;
-}
-
-async function downloadAndInstall(
-	bundle: EmulatorBundle,
-	url: string,
-	dir: string,
-	progress: vscode.Progress<{ message?: string; increment?: number }>,
-	token: vscode.CancellationToken
-): Promise<EmulatorLaunch> {
-	const parent = path.dirname(dir);
+async function install(request: ProvisionRequest, url: string): Promise<EmulatorLaunch> {
+	const { bundle, directory, log, progress, cancellation } = request;
+	const parent = path.dirname(directory);
 	fs.mkdirSync(parent, { recursive: true });
 
 	const archive = path.join(parent, `${versionKey(bundle)}.download`);
 	const staging = path.join(parent, `${versionKey(bundle)}.partial`);
-	removeDir(archive);
-	removeDir(staging);
+	removeDir(archive, log);
+	removeDir(staging, log);
 
-	log(`Downloading ${url}`);
+	log?.(`Downloading ${url}`);
 
 	try {
-		await download(url, archive, bundle.sha256, progress, token);
+		await download(url, archive, bundle.sha256, progress, cancellation);
 	} catch (e) {
-		removeDir(archive);
+		removeDir(archive, log);
 		if (e instanceof CancelledError) {
-			log('Download cancelled.');
 			throw e;
 		}
-		throw new EmulatorError(
-			`Failed to download the CLX emulator from ${url}.`,
-			`${e}`
-		);
+		throw new EmulatorError(`Failed to download the CLX emulator from ${url}.`, `${e}`);
 	}
 
 	try {
-		progress.report({ message: 'Extracting…', increment: 0 });
+		progress?.report({ message: 'Extracting…', increment: 0 });
 		extract(archive, staging);
 		fs.writeFileSync(
 			path.join(staging, MARKER_FILE),
 			JSON.stringify({ product: bundle.product, platform: bundle.platform, date: bundle.date, sha256: bundle.sha256 }, null, 2)
 		);
 	} catch (e) {
-		removeDir(staging);
-		removeDir(archive);
+		removeDir(staging, log);
+		removeDir(archive, log);
 		throw new EmulatorError('Failed to extract the CLX emulator archive.', `${e}`);
 	}
-	removeDir(archive);
+	removeDir(archive, log);
 
 	// 解压完成后才把临时目录改名成正式目录：中途被杀不会留下“看起来能用”的缓存
-	if (fs.existsSync(dir)) {
-		removeDir(dir);
+	if (fs.existsSync(directory)) {
+		removeDir(directory, log);
 	}
-	fs.renameSync(staging, dir);
-	log(`Installed the CLX emulator into ${dir}`);
+	fs.renameSync(staging, directory);
+	log?.(`Installed the CLX emulator into ${directory}`);
 
-	if (!isReady(dir, bundle)) {
-		removeDir(dir);
+	if (!isReady(directory, bundle)) {
+		removeDir(directory, log);
 		throw new EmulatorError('The downloaded CLX emulator is incomplete: the executable is missing.');
 	}
 
-	return launchFor(dir, bundle);
+	return launchFor(directory, bundle);
 }
 
-function removeDir(target: string): void {
+function removeDir(target: string, log?: (message: string) => void): void {
 	try {
 		fs.rmSync(target, { recursive: true, force: true });
 	} catch (e) {
-		log(`Failed to remove ${target}: ${e}`);
+		log?.(`Failed to remove ${target}: ${e}`);
 	}
 }
 
@@ -311,8 +234,8 @@ function download(
 	url: string,
 	destination: string,
 	expectedSha256: string,
-	progress: vscode.Progress<{ message?: string; increment?: number }>,
-	token: vscode.CancellationToken,
+	progress: ProgressSink | undefined,
+	cancellation: Cancellation | undefined,
 	redirects = 0
 ): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
@@ -320,7 +243,7 @@ function download(
 			reject(new Error('Too many redirects.'));
 			return;
 		}
-		if (token.isCancellationRequested) {
+		if (cancellation?.isCancellationRequested) {
 			reject(new CancelledError());
 			return;
 		}
@@ -339,7 +262,7 @@ function download(
 						reject(new Error(`Redirect ${status} without a Location header.`));
 						return;
 					}
-					download(new URL(location, target).toString(), destination, expectedSha256, progress, token, redirects + 1)
+					download(new URL(location, target).toString(), destination, expectedSha256, progress, cancellation, redirects + 1)
 						.then(resolve, reject);
 					return;
 				}
@@ -355,7 +278,7 @@ function download(
 				const hash = crypto.createHash('sha256');
 				const out = fs.createWriteStream(destination);
 
-				const cancel = token.onCancellationRequested(() => {
+				const cancel = cancellation?.onCancellationRequested(() => {
 					request.destroy();
 					out.destroy();
 					reject(new CancelledError());
@@ -367,26 +290,26 @@ function download(
 					if (total > 0) {
 						const percent = Math.floor((received / total) * 100);
 						if (percent > lastPercent) {
-							progress.report({
+							progress?.report({
 								message: `${percent}% of ${formatBytes(total)}`,
 								increment: percent - lastPercent
 							});
 							lastPercent = percent;
 						}
 					} else {
-						progress.report({ message: `${formatBytes(received)} downloaded`, increment: 0 });
+						progress?.report({ message: `${formatBytes(received)} downloaded`, increment: 0 });
 					}
 				});
 				response.on('error', e => {
-					cancel.dispose();
+					cancel?.dispose();
 					reject(e);
 				});
 				out.on('error', e => {
-					cancel.dispose();
+					cancel?.dispose();
 					reject(e);
 				});
 				out.on('finish', () => {
-					cancel.dispose();
+					cancel?.dispose();
 					const actual = hash.digest('hex');
 					if (actual !== expectedSha256) {
 						reject(new Error(`Checksum mismatch: expected ${expectedSha256}, got ${actual}.`));
@@ -401,7 +324,7 @@ function download(
 	});
 }
 
-function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number): string {
 	if (bytes >= 1024 * 1024) {
 		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 	}
@@ -411,8 +334,11 @@ function formatBytes(bytes: number): string {
 	return `${bytes} B`;
 }
 
-/** 解压 tar.gz；只支持普通文件和目录，拒绝任何越界路径 */
-function extract(archive: string, destination: string): void {
+/**
+ * 解压 tar.gz；只支持普通文件和目录，拒绝任何越界路径。
+ * 归档字节来自网络，这里是唯一需要防路径穿越的地方。
+ */
+export function extract(archive: string, destination: string): void {
 	const tar = zlib.gunzipSync(fs.readFileSync(archive));
 	fs.mkdirSync(destination, { recursive: true });
 
