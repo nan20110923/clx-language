@@ -94,8 +94,6 @@
       {
         "type": "clx_debug",
         "label": "CLX Debugger",
-        "program": "./out/debugger/ClxDebugAdapter.js",
-        "runtime": "node",
         "configurationAttributes": {
             "launch": {
                 "required": [
@@ -174,13 +172,12 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node --outfile=dist/extension.js",
     "watch": "npm run -S esbuild-base -- --sourcemap --sources-content=false --watch",
     "build": "npm run -S esbuild-base -- --sourcemap --sources-content=false",
-    "package": "vsce package",
+    "package": "node -e \"require('fs').mkdirSync('.artifacts',{recursive:true})\" && vsce package --out .artifacts/",
     "publish": "vsce publish",
     "publish-pre-release": "vsce publish --pre-release",
     "vscode:prepublish": "rimraf dist && npm run -S esbuild-base -- --minify",
