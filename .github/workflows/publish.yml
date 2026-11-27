@@ -31,7 +31,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # Write is needed to attach the built vsix to a GitHub Release. Reading
+      # alone was enough while this job only pushed to the Marketplace.
+      contents: write
       # Lets the job request the OIDC token that vsce exchanges for a Marketplace session.
       id-token: write
     steps:
@@ -86,9 +88,21 @@ jobs:
       - run: yarn test
       - run: yarn check-public --history
 
+      # Build the vsix here so the same file is both checked and published.
+      # `--pre-release` has to be decided at packaging time, not publishing
+      # time: vsce records `Microsoft.VisualStudio.Code.PreRelease` inside the
+      # vsix manifest, and `vsce publish --packagePath --pre-release` refuses a
+      # package that does not carry it. `yarn package` cannot pass the flag, so
+      # the channel is applied to the vsce invocation directly.
       - name: Check what the package will contain
+        env:
+          CHANNEL: ${{ steps.channel.outputs.channel }}
         run: |
-          yarn package
+          if [ "$CHANNEL" = 'pre-release' ]; then
+            npx @vscode/vsce package --no-dependencies --pre-release --out .artifacts/
+          else
+            yarn package
+          fi
           vsix=$(ls .artifacts/*.vsix)
           listing=$(unzip -l "$vsix" | awk '{print $4}' | grep -v '^$')
 
@@ -125,10 +139,75 @@ jobs:
       # A pre-release and a regular release can never share a version number
       # *within the same channel*, so the same version can appear once as
       # pre-release and once as stable — the stable one supersedes it.
+      #
+      # Both channels publish the vsix that `yarn package` already produced
+      # above, instead of letting vsce build its own. One build means the file
+      # on the Marketplace and the file on the GitHub Release are the same
+      # bytes, and it is the only way the Release copy can be verified against
+      # the allowlist that ran a step earlier.
+      # Resolve the vsix once so every step below uses the same file. A glob
+      # would pass several paths to vsce if a stale vsix ever survived into
+      # `.artifacts/`, and vsce would then publish whichever it picked.
+      - name: Locate the built vsix
+        id: vsix
+        shell: bash
+        run: |
+          mapfile -t found < <(ls .artifacts/*.vsix 2>/dev/null || true)
+          if [ "${#found[@]}" -ne 1 ]; then
+            echo "::error title=Expected exactly one vsix::Found ${#found[@]} in .artifacts/. Clear the directory and repackage."
+            printf '%s\n' "${found[@]}"
+            exit 1
+          fi
+          echo "path=${found[0]}" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "${found[0]}")" >> "$GITHUB_OUTPUT"
+          echo "Using $(basename "${found[0]}")" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Publish pre-release
         if: steps.channel.outputs.channel == 'pre-release'
-        run: npx @vscode/vsce publish --no-dependencies --oidc --pre-release
+        run: npx @vscode/vsce publish --no-dependencies --oidc --pre-release --packagePath "${{ steps.vsix.outputs.path }}"
 
       - name: Publish release
         if: steps.channel.outputs.channel == 'stable'
-        run: npx @vscode/vsce publish --no-dependencies --oidc
+        run: npx @vscode/vsce publish --no-dependencies --oidc --packagePath "${{ steps.vsix.outputs.path }}"
+
+      # Keep the built vsix reachable for anyone who wants to install it by
+      # hand (for example on Windows, where the emulator cannot be tested in
+      # CI). This runs after publishing on purpose: a Marketplace failure
+      # should fail the job before it looks like a successful release.
+      #
+      # The release is tagged with the same tag that triggered the run, so the
+      # vsix is permanently tied to the commit that produced it. `--verify-tag`
+      # would fail for a manual dispatch, which has no tag, hence the guard.
+      - name: Attach the vsix to a GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          vsix='${{ steps.vsix.outputs.path }}'
+          version=$(node -p "require('./package.json').version")
+          channel='${{ steps.channel.outputs.channel }}'
+
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            # A manual dispatch leaves no tag behind. Name the release after
+            # the version and channel so it is still identifiable, and mark
+            # pre-releases as such.
+            tag="v$version"
+          fi
+
+          notes="VSIX for clx-language $version ($channel), built from $GITHUB_SHA."
+          prerelease=''
+          if [ "$channel" = 'pre-release' ]; then
+            prerelease='--prerelease'
+          fi
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$vsix" --clobber
+          else
+            gh release create "$tag" "$vsix" \
+              --title "clx-language $version" \
+              --notes "$notes" \
+              $prerelease
+          fi
+
+          echo "Attached $(basename "$vsix") to release $tag." >> "$GITHUB_STEP_SUMMARY"
