@@ -88,28 +88,22 @@ jobs:
       - run: yarn test
       - run: yarn check-public --history
 
-      # Build the vsix here so the same file is both checked and published.
-      # `--pre-release` has to be decided at packaging time, not publishing
-      # time: vsce records `Microsoft.VisualStudio.Code.PreRelease` inside the
-      # vsix manifest, and `vsce publish --packagePath --pre-release` refuses a
-      # package that does not carry it. `yarn package` cannot pass the flag, so
-      # the channel is applied to the vsce invocation directly.
+      # Build the vsix once, here, so the file that gets checked is the file
+      # that gets published and attached to the Release.
       #
-      # `.artifacts/` is created first: it is a fresh checkout in CI, so the
-      # directory does not exist, and `--out` fails with ENOTDIR rather than
-      # creating it. `yarn package` does the mkdir itself, which is why the
-      # stable path never hit this.
+      # The packaging rules (mkdir, `--pre-release` at package time, exactly one
+      # vsix, the pre-release property matches the channel) live in
+      # scripts/package-release.mjs rather than in this file: the same command
+      # runs locally, so a mistake shows up on push instead of on a tag — and a
+      # tag publishes to the Marketplace, which cannot be undone.
       - name: Check what the package will contain
+        id: package
         env:
           CHANNEL: ${{ steps.channel.outputs.channel }}
         run: |
-          mkdir -p .artifacts
-          if [ "$CHANNEL" = 'pre-release' ]; then
-            npx @vscode/vsce package --no-dependencies --pre-release --out .artifacts/
-          else
-            yarn package
-          fi
-          vsix=$(ls .artifacts/*.vsix)
+          vsix=$(node scripts/package-release.mjs --channel "$CHANNEL")
+          echo "path=$vsix" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$vsix")" >> "$GITHUB_OUTPUT"
           listing=$(unzip -l "$vsix" | awk '{print $4}' | grep -v '^$')
 
           missing=0
@@ -146,35 +140,18 @@ jobs:
       # *within the same channel*, so the same version can appear once as
       # pre-release and once as stable — the stable one supersedes it.
       #
-      # Both channels publish the vsix that `yarn package` already produced
-      # above, instead of letting vsce build its own. One build means the file
-      # on the Marketplace and the file on the GitHub Release are the same
-      # bytes, and it is the only way the Release copy can be verified against
-      # the allowlist that ran a step earlier.
-      # Resolve the vsix once so every step below uses the same file. A glob
-      # would pass several paths to vsce if a stale vsix ever survived into
-      # `.artifacts/`, and vsce would then publish whichever it picked.
-      - name: Locate the built vsix
-        id: vsix
-        shell: bash
-        run: |
-          mapfile -t found < <(ls .artifacts/*.vsix 2>/dev/null || true)
-          if [ "${#found[@]}" -ne 1 ]; then
-            echo "::error title=Expected exactly one vsix::Found ${#found[@]} in .artifacts/. Clear the directory and repackage."
-            printf '%s\n' "${found[@]}"
-            exit 1
-          fi
-          echo "path=${found[0]}" >> "$GITHUB_OUTPUT"
-          echo "name=$(basename "${found[0]}")" >> "$GITHUB_OUTPUT"
-          echo "Using $(basename "${found[0]}")" >> "$GITHUB_STEP_SUMMARY"
-
+      # Both channels publish the vsix that the packaging step produced,
+      # instead of letting vsce build its own. One build means the file on the
+      # Marketplace and the file on the GitHub Release are the same bytes, and
+      # it is the only way the Release copy is covered by the allowlist check
+      # that ran a step earlier.
       - name: Publish pre-release
         if: steps.channel.outputs.channel == 'pre-release'
-        run: npx @vscode/vsce publish --no-dependencies --oidc --pre-release --packagePath "${{ steps.vsix.outputs.path }}"
+        run: npx @vscode/vsce publish --no-dependencies --oidc --pre-release --packagePath "${{ steps.package.outputs.path }}"
 
       - name: Publish release
         if: steps.channel.outputs.channel == 'stable'
-        run: npx @vscode/vsce publish --no-dependencies --oidc --packagePath "${{ steps.vsix.outputs.path }}"
+        run: npx @vscode/vsce publish --no-dependencies --oidc --packagePath "${{ steps.package.outputs.path }}"
 
       # Keep the built vsix reachable for anyone who wants to install it by
       # hand (for example on Windows, where the emulator cannot be tested in
@@ -188,7 +165,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          vsix='${{ steps.vsix.outputs.path }}'
+          vsix='${{ steps.package.outputs.path }}'
           version=$(node -p "require('./package.json').version")
           channel='${{ steps.channel.outputs.channel }}'
 

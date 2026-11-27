@@ -33,6 +33,19 @@ jobs:
       # vscode:prepublish runs automatically and bundles src/ into dist/
       - run: yarn package
 
+      # The publish workflow builds the vsix through this same script, but it
+      # only runs on a tag — and a tag publishes to the Marketplace, which
+      # cannot be undone. Running the pre-release branch here means a packaging
+      # mistake (missing `.artifacts/`, `--pre-release` not reaching vsce, the
+      # property missing from the vsix) fails on push instead.
+      #
+      # Output goes to a subdirectory and is removed afterwards, so the stable
+      # vsix built above stays the only one this run uploads as an artifact.
+      - name: Check the pre-release package builds correctly
+        run: |
+          node scripts/package-release.mjs --channel pre-release --out .artifacts/pre-release-check
+          rm -rf .artifacts/pre-release-check
+
       - name: Report what went into the package
         run: |
           vsix=$(ls .artifacts/*.vsix)

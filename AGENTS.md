@@ -70,6 +70,7 @@ res/emulator-manifest.json    模拟器包清单，指向 GitHub Releases 的 as
 scripts/pack-emulator.mjs     把模拟器目录打成 tar.gz 并生成清单条目
 scripts/pack-luals.mjs        裁剪并打包 LuaLS，生成清单条目
 scripts/pack-common.mjs       两个打包脚本共用的 tar/sha256 逻辑
+scripts/package-release.mjs   打可发布的 vsix（按通道写 preRelease 属性）；publish/build 都调它
 docs/                         开发、部署和决策记录，不进插件包
 dist/                         esbuild 打包产物（extension.js），不入库；会被装进插件包
 .artifacts/                   交出仓库的东西：模拟器 tar.gz 和 vsix，不入库也不进插件包
@@ -93,7 +94,7 @@ dist/                         esbuild 打包产物（extension.js），不入库
 - **模拟器不再随包分发**：1.1.0 起模拟器按需下载到 `context.globalStorageUri`，由 `src/emulator/emulator.ts`（VS Code 适配）和 `src/emulator/emulatorBundle.ts`（纯逻辑）共同管理。清单 `res/emulator-manifest.json` 指向 GitHub Releases 的 asset。**已发布的 asset 永久不删**，否则旧版扩展在冷缓存时会失能。详见 `docs/adr/0001-emulator-bundles-outside-vsix.md`。
 - **归档源自官方发布**：模拟器二进制来自 <https://x.cololight.com/mweb/docs/examples> 的 zip，用 `scripts/pack-emulator.mjs` 重新打成 tar.gz。**不要用仓库里历史上那批 2023/2024 的 `debugger/` 二进制**：官方已不再单独发布 Nature，`coloX-32` 等规格改由同一个二进制处理，macOS 也改成了 `.app` bundle 布局，字体则编译进了可执行文件。
 - **模拟器的启动方式**：用 `child_process.spawn` 传参数数组，`coloXtool -d <目录>/ -r <文件>`，调试时加 `-x`。不要改回拼接 shell 字符串的写法：Windows 的 cmd.exe 不认单引号，路径里的引号会被当成路径的一部分。
-- **ROM 由模拟器自己生成，取决于它的编译期宏 `COLOX_AUTO_GEN_ROM`**，扩展不参与。2026-11-19 的 Windows 包没开这个宏（所以当时加载卡带后从不生成 `.rom`），2026-11-27 起的包已开，与 macOS 一致。排查"没有 `.rom`"先看日志有没有 `!!!ROM GEN`；判断某个二进制有没有开宏用**裸字符串** `strings -a x.exe | grep -cx "__vm_auto_gen_rom"`（用 `grep -c` 会因内嵌 BIOS 脚本的源码文本误得 2）。细节见 `docs/development.md` 的「ROM 生成」。
+- **ROM 由模拟器自己生成，扩展不参与**。两个平台的包都开了 `COLOX_AUTO_GEN_ROM`，加载卡带时写 `<文件>.clx.rom`。排查"没有 `.rom`"先看日志有没有 `!!!ROM GEN`；判断某个二进制有没有开宏用**裸字符串** `strings -a x.exe | grep -cx "__vm_auto_gen_rom"`（用 `grep -c` 会因内嵌 BIOS 脚本的源码文本误得 2）。**不要加"自动生成"的设置项或命令**：这个宏是编译期决定的，扩展侧没有开关能控制它。细节见 `docs/development.md` 的「ROM 生成」。
 - **模拟器的选择**：只有两条路。设置了 `clx-language.debugger` = `Custom` 且填了 `debuggerCustomPath` 时完全接管，不下载也不回落；否则用下载的官方包。`Nature` 选项已废弃（等价于 Default）。
 - **设备规格不枚举**：首行只要匹配 `coloX-<字母数字>` 或 `X-<宽>x<高>` 就交给模拟器自己判断。不要重新引入 `(4|16|32)` 这类白名单，官方会加新规格（`coloX-PICO8` 就是这么出现的）。
 - **调试适配器是内联的**：`src/debug/activate.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0].program` 指向一个不存在的路径，这是遗留配置，不需要补这个文件。
@@ -175,9 +176,18 @@ dist/                         esbuild 打包产物（extension.js），不入库
 - **`package.json` 的版本不能带 `-beta` / `-rc` 后缀** —— vsce 会拒绝。预发布是 vsix 里的
   一个 `preRelease` 属性，版本号本身不变。所以 `v1.3.0-rc.1` 与 `v1.3.0` 版本号相同，
   正式版会取代同号的预发布；CHANGELOG 只需一条 `1.3.0`。
+- **发布用的 vsix 一律走 `node scripts/package-release.mjs --channel <stable|pre-release>`**，
+  不要手写 `vsce package`。三条约束都藏在那里，手写一定会漏：
+  - `--pre-release` 必须在**打包时**给，vsce 把属性写进 vsix manifest；
+    `vsce publish --packagePath --pre-release` 会拒绝不带该属性的包，而 `yarn package` 传不了这个 flag。
+  - `--out` 不会创建目录，干净 checkout 上直接报 `ENOTDIR`。
+  - 产物必须唯一，且通道标记要和请求的通道一致。
+  `build.yml` 每次 push 到非 main 分支都会跑一遍 pre-release 分支，所以这类错误在 push 时就暴露，
+  而不是等打 tag。打 tag 会真的发到 Marketplace，收不回来。
 - 版本号只支持 `主版本.次版本.修订号`。同一通道内不能重复发布同一个号 ——
   但同一个号可以先发预发布、再发正式版。
 - **publish.yml 会跑完整检查**（typecheck / lint / test / check-public --history / 包内容断言）。
   不要为了绕开某项失败而删掉这些步骤 —— 它们和 build.yml 是同一套门。
 - 只有推送 `v*` 开头的 tag 或手动触发才会发布，推送到 `main` 不会。手动触发只在应急时用：
-  它不留 tag 锚点，事后无法从版本号追溯到提交。
+  它不留 tag 锚点，事后无法从版本号追溯到提交。发布成功后 vsix 会挂到同名 GitHub Release，
+  供手工安装（Windows 上没法在 CI 里跑模拟器，这是它主要的用途）。
