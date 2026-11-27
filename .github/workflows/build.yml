@@ -27,6 +27,9 @@ jobs:
       - run: yarn typecheck
       - run: yarn lint
       - run: yarn test
+      # 这个仓库是 public：确认没有把本机路径、内网地址或凭据提交进来。
+      # 顺带扫整个 git 历史 —— 工作区干净不代表历史干净，而历史改不掉。
+      - run: yarn check-public --history
       # vscode:prepublish runs automatically and bundles src/ into dist/
       - run: yarn package
 
@@ -60,7 +63,11 @@ jobs:
           for required in \
             extension/dist/extension.js \
             extension/res/emulator-manifest.json \
-            extension/server/lua_ls.jar \
+            extension/res/luals-manifest.json \
+            extension/res/luals/clx.lua \
+            extension/res/clx-std/en/graphics.lua \
+            extension/res/clx-std/zh/graphics.lua \
+            extension/res/clx-lua/en/globals.lua \
             extension/readme.md \
             extension/syntaxes/.tmLanguage.json
           do
@@ -71,7 +78,10 @@ jobs:
           done
 
           # extension/ 下允许的路径前缀。文件和目录都列出来，别用宽前缀。
-          allowed='^extension/(dist/|res/|server/|syntaxes/|snippets/|language-configuration\.json$|readme\.md$|readme_zh\.md$|README_zh\.md$|changelog\.md$|CHANGELOG\.md$|LICENSE\.txt$|package\.json$)'
+          # 注意 res/ 是宽前缀：它下面既有要发布的存根，也是唯一放过"新增目录"
+          # 的地方。新增 res/ 子目录时请同时加一条 required 断言，否则打错路径
+          # 的文件会被静默放过（这正是 allowlist 当初要防的漏法）。
+          allowed='^extension/(dist/|res/|syntaxes/|snippets/|language-configuration\.json$|readme\.md$|readme_zh\.md$|README_zh\.md$|changelog\.md$|CHANGELOG\.md$|LICENSE\.txt$|package\.json$)'
 
           unexpected=$(echo "$listing" | grep '^extension/' | grep -vE "$allowed" || true)
           if [ -n "$unexpected" ]; then

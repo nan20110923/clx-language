@@ -20,3 +20,8 @@ yarn lint
 
 echo "pre-commit: test"
 yarn test
+
+# 这个仓库是 public：一次疏忽就会永久留在 git 历史里，改工作区也删不掉。
+# 只查暂存区；整段历史由 CI 的 --history 兜（本地每次跑太慢）。
+echo "pre-commit: public-content check"
+node scripts/check-public.mjs --staged
