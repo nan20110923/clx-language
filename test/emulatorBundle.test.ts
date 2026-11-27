@@ -23,7 +23,6 @@ import {
 	locateBundle,
 	missingWindowsDebugCrt,
 	parseManifest,
-	buildRomArgs,
 	romPathFor,
 	WINDOWS_DEBUG_CRT
 } from '../src/emulator/emulatorBundle';
@@ -352,61 +351,3 @@ test('romPathFor 不使用 -d 目录，ROM 总在卡带旁边', () => {
 });
 
 
-
-// ---------------------------------------------------------------------------
-// buildRomArgs —— `coloXtool -b` 的参数表
-//
-// 为什么逐字钉住：源码里 `-b` 一旦被解析就 `exit(coloX_build_rom(...))`，
-// 会立即结束进程。所以 -d / -r 必须排在它前面，顺序错了就会去构建默认卡带
-// （`codetest.clx`）而不是用户的文件，而且**没有任何报错**。
-// ---------------------------------------------------------------------------
-
-test('buildRomArgs 把 -b 放在最后，-d/-r 在前', () => {
-	const args = buildRomArgs('/p/game.clx');
-
-	// 语法层面就断言顺序：-b 的下标必须最大
-	const b = args.indexOf('-b');
-	assert.equal(b, args.length - 2, '-b 必须在倒数第二位（后面紧跟输出路径）');
-	assert.ok(args.indexOf('-d') < b, '-d 必须在 -b 之前');
-	assert.ok(args.indexOf('-r') < b, '-r 必须在 -b 之前');
-});
-
-test('buildRomArgs 的 -d 带尾部分隔符', () => {
-	const args = buildRomArgs('/p/game.clx');
-	const d = args[args.indexOf('-d') + 1];
-
-	// 少了它，模拟器内部 '%s/%s%s' 会拼成 /pgame.clx，静默失败
-	assert.ok(d.endsWith('/'), `-d 必须以分隔符结尾，实际是 ${JSON.stringify(d)}`);
-	assert.equal(d, '/p/');
-});
-
-test('buildRomArgs 的 -r 只给文件名，不给全路径', () => {
-	const args = buildRomArgs('/p/deep/game.clx');
-	assert.equal(args[args.indexOf('-r') + 1], 'game.clx');
-});
-
-test('buildRomArgs 的输出是完整的 <卡带>.rom 路径', () => {
-	const args = buildRomArgs('/p/game.clx');
-	const out = args[args.indexOf('-b') + 1];
-
-	// -b 的 outfile 原样使用，不补后缀；漏了 .rom 会生成一个模拟器不认的文件
-	assert.equal(out, '/p/game.clx.rom');
-	assert.ok(out.endsWith('.rom'));
-});
-
-test('buildRomArgs 在 Windows 路径上同样成立', () => {
-	// 用 win32 语义构造输入，验证拆分与拼接。
-	// 刻意避开 C:\Users\<name> 这种形状：check-public 会把它当成真实的
-	// 开发机路径拦下来（那条 grep 是对的，别为它加 allow-public）。
-	const input = 'D:\\proj\\sub\\game.clx';
-	const args = buildRomArgs(input);
-
-	assert.equal(args.length, 6);
-	assert.equal(args[args.length - 2], '-b');
-	// 输出仍是 <源文件>.rom
-	assert.equal(args[args.length - 1], input + '.rom');
-	// -r 只取文件名，不带目录
-	assert.equal(args[args.indexOf('-r') + 1], 'game.clx');
-	// -d 用反斜杠并带尾分隔符
-	assert.equal(args[args.indexOf('-d') + 1], 'D:\\proj\\sub\\');
-});

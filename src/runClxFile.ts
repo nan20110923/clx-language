@@ -26,7 +26,10 @@ export async function runClxFile(
 	resource: vscode.Uri | null,
 	debug: boolean
 ): Promise<LaunchOutcome> {
-	const target = resolveTarget(resource);
+	let target = resource;
+	if (!target && vscode.window.activeTextEditor) {
+		target = vscode.window.activeTextEditor.document.uri;
+	}
 	if (!target) {
 		return 'failed';
 	}
@@ -36,14 +39,24 @@ export async function runClxFile(
 		return 'failed';
 	}
 
-	const launch = await prepareLaunch(context);
-	// 用户拒绝下载时 prepareLaunch 已经静默返回 null，这里不要再报错
+	const customPath = selectCustomEmulator();
+	let launch: EmulatorLaunch | null;
+	if (customPath) {
+		if (!fs.existsSync(customPath)) {
+			vscode.window.showErrorMessage(`The configured emulator does not exist: ${customPath}`);
+			return 'failed';
+		}
+		launch = { executable: customPath, libraryDir: path.dirname(customPath) };
+	} else {
+		launch = await ensureEmulatorReady(context);
+	}
+	// 用户拒绝下载时 ensureEmulatorReady 已经静默返回 null，这里不要再报错
 	if (!launch) {
 		return 'cancelled';
 	}
 
-	// 模拟器的输出全部转进 "CLX Emulator" 通道：ROM 生成失败时它只往 stdout
-	// 打一行然后继续跑，不接这里就等于把唯一的线索丢进 DevTools。
+	// 模拟器的输出全部转进 "CLX Emulator" 通道。以前 onStdout 从来没人传，
+	// 这些行只进 DevTools console —— 排查"没有 .rom"时等于把唯一的线索丢掉。
 	return startEmulator({
 		file: target,
 		debug,
@@ -52,36 +65,11 @@ export async function runClxFile(
 	});
 }
 
-/** 命令的入参：菜单会传当前资源，命令面板不传。 */
-export function resolveTarget(resource: vscode.Uri | null | undefined): vscode.Uri | undefined {
-	if (resource) {
-		return resource;
-	}
-	return vscode.window.activeTextEditor?.document.uri;
-}
-
-/**
- * 选定模拟器并确保它就位。
- *
- * 返回 null 表示用户取消了下载或下载失败 —— 调用方应静默退出。
- */
-export async function prepareLaunch(context: vscode.ExtensionContext): Promise<EmulatorLaunch | null> {
-	const customPath = selectCustomEmulator();
-	if (customPath) {
-		if (!fs.existsSync(customPath)) {
-			vscode.window.showErrorMessage(`The configured emulator does not exist: ${customPath}`);
-			return null;
-		}
-		return { executable: customPath, libraryDir: path.dirname(customPath) };
-	}
-	return ensureEmulatorReady(context);
-}
-
 /**
  * 读出首行的设备规格。模拟器自己判断规格内容，插件只确认"首行确实标了"。
  * 返回 undefined 表示文件不可用（已经提示过用户）。
  */
-export async function readDeviceSpec(file: vscode.Uri): Promise<string | undefined> {
+async function readDeviceSpec(file: vscode.Uri): Promise<string | undefined> {
 	const content = await vscode.workspace.fs.readFile(file);
 	const contentStr = new TextDecoder().decode(content);
 	const lines = contentStr.split(/\r?\n/);

@@ -47,42 +47,12 @@ export interface EmulatorLaunch {
  * 卡带对应的 ROM 路径。
  *
  * 模拟器把 ROM 写成**卡带文件同目录**下的 sidecar：`<文件名>.clx.rom`，
- * 不是 `<文件名>.rom`。macOS 的模拟器包会在加载卡带时自己写这个文件；
- * Windows 的包不会，需要扩展用 `-b` 显式构建（见 emulatorProcess.buildRom），
- * 两边必须落到同一个路径，否则模拟器启动时找不到。
+ * 不是 `<文件名>.rom`。两个平台的包都会在加载卡带时自己写（Windows 包自
+ * 2026-11-27 起也开了 `COLOX_AUTO_GEN_ROM`），扩展不参与生成，只在这里
+ * 描述它落在哪 —— 排查和文档引用都用得上。
  */
 export function romPathFor(cartridgePath: string): string {
 	return `${cartridgePath}.rom`;
-}
-
-/**
- * `coloXtool -b` 的参数表（纯逻辑，便于钉住顺序）。
- *
- * 顺序有强约束：源码里 `-b` 一旦被解析就**立即 exit**（`exit(coloX_build_rom(...))`），
- * 所以 `-d` 和 `-r` 必须排在它前面，否则构建的是默认卡带。不要为了整齐重排。
- *
- * `-d` 的尾部分隔符是模拟器的硬要求：它内部用 `'%s/%s%s'` 拼路径，少了会
- * 拼出 `<dir><file>` 这种不存在的路径，**既不报错也不生成**。
- *
- * 输出路径原样使用，不会自动补 `.rom`，所以必须给完整文件名。
- *
- * 用 `path.win32` 而不是平台原生的 `path`：这条命令今天只在 Windows 上暴露
- * （`enablement: isWindows`），但纯函数不该依赖"只会在某平台被调用"这个外部
- * 假设 —— 那样测试在 macOS 上就测不出 Windows 的分隔符行为。
- */
-export function buildRomArgs(cartridgePath: string): string[] {
-	const usesBackslash = cartridgePath.includes('\\');
-	const p = usesBackslash ? path.win32 : path.posix;
-	const sep = usesBackslash ? path.win32.sep : path.posix.sep;
-
-	return [
-		'-d',
-		p.dirname(cartridgePath) + sep,
-		'-r',
-		p.basename(cartridgePath),
-		'-b',
-		romPathFor(cartridgePath)
-	];
 }
 
 /**

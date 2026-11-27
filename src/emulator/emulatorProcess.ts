@@ -19,7 +19,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { EmulatorLaunch, buildRomArgs, missingWindowsDebugCrt, romPathFor } from './emulatorBundle';
+import { EmulatorLaunch, missingWindowsDebugCrt } from './emulatorBundle';
 
 /** 模拟器的调试通道。只允许一个客户端连接。 */
 export const DEBUG_HOST = '127.0.0.1';
@@ -91,79 +91,6 @@ export function terminateEmulator(): void {
 		current?.kill();
 	}
 	current = undefined;
-}
-
-/** 一次 ROM 构建的结果。 */
-export interface BuildRomResult {
-	/** 构建出的文件路径。 */
-	path: string;
-	/** 是否成功（进程退出码为 0 且文件存在）。 */
-	ok: boolean;
-	/** 失败原因，成功时为 undefined。 */
-	reason?: string;
-}
-
-/**
- * 用模拟器自带的 `-b` 构建 ROM，不启动窗口。
- *
- * 为什么需要：macOS 的模拟器包编译时开了 `COLOX_AUTO_GEN_ROM`，加载卡带后
- * 会自己在源码旁写一份 `.rom`；Windows 官方包**没开这个宏**，所以从来不会
- * 自动生成。`-b` 是官方 CLI 里的"只构建"入口（`exit(coloX_build_rom(...))`，
- * 既不进主循环也不开窗口），两个平台都支持。
- *
- * 参数顺序有强约束：源码里 `-b` 一旦被解析就**立即 exit**，所以 `-d` 和 `-r`
- * 必须排在它前面。不要为了"看起来整齐"重排。
- *
- * 输出路径是原样使用的，不会自动补 `.rom` —— 这里显式给 `<源文件>.clx.rom`，
- * 与 macOS 自动生成的名字保持一致，否则模拟器启动时找不到它。
- */
-export function buildRom(request: {
-	file: vscode.Uri;
-	launch: EmulatorLaunch;
-	onStdout?: (text: string) => void;
-}): Promise<BuildRomResult> {
-	const filePath = request.file.fsPath;
-	const romPath = romPathFor(filePath);
-	const args = buildRomArgs(filePath);
-
-	let env = process.env;
-	if (os.platform() === 'darwin' && request.launch.libraryDir) {
-		env = { ...process.env, DYLD_LIBRARY_PATH: request.launch.libraryDir };
-	}
-
-	return new Promise<BuildRomResult>(resolve => {
-		let child: child_process.ChildProcess;
-		try {
-			child = child_process.spawn(request.launch.executable, args, { env });
-		} catch (e) {
-			resolve({ path: romPath, ok: false, reason: `${e}` });
-			return;
-		}
-
-		// 构建的输出同样进通道：失败时模拟器只打一行 `gen rom(...) fail.`
-		child.stdout?.on('data', data => request.onStdout?.(String(data)));
-		child.stderr?.on('data', data => request.onStdout?.(String(data)));
-
-		let settled = false;
-		const settle = (result: BuildRomResult) => {
-			if (!settled) {
-				settled = true;
-				resolve(result);
-			}
-		};
-
-		child.on('error', e => settle({ path: romPath, ok: false, reason: `${e}` }));
-		// 用 close 而不是 exit：close 在 stdio 流关闭后才触发，日志才收得全
-		child.on('close', code => {
-			if (code === 0 && fs.existsSync(romPath)) {
-				settle({ path: romPath, ok: true });
-			} else if (code === 0) {
-				settle({ path: romPath, ok: false, reason: 'the emulator reported success but wrote no file' });
-			} else {
-				settle({ path: romPath, ok: false, reason: `the emulator exited with code ${code}` });
-			}
-		});
-	});
 }
 
 /**

@@ -53,21 +53,12 @@
           "command": "extension.clx-language.run",
           "when": "resourceLangId == clx",
           "group": "navigation@1"
-        },
-        {
-          "command": "extension.clx-language.buildRom",
-          "when": "resourceLangId == clx && isWindows",
-          "group": "navigation@2"
         }
       ],
       "commandPalette": [
         {
           "command": "extension.clx-language.run",
           "when": "resourceLangId == clx"
-        },
-        {
-          "command": "extension.clx-language.buildRom",
-          "when": "resourceLangId == clx && isWindows"
         }
       ]
     },
@@ -78,13 +69,6 @@
         "category": "CLX Run",
         "enablement": "!inDebugMode",
         "icon": "$(play)"
-      },
-      {
-        "command": "extension.clx-language.buildRom",
-        "title": "Build ROM",
-        "category": "CLX",
-        "enablement": "isWindows",
-        "icon": "$(package)"
       },
       {
         "command": "extension.clx-language.restartServer",
