@@ -94,10 +94,16 @@ jobs:
       # vsix manifest, and `vsce publish --packagePath --pre-release` refuses a
       # package that does not carry it. `yarn package` cannot pass the flag, so
       # the channel is applied to the vsce invocation directly.
+      #
+      # `.artifacts/` is created first: it is a fresh checkout in CI, so the
+      # directory does not exist, and `--out` fails with ENOTDIR rather than
+      # creating it. `yarn package` does the mkdir itself, which is why the
+      # stable path never hit this.
       - name: Check what the package will contain
         env:
           CHANNEL: ${{ steps.channel.outputs.channel }}
         run: |
+          mkdir -p .artifacts
           if [ "$CHANNEL" = 'pre-release' ]; then
             npx @vscode/vsce package --no-dependencies --pre-release --out .artifacts/
           else
