@@ -1,6 +1,16 @@
 # Publishes the extension to the VS Code Marketplace.
 # The Marketplace "Trusted Publishing" policy must name this file (publish.yml):
 # https://marketplace.visualstudio.com/manage/publishers
+#
+# Two ways to publish, both gated on the same checks:
+#
+#   Tag   (preferred)  `v<version>`         -> stable
+#                      `v<version>-rc.<n>`  -> pre-release
+#   Manual             workflow_dispatch with `pre_release`
+#
+# The tag form is preferred because a tag is immutable and names the exact
+# commit. A manual dispatch leaves no such anchor, so after the fact there is
+# no version-controlled record of which commit produced a build.
 name: Publish
 
 on:
@@ -9,10 +19,13 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
-      pre_release:
-        description: "Publish as a pre-release (users must opt in to install it)"
-        type: boolean
-        default: false
+      channel:
+        description: "Which channel to publish to"
+        type: choice
+        options:
+          - stable
+          - pre-release
+        default: stable
 
 jobs:
   publish:
@@ -29,21 +42,93 @@ jobs:
           cache: yarn
       - run: yarn install --frozen-lockfile
 
-      - name: Check that the tag matches the version in package.json
-        if: github.ref_type == 'tag'
+      # Resolve the channel and validate the tag in one place, so the publish
+      # steps below stay free of branching logic.
+      #
+      # `package.json` cannot carry a `-rc` suffix: vsce rejects any version
+      # with a semver prerelease part, and the pre-release channel is signalled
+      # by the vsix's `preRelease` property instead. So the channel has to come
+      # from the tag name, and the tag may carry a `-rc.N` suffix that the
+      # version does not.
+      - name: Resolve the channel from the tag
+        id: channel
+        shell: bash
         run: |
-          expected="v$(node -p "require('./package.json').version")"
-          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
-            echo "::error title=Version mismatch::tag is $GITHUB_REF_NAME but package.json says $expected. Bump the version, commit, then move or recreate the tag."
-            exit 1
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag="$GITHUB_REF_NAME"
+            version="$(node -p "require('./package.json').version")"
+
+            # Accept `v<version>` or `v<version>-rc.<n>`; nothing else.
+            # bash's own `=~` is used instead of grep so the pattern's leading
+            # dash is never mistaken for an option.
+            if [[ ! "$tag" =~ ^v"$version"(-rc\.[0-9]+)?$ ]]; then
+              echo "::error title=Version mismatch::tag is $tag but package.json says v$version. Expected v$version or v$version-rc.<n>. Bump the version, commit, then recreate the tag."
+              exit 1
+            fi
+
+            if [[ "$tag" =~ -rc\.[0-9]+$ ]]; then
+              channel=pre-release
+            else
+              channel=stable
+            fi
+            echo "channel=$channel" >> "$GITHUB_OUTPUT"
+            echo "Tag $tag maps to the $channel channel."
+          else
+            echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
           fi
 
-      # A pre-release and a regular release can never share a version number,
-      # so a version published as pre-release needs a different one to go stable.
+      # Publishing used to skip every check: build.yml gates non-main branches,
+      # so a tag pushed straight from main went to the Marketplace unverified.
+      # Run the same gates here so a tag cannot ship something that would have
+      # failed on a branch.
+      - run: yarn typecheck
+      - run: yarn lint
+      - run: yarn test
+      - run: yarn check-public --history
+
+      - name: Check what the package will contain
+        run: |
+          yarn package
+          vsix=$(ls .artifacts/*.vsix)
+          listing=$(unzip -l "$vsix" | awk '{print $4}' | grep -v '^$')
+
+          missing=0
+          for required in \
+            extension/dist/extension.js \
+            extension/res/emulator-manifest.json \
+            extension/res/luals-manifest.json \
+            extension/res/luals/clx.lua \
+            extension/res/clx-std/en/graphics.lua \
+            extension/res/clx-std/zh/graphics.lua \
+            extension/res/clx-lua/en/globals.lua \
+            extension/readme.md \
+            extension/syntaxes/.tmLanguage.json
+          do
+            if ! echo "$listing" | grep -qxF "$required"; then
+              echo "::error title=Missing from vsix::$required is not in the package"
+              missing=1
+            fi
+          done
+
+          allowed='^extension/(dist/|res/|syntaxes/|snippets/|language-configuration\.json$|readme\.md$|readme_zh\.md$|README_zh\.md$|changelog\.md$|CHANGELOG\.md$|LICENSE\.txt$|package\.json$)'
+
+          unexpected=$(echo "$listing" | grep '^extension/' | grep -vE "$allowed" || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error title=Unexpected file in vsix::Not in the allowlist. Either exclude it in .vscodeignore, or add it to the allowlist above if it is meant to ship:"
+            echo "$unexpected"
+            missing=1
+          fi
+
+          [ "$missing" -eq 0 ] || exit 1
+          echo "Package contents are correct (allowlist)." >> "$GITHUB_STEP_SUMMARY"
+
+      # A pre-release and a regular release can never share a version number
+      # *within the same channel*, so the same version can appear once as
+      # pre-release and once as stable — the stable one supersedes it.
       - name: Publish pre-release
-        if: inputs.pre_release
+        if: steps.channel.outputs.channel == 'pre-release'
         run: npx @vscode/vsce publish --no-dependencies --oidc --pre-release
 
       - name: Publish release
-        if: ${{ !inputs.pre_release }}
+        if: steps.channel.outputs.channel == 'stable'
         run: npx @vscode/vsce publish --no-dependencies --oidc

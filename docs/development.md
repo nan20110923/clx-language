@@ -266,12 +266,26 @@ node -e "const {extract}=require('/tmp/eb.js'); /* ... */"
 
 发布由 GitHub Actions 完成，配置在 [`.github/workflows/publish.yml`](../.github/workflows/publish.yml)，通过 Marketplace Trusted Publishing（OIDC）认证，不需要在仓库里保存任何令牌。
 
-触发方式：
+### 两种通道
 
-- 推送 `v*` 开头的 tag
-- 在仓库的 Actions 页手动运行 Publish workflow
+**优先用 tag**，因为 tag 不可变、能指名到具体提交；手动 trigger 事后无法从版本号
+追溯到是哪个提交构建的。
 
-发布步骤：
+| tag | 通道 |
+|---|---|
+| `v1.3.0` | 正式版 |
+| `v1.3.0-rc.1` | 预发布 |
+| `v1.3.0-rc.2` | 同上（`N` 递增） |
+
+tag 名是唯一携带通道信息的地方，因为 **`package.json` 的 `version` 不能带
+`-beta` / `-rc` 这类后缀** —— vsce 会直接拒绝。预发布是写在 vsix 里的一个
+`preRelease` 属性，版本号本身仍是 `1.3.0`。
+
+所以 `v1.3.0-rc.1` 和 `v1.3.0` 的版本号**相同**。这是可以的：预发布与正式版在
+Marketplace 上是两个通道，正式版会取代同号的预发布。CHANGELOG 只需要一条
+`1.3.0`，测试期不用为 `-rc` 单独写条目。
+
+### 发布步骤
 
 1. 在 `CHANGELOG.md` 顶部按现有格式添加一条：`### <版本> (YYYY-MM-DD)`。
 2. 把 `package.json` 的 `version` 改成同一个版本号。
@@ -279,18 +293,40 @@ node -e "const {extract}=require('/tmp/eb.js'); /* ... */"
 4. 打 tag 并推送：
 
    ```bash
-   git tag v<version>
-   git push origin v<version>
+   # 预发布
+   git tag v1.3.0-rc.1
+   git push origin v1.3.0-rc.1
+
+   # 测过之后发正式版（同一个提交，换个 tag）
+   git tag v1.3.0
+   git push origin v1.3.0
    ```
 
 5. 在仓库的 Actions 页确认运行结果。
 
-workflow 里有一道校验：tag 必须等于 `v` 加上 `package.json` 里的版本号，否则会在发布前报错退出。这能避免 tag 和实际发布的版本对不上。
+workflow 会校验 tag 形如 `v<version>` 或 `v<version>-rc.<n>`，`<version>` 必须与
+`package.json` 完全一致，否则在发布前退出。
 
-其他限制：
+应急时也可以在 Actions 页手动运行，用 `channel` 输入选 `stable` / `pre-release`。
+这条路不留 tag 锚点，只在确实需要时用。
+
+### 发布前会跑什么
+
+`publish.yml` 和 `build.yml` 跑同一套门，所以推 tag 不会绕过检查：
+
+- `typecheck`、`lint`、`test`
+- `check-public --history`（这个仓库是 public，发布前再确认一遍）
+- 打包并断言包内容（必需文件都在、没有源码混进去）
+
+历史上这里什么都不检查 —— `build.yml` 只在非 `main` 分支跑，所以从 `main` 直接
+打的 tag 会未经任何验证进市场。现在补上了。
+
+### 其他限制
 
 - 不要手动执行 `vsce publish`，也不要把任何令牌写进仓库或日志。
-- 已经发布过的版本号不能重复使用。版本号只支持 `主版本.次版本.修订号`，不能带预发布后缀；发布时 `package.json` 的版本就是市场上的版本。
+- 版本号只支持 `主版本.次版本.修订号`。**已经发布过的版本号不能重复使用** ——
+  注意这条只对同一通道内的重复发布生效：同一个 `1.3.0` 可以先发预发布、再发正式版，
+  但不能再发第二个 `1.3.0`。
 - 推送到 `main` 不会触发发布。
 
 ### Trusted Publishing 配置
