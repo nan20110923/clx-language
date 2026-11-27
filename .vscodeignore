@@ -2,13 +2,14 @@
 .vscode-test/**
 .github/**
 .gitignore
+# 工具会话留下的计划/草稿目录（.gitignore 里有，但 vsce 不读 gitignore）
+.zcode/**
 AGENTS.md
 docs/**
 vsc-extension-quickstart.md
 
 # 只在仓库里用，不分发给用户
 scripts/**
-static/**
 test/**
 .githooks/**
 GLOSSARY.md

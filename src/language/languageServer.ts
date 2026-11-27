@@ -1,73 +1,62 @@
 'use strict';
 
 /**
- * CLX 语言服务器（EmmyLua 修改版，server/lua_ls.jar）的生命周期。
+ * CLX 语言服务器的生命周期。
  *
- * 一个 Java 子进程，通过 stdin/stdout 讲 LSP。这里管三件事：找到可用的 Java、
- * 起停客户端、在 Java 路径变化时重启。
+ * 服务器是 LuaLS（lua-language-server，Rust/C++ 实现，无需运行时依赖），
+ * 按需下载到 globalStorage。这里管三件事：确保它已就位、起停客户端、
+ * 配置变化时重启。
  *
- * 标准库存根按 VS Code 的界面语言选：中文用 res/std_zh，其他用 res/std。
+ * 为什么换掉了原来的 Java jar：
+ *   - 不再需要用户预装 JDK
+ *   - 不再需要仓库里维护一份改过的 EmmyLua 二进制
+ *   - .clx 的格式差异由 res/luals/clx.lua 插件处理，不再靠魔改服务器
+ * 详见 docs/adr/0003-luals-replaces-emmylua.md。
+ *
+ * 存根按 VS Code 的界面语言选：中文用 res/clx-std/zh，其他用 en。
+ * 存根路径与 LuaLS 的其他配置都在 lualsConfig.ts 生成。
  */
 
 import * as vscode from 'vscode';
-import * as child_process from 'child_process';
-import * as path from 'path';
 import { LanguageClientOptions, LanguageClient, ServerOptions } from 'vscode-languageclient/node';
-import findJava from './javaLocator';
-
-export const LANGUAGE_ID = 'clx';
-
-/** java 11+ 才够用；这里只看 stderr 里报的版本号 */
-function validateJava(javaPath: string): Promise<void> {
-	const exePath = javaPath || 'java';
-	return new Promise<void>((resolve, reject) => {
-		child_process.exec(`"${exePath}" -version`, (e, stdout, stderr) => {
-			const regexp = /(?:java|openjdk) version "((\d+)(\.(\d+).+?)?)"/g;
-			if (stderr) {
-				const match = regexp.exec(stderr);
-				if (match) {
-					const major = parseInt(match[2]) || 0;
-					if (major >= 11) {
-						resolve();
-						return;
-					}
-					reject(`Unsupported Java version: ${match[1]}, please install Java 11 or above.`);
-					return;
-				}
-			}
-			reject("Can't find Java! Please install Java 11 or above and set JAVA_HOME environment variable.");
-		});
-	});
-}
+import { LANGUAGE_ID } from '../ids';
+import { prepareServer } from './lualsServer';
 
 export class ClxLanguageServer {
 	private _client: LanguageClient | undefined;
-	private javaPath: string | null;
 
-	constructor(private readonly extensionPath: string) {
-		this.javaPath = findJava();
-	}
+	constructor(private readonly context: vscode.ExtensionContext) {}
 
-	/** 给注解模块用：它需要一个 LanguageClient 去发 emmy/annotator 请求。 */
 	get client(): LanguageClient | undefined {
 		return this._client;
 	}
 
-	get isRunning(): boolean {
-		return this._client !== undefined;
-	}
-
-	/** 往语言服务器发请求。客户端没起来时静默丢弃 —— 调用方都是"尽力而为"。 */
+	/**
+	 * 往语言服务器发请求。
+	 *
+	 * 客户端没起来时静默丢弃 —— 调用方都是"尽力而为"。这里必须挂 catch：
+	 * 服务器不认的方法会回 MethodNotFound，不接住就是 unhandled rejection。
+	 */
 	sendRequest(method: string, params: unknown): void {
-		this._client?.sendRequest(method, params);
+		this._client?.sendRequest(method, params).catch(() => undefined);
 	}
 
-	/** 启动客户端。Java 不可用时报错并保持未启动状态。 */
+	/**
+	 * 启动客户端。
+	 *
+	 * 语言服务器需要下载时在这里完成（静默 + 状态栏）。下载失败或用户跳过时
+	 * 只是没有语言功能，语法高亮不受影响 —— 所以不弹错误框，直接返回。
+	 */
 	async start(): Promise<void> {
+		let spec;
 		try {
-			await validateJava(this.javaPath || 'java');
+			spec = await prepareServer(this.context);
 		} catch (e) {
-			vscode.window.showErrorMessage('Please install Java 11 or above.');
+			console.log(`Cannot prepare the CLX language server: ${e}`);
+			return;
+		}
+		if (!spec) {
+			// 用户取消下载或下载失败，lualsServer 已经记过日志
 			return;
 		}
 
@@ -75,14 +64,14 @@ export class ClxLanguageServer {
 			const client = new LanguageClient(
 				LANGUAGE_ID,
 				'CLX language client',
-				this.serverOptions(),
+				this.serverOptions(spec),
 				this.clientOptions()
 			);
 			this._client = client;
 			await client.start();
 			console.log('CLX language client ready');
 		} catch (reason) {
-			console.log(`Failed to start clx language server!\n${reason}`);
+			console.log(`Failed to start the CLX language server!\n${reason}`);
 			this._client = undefined;
 		}
 	}
@@ -105,45 +94,28 @@ export class ClxLanguageServer {
 		await client?.stop();
 	}
 
-	/**
-	 * 重新检测 Java 路径（设置项 JAVA_HOME、环境变量、PATH 任一可能改了）。
-	 * 返回是否发生变化 —— 变了就得重启才生效。
-	 */
-	refreshJavaPath(): boolean {
-		const next = findJava();
-		if (next === this.javaPath) {
-			return false;
-		}
-		this.javaPath = next;
-		return true;
-	}
-
 	private clientOptions(): LanguageClientOptions {
-		// 中文界面用中文标准库，其他语言用英文。只看前缀，zh-CN / zh-TW 都算中文。
-		const isZh = vscode.env.language.startsWith('zh');
 		return {
 			documentSelector: [{ scheme: 'file', language: LANGUAGE_ID }],
 			synchronize: {
-				configurationSection: ['clx', 'files.associations'],
+				configurationSection: ['Lua', 'files.associations'],
 				fileEvents: [vscode.workspace.createFileSystemWatcher('**/*.clx')]
 			},
 			initializationOptions: {
-				stdFolder: vscode.Uri.file(
-					path.resolve(this.extensionPath, isZh ? 'res/std_zh' : 'res/std')
-				).toString(),
-				apiFolders: [],
-				client: 'vsc'
+				// 插件由本扩展提供（res/luals/clx.lua），不需要 LuaLS 再弹一次信任确认。
+				// 见 LuaLS 的 script/plugin.lua checkTrustLoad 与 script/client.lua getOption。
+				trustByClient: true
 			}
 		};
 	}
 
-	private serverOptions(): ServerOptions {
-		// java -cp <extension>/server/* com.tang.vscode.MainKt
-		// server/ 下的 jar 由 package.json 打进 vsix；这个通配符交给 JVM 展开。
-		const classpath = path.resolve(this.extensionPath, 'server', '*');
+	private serverOptions(spec: { command: string; args: string[]; env: NodeJS.ProcessEnv }): ServerOptions {
 		return {
-			command: this.javaPath || 'java',
-			args: ['-cp', classpath, 'com.tang.vscode.MainKt', '-XX:+UseG1GC', '-XX:+UseStringDeduplication']
+			command: spec.command,
+			args: spec.args,
+			options: {
+				env: spec.env
+			}
 		};
 	}
 }

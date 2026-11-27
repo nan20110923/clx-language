@@ -17,7 +17,7 @@
 
 **不生成源码副本。断点、当前行、栈帧全部落在用户原始的 `.clx` 文件上。**
 
-关键事实（源码级确认，见 `msl_naturexd` 仓库的 `c/coloX/src/coloX_core.c`）：
+关键事实（源码级确认，见模拟器官方源码的 `c/coloX/src/coloX_core.c`）：
 
 ```c
 coloX_lua_DoString(vm, cart->_luastr, cart->_luastrlen, &err, "__lua__");

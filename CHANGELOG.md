@@ -1,3 +1,26 @@
+### 1.3.0 (2026-11-27)
+
+* Breaking:
+  * **Java is no longer required.** The language server is now [LuaLS](https://github.com/LuaLS/lua-language-server) instead of a modified EmmyLua jar. If you installed a JDK only for this extension, you can remove it.
+  * The `clx-language.JAVA_HOME` setting is gone, along with the five `clx-language.colors.*` settings. Custom colours now go through VS Code's standard `editor.semanticTokenColorCustomizations`.
+  * The upvalue underline is gone. LuaLS does not distinguish upvalues from ordinary variables, and reconstructing that needs a scope analysis of our own.
+  * A `.luarc.json` in your workspace no longer affects `.clx` files. The extension supplies its own configuration so behaviour is the same everywhere.
+* Changed:
+  * The language server is downloaded once (~1 MB) into the extension's global storage on first use. It happens in the background with a status bar indicator; there is no dialog. Syntax highlighting works immediately and does not wait for it.
+  * The extension package went from 8.71 MB to 193 KB (−97.8%).
+  * CLX stubs now match the real dialect. CLX runs a customized **Lua 5.4** (32-bit numerics), so `os` and `io` are marked as unavailable (time is `stat(90..96)`, files are `__resread`/`__reslist`), `load` is declared as `loads`, and the five conversion helpers (`tostr`, `tonum`, `chr`, `ord`, `split`) are documented.
+  * Stubs reorganized into `res/clx-std/{en,zh}` (CLX built-ins) and `res/clx-lua/{en,zh}` (dialect differences). The old Lua 5.1 standard-library stubs were removed; the standard library now comes from LuaLS's own Lua 5.4 definitions.
+  * Stub coverage synced against the official coloX documentation (platform version 14). The previously missing APIs are now declared: `flip`, `wline`, `bezier`, `rectcls`, the whole `pad_*` gamepad set, `micpoll`, `svcget`/`svcadd`/`svcset`/`svcreq`/`svcmon`, `toidle`/`tofg`, `t`, `compress`/`decompress`, the MD5/SHA-1/Base64 helpers, `usemod`, `__cartinfo`/`__resread`/`__reslist`/`__getbioserror`, the air-image stream (`img_airinfo`/`img_loadair`/`img_scrair`), `img_loadscr`/`img_set_flag`/`img_webpani_*`, and the `cjson` configuration functions. All 11 lifecycle callbacks are declared as well.
+* New:
+  * `#include`, `#blob` and `#png` now complete file paths from the directory of the `.clx` file. Both files and subdirectories are offered.
+  * Signature help, parameter-name hints and semantic highlighting now work — these were not available before.
+  * `os` and `io` completions no longer appear, so the editor stops suggesting APIs that do not exist in CLX.
+* Fixed:
+  * `.clx` files no longer produce a screen full of syntax errors for the header and the `__gfx__`/`__map__` resource sections. The non-Lua sections are turned into comments of identical width, so line numbers are unchanged.
+* Dependencies:
+  * `server/lua_ls.jar` (9.0 MB, EmmyLua-LanguageServer 0.5.16) removed.
+  * LuaLS 3.19.2 added as a downloaded artifact, trimmed from 21 MB to ~4.3 MB unpacked (`meta/` is 17 MB of Unity/.NET bindings and third-party frameworks that have nothing to do with CLX).
+
 ### 1.2.0 (2026-11-26)
 
 * Breaking:

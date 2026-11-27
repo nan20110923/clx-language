@@ -11,7 +11,6 @@
 |---|---|---|
 | Node.js | 22 或更高 | 打包和发布用的 `@vscode/vsce` 要求 22 以上，CI 使用 24 |
 | yarn | 1.x | 仓库只使用 yarn |
-| JDK | 11 或更高 | 运行语言服务器 `server/lua_ls.jar` |
 | VS Code | 1.91 或更高 | 与 `package.json` 的 `engines.vscode` 一致 |
 
 扩展本身运行在 Windows 和 macOS 上，模拟器没有 Linux 版本。打包和发布在 Linux 的 CI 上进行，那里只需要构建，不需要运行模拟器。
@@ -22,7 +21,7 @@
 git clone https://github.com/nan20110923/clx-language.git
 cd clx-language
 yarn install
-./scripts/setup-hooks.sh   # 启用 pre-commit（跑 typecheck + lint + test）
+./scripts/setup-hooks.sh   # 启用 pre-commit（跑 typecheck + lint + test + check-public）
 ```
 
 仓库只使用 yarn。不要运行 `npm install` 或 `npm ci`：npm 会重新生成 `package-lock.json`，并把 `yarn.lock` 改写成 npm 的格式。`npm run <script>` 不受影响。
@@ -35,9 +34,12 @@ src/                            TypeScript 源码，由 esbuild 打包成 dist/e
   ids.ts                        两个 id（LANGUAGE_ID / DEBUG_TYPE）与设置命名空间的唯一住所
   runClxFile.ts                 选模拟器并启动：自定义路径或按需下载；运行和调试共用这一条
   language/                     语言侧
-    languageServer.ts           CLX 语言服务器（Java 子进程）启停、按界面语言选标准库
-    javaLocator.ts              查找 Java（设置项 / JAVA_HOME）并展开 ${workspaceFolder}
-    annotations.ts              注解：协议类型、装饰渲染、编辑器和文档变化的接线
+    languageServer.ts           CLX 语言服务器（LuaLS）启停
+    lualsServer.ts              LuaLS 包的 VS Code 适配：清单、缓存根、状态栏进度
+    lualsBundle.ts              LuaLS 包的纯逻辑：清单校验（带 arch）、就绪判定
+    lualsConfig.ts              生成 LuaLS 的 configpath 内容
+    includePath.ts              #include/#blob/#png 路径补全的纯逻辑
+    includeCompletion.ts        上面那个的 VS Code adapter
     languageConfiguration.ts    括号、注释、缩进规则
   emulator/                     模拟器侧
     emulator.ts                 模拟器包的 VS Code 适配：清单文件、缓存根、确认弹窗、进度条
@@ -57,11 +59,14 @@ test/                           node:test 用例，覆盖上面三个不 import 
 syntaxes/.tmLanguage.json       TextMate 语法
 snippets/snippets.json          代码片段
 language-configuration.json     语言配置
-res/                            图标和标准库存根：std 是英文，std_zh 是中文
+res/clx-std/{en,zh}             CLX 内置 API 存根
+res/clx-lua/{en,zh}             CLX 的 Lua 方言差异
+res/luals/clx.lua               LuaLS 插件：屏蔽 .clx 的非 Lua 段
+res/luals-manifest.json         LuaLS 包清单
 res/emulator-manifest.json      模拟器包清单，指向 GitHub Releases
-server/lua_ls.jar               语言服务器，基于 EmmyLua-LanguageServer 修改
 scripts/pack-emulator.mjs       模拟器打包脚本
-static/readme/                  README 图片，不进插件包
+scripts/pack-luals.mjs          LuaLS 裁剪打包脚本
+scripts/pack-common.mjs         打包脚本共用工具
 docs/                           开发、部署文档和决策记录
 dist/                           esbuild 打包产物，不入库；会被装进插件包
 .artifacts/                     模拟器 tar.gz 和 vsix，不入库也不进插件包
@@ -78,7 +83,10 @@ yarn watch    # 监听文件改动，自动重新打包
 
 ### 运行时要点
 
-- **语言服务器**：`server/lua_ls.jar` 用 Java 启动。Java 的查找顺序是设置项 `clx-language.JAVA_HOME`、环境变量 `JAVA_HOME`、`PATH`。标准库存根按 VS Code 的界面语言选择：中文用 `res/std_zh`，其他语言用 `res/std`。
+- **语言服务器**：LuaLS，按需下载到 `globalStorageUri/luals/`，不需要 Java。清单 `res/luals-manifest.json` 指向 GitHub Releases，**已发布的 asset 永久不删**。`.clx` 的格式差异由 `res/luals/clx.lua` 插件处理（把非 Lua 段替换成等宽注释），LuaLS 源码未改动。
+
+  **打包、补丁原理、升级流程、排查手册都在 [`docs/luals.md`](luals.md)。** 那一份是权威，不要在这里重复维护。要点速记：`meta/template/` 必须保留（标准库定义的源码模板），`meta/` 下的其他目录是 Unity/.NET 绑定和第三方框架，删；三个平台都要打；清单里的 `arch` 必填。
+
 - **模拟器的启动方式**：用 `child_process.spawn` 传参数数组，`coloXtool -d <目录>/ -r <文件>`，调试时加 `-x`。不要改回拼接 shell 字符串的写法：Windows 的 cmd.exe 不认单引号，路径里的引号会被当成路径的一部分，表现是 `EIE:open file err`。
 - **模拟器不再随包分发**：1.1.0 起按需下载到 `context.globalStorageUri/emulators/ColoPlay-<platform>-<date>-<sha前8位>/`，由 `src/emulator/emulator.ts`（VS Code 适配）和 `src/emulator/emulatorBundle.ts`（纯逻辑）共同管理。首次下载前弹一次确认，之后静默复用缓存。缓存目录里写 `.complete` 标记，缺失或可执行文件不在就整个重下。
 
@@ -113,7 +121,7 @@ yarn watch    # 监听文件改动，自动重新打包
 - **断点打在原始 `.clx` 文件上**，不生成 `debug_temp.clx` 副本：模拟器只认内部名为 `__lua__` 的缓冲区。行号换算见 `src/debug/lineMapping.ts`，映射建立不起来时拒绝启动调试。详见 `docs/adr/0002-breakpoints-on-the-original-file.md`。
 - **`i local` 拿不到局部变量**（模拟器侧的帧偏移 bug）。内嵌的 Lua helper 硬编码了 `debug.getlocal(frame + 2, …)` 的 `+2`，帧偏移错，报的是卡带顶层 chunk。同一帧上 `p <名字>` 是正确的，所以 Variables 面板的 Locals 会明确提示改用 `p`。不要试图靠解析 `i local` 的文本凑出局部变量。
 - **`src __lua__` 应答里的 `__lua__:N`，N 是行数不是起始行号**，且**比正文行数少 1**（文件末尾空行不计）。别拿它做行号校验，正文是权威。历史上它被误读成"`__lua__` 段在原文件里的起始行"，导致断点整体错位。
-- **协议权威来源**：`msl_naturexd` 仓库的 `c/coloX/src/coloX_dbg.cpp` 是权威实现（文档是摘要，漏掉应答体形状和错误文本）；`c/coloX/guide/debug.md` 是官方文档；`dbgtool/` 是手工客户端参考。改协议层前先对照它们，`help` 命令也能从模拟器直接问出全量命令表。
+- **协议权威来源**：模拟器官方源码的 `c/coloX/src/coloX_dbg.cpp` 是权威实现（文档是摘要，漏掉应答体形状和错误文本）；`c/coloX/guide/debug.md` 是官方文档；`dbgtool/` 是手工客户端参考。改协议层前先对照它们，`help` 命令也能从模拟器直接问出全量命令表。
 - **运行成功与否的判断**：看文件同级目录是否出现 `.rom`，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。
 - **macOS Gatekeeper**：官方 macOS 包是 ad-hoc 签名、未公证。插件通过 `https` 下载的文件不带 quarantine 属性，能直接跑；手工下载再指定路径的情形会被拦，需要 `xattr -d com.apple.quarantine`。
 
@@ -125,7 +133,8 @@ yarn watch    # 监听文件改动，自动重新打包
 
 在 Development Host 里手工验证的内容：
 
-1. 打开一个 `.clx` 文件，语法高亮和补全正常（本机需要 Java 11 或更高）。
+1. 打开一个 `.clx` 文件：语法高亮立即可用；状态栏下载完成后补全与 hover 正常。
+2. `#include ` 后触发补全能列出同目录文件；`__gfx__` 段不出现语法错误。
 2. 输入 `template` 能出现模板片段，新建文件后首行带设备规格标识。
 3. 点击编辑器右上角的运行按钮或按 `F5`，模拟器启动，并在文件的同级目录生成 `.rom`。
 4. 左侧切到 Run and Debug 启动调试。断点应显示为已填充的圆点并落在原始 `.clx` 文件上。判断文件是否加载成功看 `<文件名>.clx.rom` 是否生成，不要看 3563 端口 —— 加载失败时它也会监听。调试期间不要另外连接 3563 端口，第二个连接会挤掉扩展自己的连接，看起来像调试功能坏了。
@@ -136,10 +145,40 @@ yarn watch    # 监听文件改动，自动重新打包
 yarn typecheck   # tsc --noEmit
 yarn lint        # eslint src
 yarn test        # node:test，覆盖协议解析、行号映射、DAP 请求处理
+yarn check-public  # 确认没有本机路径/内网地址/凭据；:history 连 git 历史一起查
 yarn e2e         # 需要图形界面和模拟器，见下
 ```
 
-交付前这三条都要过，而且 `yarn package` 必须能出 vsix。
+交付前这几条都要过，而且 `yarn package` 必须能出 vsix。
+
+### 敏感信息检查
+
+**这个仓库是 public。** 代码、文档、提交历史、GitHub Releases 上的 asset 全部对外
+可见，而且**历史删不掉** —— 把文件从工作区删掉之后，`git log` 里依然能翻出来。
+
+`scripts/check-public.mjs` 拦四类：
+
+| 类别 | 例子 |
+|---|---|
+| 本机绝对路径 | `/Users/<name>/...`、`C:\Users\<name>` |
+| 内网地址 | `10.x`、`192.168.x`、`*.local`、`*.internal`、`*.vicp.net`、`http://host:port/svn/` |
+| 凭据 | `ghp_*`、`github_pat_*`、私钥块、`password = "..."` 这类硬编码 |
+| 本地垃圾 | `.DS_Store`、`__MACOSX`（打包脚本另有独立检查） |
+
+三个触发点：
+
+- **pre-commit**：只查暂存区（`--staged`），快
+- **CI**：`yarn check-public --history`，连整个 git 历史一起查
+- **手动**：`yarn check-public` 查全部被追踪的文件
+
+误报的处理方式分两种：
+
+- **当前文件**：在那一行加 `allow-public` 注释，检查会跳过整行
+- **历史里的旧内容**（文件已改或已删，标记加不进去）：在
+  `scripts/check-public.mjs` 的 `HISTORY_ALLOWLIST` 里登记路径，**并写明理由**。
+  只登记路径不登记内容 —— 那些文件在当前工作区仍要过完整检查。
+
+不要因为"懒得看"就往白名单里加东西。这个脚本的全部价值在于它真的会失败。
 
 类型检查只走 `tsc --noEmit`，不要把 tsc 的产物写到磁盘；构建统一用 esbuild。
 
@@ -209,7 +248,7 @@ yarn package
 unzip -l .artifacts/clx-language-*.vsix
 ```
 
-出厂内容应该只有 `dist/`、`res/`、`server/`、`syntaxes/`、`snippets/`、`language-configuration.json` 和几个 md。出现 `.ts`、`out/` 或 `tsconfig.json` 就说明 `.vscodeignore` 漏了。CI 的 `Build VSIX` workflow 会断言同样的内容。
+出厂内容应该只有 `dist/`、`res/`、`syntaxes/`、`snippets/`、`language-configuration.json` 和几个 md。出现 `.ts`、`out/` 或 `tsconfig.json` 就说明 `.vscodeignore` 漏了。CI 的 `Build VSIX` workflow 会断言同样的内容。
 
 模拟器归档里的可执行位由 `src/emulator/emulatorBundle.ts` 按 tar 头的 mode 还原，所以打包脚本必须在 macOS/Linux 上运行（保持源文件权限），不要用会丢权限的工具重新压缩。`scripts/pack-emulator.mjs` 会拒绝 symlink 和非普通文件。
 
@@ -278,5 +317,8 @@ workflow 里有一道校验：tag 必须等于 `v` 加上 `package.json` 里的�
 |---|---|---|
 | `README.md`、`README_zh.md` | 扩展用户 | 用户指南。`README.md` 就是插件市场的 DETAILS 页面 |
 | `docs/development.md` | 开发者 | 本文件 |
+| `docs/luals.md` | 维护语言服务器的人 | **LuaLS 的打包、补丁和升级手册。** 改 `res/luals/clx.lua`、升级 LuaLS、排查语言功能问题前先读它 |
+| `docs/test-automation.md` | 写卡带做回归测试的人 | 注入输入与截图的命令参考。README 里只留了一行指引 |
+| `docs/adr/` | 开发者 | 决策记录。0001 模拟器包外置、0002 断点打在原文件、0003 换掉 Java 服务器 |
 | `AGENTS.md` | 编码代理、开发者 | 命令、约定和验证清单 |
 | `CHANGELOG.md` | 扩展用户 | 发布记录，同时显示在插件的 Changelog 页 |

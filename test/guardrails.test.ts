@@ -30,12 +30,16 @@ const here = path.join(repoRoot, 'test');
  * 这正是重点 —— 纯 module 不测，就等于放弃了它们存在的理由。
  */
 const PURE_MODULES = [
+	'src/artifact/bundle.ts',
 	'src/debug/debugChannel.ts',
 	'src/debug/luaProtocol.ts',
 	'src/debug/lineMapping.ts',
 	'src/debug/luaValue.ts',
 	'src/debug/testAutomation.ts',
-	'src/emulator/emulatorBundle.ts'
+	'src/emulator/emulatorBundle.ts',
+	'src/language/includePath.ts',
+	'src/language/lualsBundle.ts',
+	'src/language/lualsConfig.ts'
 ];
 
 /** 收集 test/ 下所有测试文件的源码（不含本文件，避免自我满足）。 */

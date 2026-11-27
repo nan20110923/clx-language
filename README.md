@@ -4,91 +4,136 @@
 
 ## Introduction
 
-You can use this extension to develop CLX programs based on LUA extended syntax, which can be run on ColoPlay devices released by Lifesmart. This extension provides an environment related to development and debugging:
+Develop CLX programs — Lua with extended syntax — for ColoPlay devices made by
+Lifesmart, without leaving VS Code.
 
-- CLX syntax highlighting, syntax hints
-- ColoX related interface tips
-- Compile files and run them in ColoX emulator
-- Breakpoints debugging
+- Syntax highlighting and completion for CLX
+- Inline documentation for the ColoX built-in API
+- Run a cartridge in the ColoX emulator
+- Breakpoint debugging, driven from VS Code
 
-## Environment
+## Installation
 
-This extension currently only supports Win32 and OSX environments, and you need to pre-configure the **JAVA_HOME** environment, currently supports Java11 and above, if you do not want to modify the system environment in the original **JAVA_HOME** variable, you can also modify the extension related configuration items
+Install **clx-language** from the VS Code Marketplace and open any `.clx` file.
+That is all — no toolchain, no environment variables, nothing to configure.
 
-## Configuration items
+Two things download themselves the first time they are needed, into VS Code's
+per-extension storage, shared by every workspace:
 
-* **Select debugger**
-  * **Default**, use the emulator downloaded on demand by the extension (recommended)
-  * **Nature**, deprecated. Nature is no longer published separately; this behaves like Default
-  * **Custom**, use the program at **Custom debugger path** and never download
-* **Custom debugger path**, user-specified emulator program path, only used when **Select debugger** is `Custom`
-* **JAVA_HOME**, the custom configuration item mentioned in the above runtime environment.
+| What | When | Size |
+|---|---|---|
+| Language server (LuaLS) | First `.clx` file you open | ~1 MB |
+| ColoX emulator | First time you run a file | ~5 MB |
 
-## Emulator download
+Both happen in the background with progress in the status bar. Syntax
+highlighting works immediately and never waits for a download. If a download
+fails, you lose the corresponding feature and the problem is logged to the
+**CLX Language Server** output channel — editing and highlighting keep working.
 
-Starting with 1.1.0 the emulator is no longer installed together with the extension. It is downloaded once on first run (about 5 MB) and reused from a local cache afterwards.
+## What CLX runs
 
-**The first time you run a file, the extension asks whether to download it and then shows the download progress.** The emulator is stored in VS Code's extension global storage, shared by every workspace, and removed when the extension is uninstalled.
+CLX is a customized **Lua 5.4** with 32-bit numerics. A few things differ from
+stock Lua in ways that will bite you if you assume otherwise:
 
-Device specifications (`coloX-4P`, `coloX-16`, `coloX-PICO8`, `coloX-32`, …) are recognised by the emulator itself; the extension no longer keeps a list of them.
+- `os` and `io` **do not exist.** For time use `stat(90..96)`; for files use
+  `__resread` / `__reslist`.
+- `print` draws text on the screen, it does not write to a console. Use
+  `printh` for console output.
+- `load` is renamed **`loads`** — the name `load` belongs to CLX's own
+  cartridge-loading API.
+- `dofile` and `loadfile` exist but raise if called.
 
-### Without internet access
+The extension's completions reflect all of this, so `os` and `io` will not be
+suggested to you.
 
-If your network cannot reach GitHub Releases (an intranet, for example), obtain the emulator yourself, set `clx-language.debugger` to `Custom`, and point `clx-language.debuggerCustomPath` at the emulator executable:
+## Configuration
 
-* macOS: point at `coloXtool.app/Contents/MacOS/coloXtool`; keep the whole `.app` directory
-* Windows: point at `coloXtool.exe`; keep the sibling dlls
+| Setting | Values | Meaning |
+|---|---|---|
+| `clx-language.debugger` | `Default` | Use the emulator the extension downloads (recommended) |
+| | `Custom` | Use the program at `debuggerCustomPath`, never download |
+| `clx-language.debuggerCustomPath` | path | Only read when `debugger` is `Custom` |
 
-The emulator can be obtained from the [ColoX documentation download page](https://x.cololight.com/mweb/docs/examples).
+`Nature` is still accepted for compatibility but behaves like `Default` — the
+Nature emulator is no longer published separately.
 
-**If macOS refuses to open it ("cannot be opened because the developer cannot be verified")**, the file carries a quarantine attribute. Remove it once in Terminal:
+### Working without internet access
+
+If your network cannot reach GitHub Releases, get the emulator yourself and
+point the extension at it:
+
+1. Set `clx-language.debugger` to `Custom`.
+2. Download the emulator from the
+   [ColoX documentation page](https://x.cololight.com/mweb/docs/examples).
+3. Set `clx-language.debuggerCustomPath` to the executable:
+   - **macOS**: `coloXtool.app/Contents/MacOS/coloXtool` — keep the whole `.app`
+     directory next to it
+   - **Windows**: `coloXtool.exe` — keep the sibling DLLs
+
+If macOS refuses to open it ("cannot be opened because the developer cannot be
+verified"), the file has a quarantine attribute. Clear it once:
 
 ```bash
 xattr -d com.apple.quarantine /path/to/coloXtool.app
 ```
 
-An emulator downloaded by the extension does not have this problem.
+An emulator downloaded by the extension never has this problem.
+
+The language server still needs internet, but it is optional: without it you
+keep syntax highlighting, and everything else in this page works.
 
 ## Usage
 
-### Create
+### Create a cartridge
 
-To create a new file with a clx suffix, you can type "template" and the plugin will prompt for the built-in initial template for the application
+Create a file with a `.clx` extension and type `template`. The snippet expands
+to a complete cartridge skeleton — device specification line, the Lua section,
+and the resource sections.
 
-![create](https://x.cololight.com/mweb/docs/assets/images/create-1d320d24952dbca8a347efd2e0725f29.gif)
+The first line must name a device specification such as `coloX-4P`,
+`coloX-16` or `coloX-PICO8`. The emulator reads that line to decide screen size
+and capabilities; the extension does not keep a list, so new specifications
+work as soon as the emulator supports them.
 
-### Run the file in the emulator
+### Run it
 
-**When the mouse focus is on the clx file, click the Run button in the upper right corner (you can also use the F5 shortcut key) to run the file, you can open the emulator and run the file, and at the same time, it will generate a rom file in the same directory.**
+With the cursor in a `.clx` file, click the **Run** button in the editor title
+bar, or press <kbd>F5</kbd>. The emulator opens and loads the cartridge.
 
-![run](https://x.cololight.com/mweb/docs/assets/images/run-0dad04a59d0723673c04cc5540ce15f6.gif)
+You will also see a `<name>.clx.rom` file appear next to your source. That file
+is the emulator's compiled output — **it is the reliable sign that the cartridge
+actually loaded.** If the emulator window opens but that file is missing,
+loading failed (usually a syntax error in the header) and the emulator silently
+fell back to its menu.
 
-### Debugging
+### Debug it
 
-**The simulator has a built-in debugger, and this plugin drives it from VS Code**
+1. Switch to **Run and Debug** in the sidebar and start the `CLX Debugger`
+   configuration. The emulator starts and attaches.
+2. Set breakpoints **in your own `.clx` file.** No copy is generated; the line
+   numbers you see are the line numbers you get.
+3. While stopped you get the call stack, a Globals scope (tables expand), watch
+   expressions, and hover values.
+4. Type emulator commands in the **Debug Console**. `help` lists all of them.
 
-1. Switch to **Debug** in the left column and click **Run and Debug**. The simulator starts and attaches.
-2. Set breakpoints in **your own `.clx` file** — no copy is generated.
-3. While stopped you get the call stack, the Globals scope (tables expand), Watch, and hover values.
-4. Type emulator commands in **DEBUG CONSOLE**. `help` lists them all.
+**Reading local variables**: use `p <name>` in the Debug Console. This emulator
+build cannot enumerate locals, so the **Locals** scope is empty and tells you
+so — that is a limitation of the emulator, not something you configured wrong.
 
-To read a local variable, use `p <name>` in the Debug Console. This emulator build
-cannot list locals by itself, so the **Locals** scope is empty and says so.
+**Positions can be off with `#include`**: included files are spliced in at
+compile time, so debugger line numbers refer to the compiled result. The
+extension calibrates against what the emulator actually loaded; if it cannot
+establish the mapping reliably, it refuses to start the debug session rather
+than show you wrong line numbers.
 
 ### Test automation
 
-While debugging, the `CLX Test` commands inject input and take screenshots:
+While a debug session is running, the **CLX Test** commands inject button
+presses, keyboard keys and touch positions, and take screenshots whose pixel
+md5 you can compare. They are for regression-testing cartridges.
 
-| Command | What it does |
-|---|---|
-| **CLX Test: Inject Buttons** | Hold CLX buttons for a number of frames, a duration, or until released |
-| **CLX Test: Hold a Key** | Hold a keyboard key |
-| **CLX Test: Move or Touch** | Set the mouse/touch position |
-| **CLX Test: Screenshot** | Save a BMP and print its pixel md5 |
-| **CLX Test: Show Input State** | Print frames, buttons, mouse, keyboard and gamepads |
-
-The same commands work from the Debug Console behind a `!` prefix, which is handy
-for stepping through input frame by frame:
+The same commands are available in the Debug Console behind a `!` prefix, which
+makes it easy to step through input frame by frame:
 
 ```
 !btn LEFT 1          one frame of LEFT
@@ -96,24 +141,42 @@ for stepping through input frame by frame:
 !btn LEFT 500ms      LEFT for 500 ms
 !btn 0               release
 !shot                screenshot; prints the pixel md5
-!input?              everything about the current input state
 ```
 
-Screenshots are written to the extension's own storage, never next to your source
-files. The reported `md5` covers pixel data only, so it is stable across platforms
-and usable as a golden-image key.
+Screenshots go to the extension's own storage, never next to your source files.
+The reported md5 covers pixel data only, so it is stable across platforms and
+usable as a golden-image key.
 
-![debug](https://x.cololight.com/mweb/docs/assets/images/debug-258b9f11b14dfc971b29f6719a4aaba5.gif)
+Full command reference: [docs/test-automation.md](https://github.com/nan20110923/clx-language/blob/main/docs/test-automation.md).
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| No completion or hover | Language server download failed — see the **CLX Language Server** output channel |
+| Emulator opens but shows its menu | The cartridge did not load: check the first line and the `<name>.clx.rom` file |
+| Breakpoints never hit | A previous emulator is still running and holding the debug port. Close it, or run **CLX: Restart Lua Server** |
+| "ColoX emulator is already running" | Same cause — one emulator at a time |
+| Emulator will not start on Windows 11 | Try reinstalling the .NET Framework (3.5 and 4.8) |
+
+**Setting that helps while debugging**: VS Code moves the cursor to the
+breakpoint when execution stops, which interrupts console work. Set
+`"debug.focusEditorOnBreak": false` to stop that.
 
 ## More
 
-* [VS Code plugin guide](https://x.cololight.com/mweb/docs/VSCodePlugin)
-* [ColoX Doc](https://x.cololight.com/mweb/docs/)
-* Tips
+- [ColoX documentation](https://x.cololight.com/mweb/docs/)
+- [ColoX VS Code plugin guide](https://x.cololight.com/mweb/docs/VSCodePlugin)
+- [Changelog](CHANGELOG.md)
 
-  * When debugging breakpoints, vscode may automatically move the cursor to the breakpoint, which is not conducive to continuous debug console operation, then you can change the *"debug.focusEditorOnBreak"* item to false in the settings.
-  * If the emulator not startup properly on Windows 11, try reinstalling the .NET Framework (3.5 and 4.8)
+## Credits
 
-## Thanks
+The language server is [LuaLS](https://github.com/LuaLS/lua-language-server)
+(MIT), used unmodified. CLX's file format is supported through a plugin that
+turns the non-Lua sections into comments, so the `.clx` handling can be
+maintained independently of the server.
 
-The Language Server of this extension is modified based on [EmmyLua-LanguageServer](https://github.com/EmmyLua/EmmyLua-LanguageServer/)
+The previous language server was a modified
+[EmmyLua-LanguageServer](https://github.com/EmmyLua/EmmyLua-LanguageServer);
+it required a Java runtime and has been replaced. See
+[ADR 0003](https://github.com/nan20110923/clx-language/blob/main/docs/adr/0003-luals-replaces-emmylua.md) for why.

@@ -3,21 +3,35 @@
 /**
  * 模拟器包（emulator bundle）的获取与安装，不 import vscode。
  *
- * 这一层只做确定性的事：解析清单、下载、校验 sha256、解压、原子替换。
- * 进度、日志、取消都从参数注入，所以可以在普通 Node 进程里直接测 —— 这里是
- * 仓库中唯一处理不可信输入（下载到的归档字节）的代码，必须能测。
+ * 下载、校验、解压、原子替换这些与产品无关的活都在 src/artifact/bundle.ts；
+ * 这里只放模拟器自己的东西：清单形状、缓存键、就绪判定、启动规格。
  *
  * 需要 VS Code 的那一侧（进度通知、确认弹窗、OutputChannel）在 emulator.ts。
  * 术语见 GLOSSARY.md：模拟器（emulator）≠ 调试适配器（debug adapter）。
  */
 
-import * as https from 'https';
-import * as http from 'http';
-import * as crypto from 'crypto';
-import * as zlib from 'zlib';
 import * as fs from 'fs';
 import * as path from 'path';
-import { URL } from 'url';
+import {
+	ArtifactError,
+	CancelledError,
+	HttpTransport,
+	MARKER_FILE,
+	ProgressSink,
+	Cancellation,
+	installArchive,
+	removePath
+} from '../artifact/bundle';
+
+// 通用件原样再导出：runClxFile、emulator.ts 和测试都从这里取，不用改导入路径。
+export { formatBytes, extract, download, MARKER_FILE } from '../artifact/bundle';
+export type {
+	Cancellation,
+	ProgressSink,
+	HttpTransport,
+	HttpTransportRequest,
+	HttpTransportResponse
+} from '../artifact/bundle';
 
 export type EmulatorPlatform = 'darwin' | 'win32';
 
@@ -46,59 +60,6 @@ export interface EmulatorManifest {
 	bundles: EmulatorBundle[];
 }
 
-/**
- * vscode.CancellationToken 的结构子集。
- * 用结构类型而不是 import，这个文件才不需要 vscode，测试传个假对象即可。
- */
-export interface Cancellation {
-	readonly isCancellationRequested: boolean;
-	onCancellationRequested(listener: () => void): { dispose(): void };
-}
-
-/**
- * 下载用的 HTTP 传输。是 `node:http` / `node:https` 的 `get` 的结构子集。
- *
- * 单独抽出来是为了可测：`download()` 里的重定向、sha256 校验、取消、
- * 进度上报都是真实逻辑，但它们此前只能靠真的联网验证。注入一个假传输就能
- * 在普通 Node 里跑完整分支。
- */
-export interface HttpTransport {
-	get(
-		url: URL,
-		options: { headers: Record<string, string> },
-		onResponse: (response: HttpTransportResponse) => void
-	): HttpTransportRequest;
-}
-
-/** 应答对象用到的部分（IncomingMessage 的子集）。 */
-export interface HttpTransportResponse {
-	statusCode?: number;
-	headers: Record<string, string | string[] | undefined>;
-	on(event: 'data', listener: (chunk: Buffer) => void): void;
-	on(event: 'error', listener: (error: Error) => void): void;
-	resume(): void;
-	pipe(destination: NodeJS.WritableStream): void;
-}
-
-/** 请求对象用到的部分（ClientRequest 的子集）。 */
-export interface HttpTransportRequest {
-	on(event: 'error', listener: (error: Error) => void): void;
-	destroy(): void;
-}
-
-/** 默认传输：按 URL 协议选 http 或 https。 */
-const defaultTransport: HttpTransport = {
-	get(url, options, onResponse) {
-		const transport = url.protocol === 'http:' ? http : https;
-		return transport.get(url, options, onResponse as never) as unknown as HttpTransportRequest;
-	}
-};
-
-/** vscode.Progress 的结构子集，同理。 */
-export interface ProgressSink {
-	report(value: { message?: string; increment?: number }): void;
-}
-
 export interface ProvisionRequest {
 	manifest: EmulatorManifest;
 	bundle: EmulatorBundle;
@@ -115,21 +76,12 @@ export interface BundleInstall {
 	launch: EmulatorLaunch | null;
 }
 
-export class EmulatorError extends Error {
-	constructor(message: string, public readonly detail?: string) {
-		super(message);
+export class EmulatorError extends ArtifactError {
+	constructor(message: string, detail?: string) {
+		super(message, detail);
 		this.name = 'EmulatorError';
 	}
 }
-
-class CancelledError extends Error {
-	constructor() {
-		super('cancelled');
-		this.name = 'CancelledError';
-	}
-}
-
-const MARKER_FILE = '.complete';
 
 /**
  * 解析并校验清单。清单坏了没有可用的降级路径，所以直接抛：
@@ -171,18 +123,43 @@ export function locateBundle(cacheRoot: string, bundle: EmulatorBundle): BundleI
  */
 export async function provision(
 	request: ProvisionRequest,
-	transport: HttpTransport = defaultTransport
+	transport?: HttpTransport
 ): Promise<EmulatorLaunch | null> {
-	const url = assetUrl(request.manifest, request.bundle);
+	const { bundle, directory } = request;
+	const key = versionKey(bundle);
 	try {
-		return await install(request, url, transport);
+		await installArchive(
+			{
+				directory,
+				url: assetUrl(request.manifest, bundle),
+				sha256: bundle.sha256,
+				key,
+				marker: { product: bundle.product, platform: bundle.platform, date: bundle.date, sha256: bundle.sha256 },
+				label: 'CLX emulator',
+				log: request.log,
+				progress: request.progress,
+				cancellation: request.cancellation
+			},
+			transport
+		);
 	} catch (e) {
 		if (e instanceof CancelledError) {
 			request.log?.('Download cancelled.');
 			return null;
 		}
+		if (e instanceof ArtifactError) {
+			// 保持 EmulatorError 类型，调用方按它区分"清单/下载失败"和普通异常
+			throw new EmulatorError(e.message, e.detail);
+		}
 		throw e;
 	}
+
+	if (!isReady(directory, bundle)) {
+		removePath(directory, request.log);
+		throw new EmulatorError('The downloaded CLX emulator is incomplete: the executable is missing.');
+	}
+
+	return launchFor(directory, bundle);
 }
 
 function assetUrl(manifest: EmulatorManifest, bundle: EmulatorBundle): string {
@@ -211,303 +188,4 @@ function launchFor(directory: string, bundle: EmulatorBundle): EmulatorLaunch {
 		launch.libraryDir = path.join(directory, bundle.libraryPath);
 	}
 	return launch;
-}
-
-async function install(request: ProvisionRequest, url: string, transport: HttpTransport): Promise<EmulatorLaunch> {
-	const { bundle, directory, log, progress, cancellation } = request;
-	const parent = path.dirname(directory);
-	fs.mkdirSync(parent, { recursive: true });
-
-	const archive = path.join(parent, `${versionKey(bundle)}.download`);
-	const staging = path.join(parent, `${versionKey(bundle)}.partial`);
-	removeDir(archive, log);
-	removeDir(staging, log);
-
-	log?.(`Downloading ${url}`);
-
-	try {
-		await download(url, archive, bundle.sha256, progress, cancellation, 0, transport);
-	} catch (e) {
-		removeDir(archive, log);
-		if (e instanceof CancelledError) {
-			throw e;
-		}
-		throw new EmulatorError(`Failed to download the CLX emulator from ${url}.`, `${e}`);
-	}
-
-	try {
-		progress?.report({ message: 'Extracting…', increment: 0 });
-		extract(archive, staging);
-		fs.writeFileSync(
-			path.join(staging, MARKER_FILE),
-			JSON.stringify({ product: bundle.product, platform: bundle.platform, date: bundle.date, sha256: bundle.sha256 }, null, 2)
-		);
-	} catch (e) {
-		removeDir(staging, log);
-		removeDir(archive, log);
-		throw new EmulatorError('Failed to extract the CLX emulator archive.', `${e}`);
-	}
-	removeDir(archive, log);
-
-	// 解压完成后才把临时目录改名成正式目录：中途被杀不会留下“看起来能用”的缓存
-	if (fs.existsSync(directory)) {
-		removeDir(directory, log);
-	}
-	fs.renameSync(staging, directory);
-	log?.(`Installed the CLX emulator into ${directory}`);
-
-	if (!isReady(directory, bundle)) {
-		removeDir(directory, log);
-		throw new EmulatorError('The downloaded CLX emulator is incomplete: the executable is missing.');
-	}
-
-	return launchFor(directory, bundle);
-}
-
-function removeDir(target: string, log?: (message: string) => void): void {
-	try {
-		fs.rmSync(target, { recursive: true, force: true });
-	} catch (e) {
-		log?.(`Failed to remove ${target}: ${e}`);
-	}
-}
-
-function download(
-	url: string,
-	destination: string,
-	expectedSha256: string,
-	progress: ProgressSink | undefined,
-	cancellation: Cancellation | undefined,
-	redirects = 0,
-	transport: HttpTransport = defaultTransport
-): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		if (redirects > 5) {
-			reject(new Error('Too many redirects.'));
-			return;
-		}
-		if (cancellation?.isCancellationRequested) {
-			reject(new CancelledError());
-			return;
-		}
-
-		const target = new URL(url);
-		const request = transport.get(
-			target,
-			{ headers: { 'User-Agent': 'vscode-clx-language', Accept: 'application/octet-stream' } },
-			response => {
-				const status = response.statusCode || 0;
-				if (status === 301 || status === 302 || status === 303 || status === 307 || status === 308) {
-					const location = response.headers.location;
-					response.resume();
-					if (!location) {
-						reject(new Error(`Redirect ${status} without a Location header.`));
-						return;
-					}
-					download(new URL(location, target).toString(), destination, expectedSha256, progress, cancellation, redirects + 1, transport)
-						.then(resolve, reject);
-					return;
-				}
-				if (status !== 200) {
-					response.resume();
-					reject(new Error(`Server responded with HTTP ${status}.`));
-					return;
-				}
-
-				const total = Number(response.headers['content-length'] || 0);
-				let received = 0;
-				let lastPercent = 0;
-				const hash = crypto.createHash('sha256');
-				const out = fs.createWriteStream(destination);
-
-				const cancel = cancellation?.onCancellationRequested(() => {
-					request.destroy();
-					out.destroy();
-					reject(new CancelledError());
-				});
-
-				response.on('data', (chunk: Buffer) => {
-					received += chunk.length;
-					hash.update(chunk);
-					if (total > 0) {
-						const percent = Math.floor((received / total) * 100);
-						if (percent > lastPercent) {
-							progress?.report({
-								message: `${percent}% of ${formatBytes(total)}`,
-								increment: percent - lastPercent
-							});
-							lastPercent = percent;
-						}
-					} else {
-						progress?.report({ message: `${formatBytes(received)} downloaded`, increment: 0 });
-					}
-				});
-				response.on('error', e => {
-					cancel?.dispose();
-					reject(e);
-				});
-				out.on('error', e => {
-					cancel?.dispose();
-					reject(e);
-				});
-				out.on('finish', () => {
-					cancel?.dispose();
-					const actual = hash.digest('hex');
-					if (actual !== expectedSha256) {
-						reject(new Error(`Checksum mismatch: expected ${expectedSha256}, got ${actual}.`));
-						return;
-					}
-					resolve();
-				});
-				response.pipe(out);
-			}
-		);
-		request.on('error', e => reject(e));
-	});
-}
-
-export function formatBytes(bytes: number): string {
-	if (bytes >= 1024 * 1024) {
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	}
-	if (bytes >= 1024) {
-		return `${(bytes / 1024).toFixed(0)} KB`;
-	}
-	return `${bytes} B`;
-}
-
-/**
- * 解压 tar.gz；只支持普通文件和目录，拒绝任何越界路径。
- * 归档字节来自网络，这里是唯一需要防路径穿越的地方。
- */
-export function extract(archive: string, destination: string): void {
-	const tar = zlib.gunzipSync(fs.readFileSync(archive));
-	fs.mkdirSync(destination, { recursive: true });
-
-	let offset = 0;
-	let pendingPath: string | undefined;
-	let pendingSize: number | undefined;
-
-	while (offset + 512 <= tar.length) {
-		const header = tar.subarray(offset, offset + 512);
-		if (isZeroBlock(header)) {
-			break;
-		}
-		offset += 512;
-
-		const name = readString(header, 0, 100);
-		const mode = parseInt(readString(header, 100, 8).trim() || '0', 8);
-		const sizeField = readString(header, 124, 12).trim();
-		const size = pendingSize ?? (sizeField ? parseInt(sizeField, 8) : 0);
-		const typeflag = header[156] === 0 ? '0' : String.fromCharCode(header[156]);
-		const prefix = readString(header, 345, 155);
-		const entryName = pendingPath ?? (prefix ? `${prefix}/${name}` : name);
-		pendingPath = undefined;
-		pendingSize = undefined;
-
-		const dataStart = offset;
-		const dataEnd = dataStart + size;
-		if (dataEnd > tar.length) {
-			throw new Error(`Truncated archive while reading ${entryName}.`);
-		}
-		const data = tar.subarray(dataStart, dataEnd);
-		offset = dataStart + Math.ceil(size / 512) * 512;
-
-		if (typeflag === 'x' || typeflag === 'X' || typeflag === 'g') {
-			// pax：下一个条目的路径/长度可能被覆盖
-			const records = parsePax(data.toString('utf8'));
-			if (records.path) {
-				pendingPath = records.path;
-			}
-			if (records.size !== undefined) {
-				pendingSize = records.size;
-			}
-			continue;
-		}
-		if (typeflag === 'L') {
-			// GNU longname
-			pendingPath = cString(data.toString('utf8'));
-			continue;
-		}
-		if (typeflag === 'K') {
-			continue;
-		}
-		if (typeflag === '5') {
-			fs.mkdirSync(safeJoin(destination, entryName), { recursive: true });
-			continue;
-		}
-		if (typeflag !== '0' && typeflag !== '7') {
-			throw new Error(`Unsupported archive entry type "${typeflag}" for ${entryName}.`);
-		}
-
-		const target = safeJoin(destination, entryName);
-		fs.mkdirSync(path.dirname(target), { recursive: true });
-		fs.writeFileSync(target, data);
-		// 可执行位必须保留，否则 macOS 上模拟器起不来
-		fs.chmodSync(target, mode & 0o777 || 0o644);
-	}
-}
-
-function isZeroBlock(block: Buffer): boolean {
-	for (let i = 0; i < block.length; i++) {
-		if (block[i] !== 0) {
-			return false;
-		}
-	}
-	return true;
-}
-
-function readString(buffer: Buffer, start: number, length: number): string {
-	const slice = buffer.subarray(start, start + length);
-	const end = slice.indexOf(0);
-	return (end === -1 ? slice : slice.subarray(0, end)).toString('utf8');
-}
-
-function cString(value: string): string {
-	const end = value.indexOf('\0');
-	return end === -1 ? value : value.slice(0, end);
-}
-
-function parsePax(data: string): { path?: string; size?: number } {
-	const result: { path?: string; size?: number } = {};
-	let index = 0;
-	while (index < data.length) {
-		const space = data.indexOf(' ', index);
-		if (space === -1) {
-			break;
-		}
-		const length = parseInt(data.slice(index, space), 10);
-		if (!length || length <= 0) {
-			break;
-		}
-		const record = data.slice(space + 1, index + length - 1);
-		const equals = record.indexOf('=');
-		if (equals !== -1) {
-			const key = record.slice(0, equals);
-			const value = record.slice(equals + 1);
-			if (key === 'path') {
-				result.path = value;
-			} else if (key === 'size') {
-				const parsed = parseInt(value, 10);
-				if (!isNaN(parsed)) {
-					result.size = parsed;
-				}
-			}
-		}
-		index += length;
-	}
-	return result;
-}
-
-function safeJoin(root: string, relative: string): string {
-	const normalized = path.posix.normalize(relative.replace(/\\/g, '/')).replace(/^\/+/, '');
-	if (normalized.startsWith('..')) {
-		throw new Error(`Archive entry escapes the target directory: ${relative}`);
-	}
-	const resolvedRoot = path.resolve(root);
-	const resolved = path.resolve(resolvedRoot, normalized);
-	if (resolved !== resolvedRoot && !resolved.startsWith(resolvedRoot + path.sep)) {
-		throw new Error(`Archive entry escapes the target directory: ${relative}`);
-	}
-	return resolved;
 }
