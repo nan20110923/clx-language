@@ -121,7 +121,8 @@ dist/                         esbuild 打包产物（extension.js），不入库
   确实无害但被误报时，在该行加 `allow-public` 注释；历史里的误报只能在
   `scripts/check-public.mjs` 的 `HISTORY_ALLOWLIST` 里登记路径，并写明理由。
 - 工作区设置把 `main` 设为受保护分支（`.vscode/settings.json`），在 VS Code 里直接提交到 `main` 会提示新建分支。
-- **提交前钩子跑 lint/typecheck/test/check-public**：仓库用 `core.hooksPath=.githooks`（不是 husky）。换机器 clone 后要执行一次 `git config core.hooksPath .githooks`，否则钩子不生效。确实需要跳过时用 `git commit --no-verify`。
+- **推送只认 `origin`**。本机 clone 里可能还配着别的远端（历史遗留的内网镜像），但本仓库对外的是 `origin`，发布用的 GitHub Actions 也只看它。`git remote -v` 按字母序排列，读全文再判断，不要用 `head` 截断后下结论。
+- **提交前钩子跑 lint/typecheck/test/check-public**：仓库用 `core.hooksPath=.githooks`（不是 husky）。换机器 clone 后要执行一次 `git config core.hooksPath .githooks`，否则钩子不生效。确实需要跳过时用 `git commit --no-verify`。`pre-push` 另外拦"推到了 `origin` 以外的远端"。
 - **TypeScript 锁在 5.9.3，不要升到 7.x。** TS 7 是原生重写版，`require("typescript")` 只返回 `{ version }`（编译 API 在 `./unstable/*` 下），`@typescript-eslint` 会直接拒绝启动。官方共存方案要把 `typescript` alias 到 `@typescript/typescript6`、TS 7 用别名给 `tsc`，但 **yarn 1 不支持 npm alias**（空白项目上也会失败）。要升就得连包管理器一起换。详细理由见 `docs/development.md`。
 - `@typescript-eslint@8` 的 peer 是 `typescript >=4.8.4 <6.1.0`。换 TS 版本前先确认还落在范围里，否则 `yarn lint` 会挂。
 
