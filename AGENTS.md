@@ -37,7 +37,8 @@ src/extension.ts              扩展入口，只做装配（约 90 行）；esbu
 src/ids.ts                    两个 id（LANGUAGE_ID / DEBUG_TYPE）与设置命名空间的唯一住所
 src/runClxFile.ts             选模拟器（自定义路径 or 下载）并启动；运行和调试共用
 src/language/                 语言侧
-  languageServer.ts           CLX 语言服务器（LuaLS）的启停
+  languageServer.ts           CLX 语言服务器（LuaLS）的启停；接管它宣告的 workspace 命令
+  lifecycle.ts                命令接管（重名跳过）与生命周期串行队列（纯逻辑）
   lualsServer.ts              LuaLS 包的 VS Code 适配：清单、缓存根、状态栏进度
   lualsBundle.ts              LuaLS 包的纯逻辑：清单校验（带 arch）、就绪判定
   lualsConfig.ts             生成 LuaLS 的 configpath 内容（纯逻辑）
@@ -109,7 +110,8 @@ dist/                         esbuild 打包产物（extension.js），不入库
 
 - `dist/`、`.artifacts/` 和 `*.vsix` 不入库。`dist/` 放会被装进插件包的构建产物，`.artifacts/` 放交出去的东西（模拟器归档、vsix），两者不要混。不要往 `dist/` 里放 vsix：`vscode:prepublish` 每次先 `rimraf dist`，上一份产物会连根消失。
 - 模拟器归档里的可执行位必须保留。`src/emulator/emulatorBundle.ts` 解压时按 tar 头的 mode 还原权限；打包脚本拒绝 symlink 和非普通文件。
-- `src/emulator/emulatorBundle.ts`、`src/debug/debugChannel.ts`、`src/debug/luaProtocol.ts`、`src/debug/lineMapping.ts` 都不许 import `vscode`。它承载全部处理不可信输入的代码（tar 解析、路径穿越防护、sha256），必须能在普通 Node 进程里加载和测试。需要编辑器能力时从参数注入 `ProgressSink` / `Cancellation`。
+- `src/emulator/emulatorBundle.ts`、`src/debug/debugChannel.ts`、`src/debug/luaProtocol.ts`、`src/debug/lineMapping.ts`、`src/language/lifecycle.ts` 都不许 import `vscode`。它承载全部处理不可信输入的代码（tar 解析、路径穿越防护、sha256），必须能在普通 Node 进程里加载和测试。需要编辑器能力时从参数注入 `ProgressSink` / `Cancellation` / `CommandRegistrar`。
+- **语言客户端的命令注册不许交回 `vscode-languageclient`。** LuaLS 在 initialize 里静态宣告 `lua.removeSpace` / `lua.solve` / `lua.jsonToLua` 等 workspace 命令，库对每个名字直接 `registerCommand`；命令是全局命名空间，重名会抛错，而异常发生在 `initializeFeatures` 里，**整个语言客户端**跟着起不来（表现为 "couldn't create connection to server"）。`src/language/languageServer.ts` 的 `takeOverCommands()` 接管了这个环节，重名只跳过、不让启动失败。同理 `start` / `stop` / `restart` 必须走 `LifecycleQueue`：两个客户端同时在役也会撞上同一批名字。细节与升级核对方法见 `docs/luals.md` 的「命令重名」。
 - 三个平台的模拟器二进制都只有 x86_64（macOS 靠 Rosetta 2）。归档按 **platform** 命名，**不要**带 `process.arch`，否则 Apple Silicon 会去找不存在的 arm64 包。
 - macOS 的 `.app` 结构不能压平：可执行文件用 `@executable_path/../Frameworks` 加载 SDL2，清单里的 `executable` 和 `libraryPath` 缺一不可。
 - 官方 macOS 包是 ad-hoc 签名、未公证。插件自己下载的文件不带 quarantine 属性所以能直接跑；用户手动下载的会被 Gatekeeper 拦，README 里给了 `xattr -d com.apple.quarantine`。

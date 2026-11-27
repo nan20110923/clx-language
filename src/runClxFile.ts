@@ -13,8 +13,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ensureEmulator, EmulatorError } from './emulator/emulator';
-import { EmulatorLaunch } from './emulator/emulatorBundle';
+import { ensureEmulator, EmulatorError, logEmulatorOutput, showEmulatorOutput } from './emulator/emulator';
+import { EmulatorLaunch, romPathFor, waitForRom } from './emulator/emulatorBundle';
 import { startEmulator, type LaunchOutcome } from './emulator/emulatorProcess';
 
 /**
@@ -55,7 +55,54 @@ export async function runClxFile(
 		return 'cancelled';
 	}
 
-	return startEmulator({ file: target, debug, launch });
+	// 模拟器的输出全部转进 "CLX Emulator" 通道。ROM 生成失败时它只往 stdout
+	// 打一行然后继续跑，不接这里就等于把唯一的线索丢进 DevTools。
+	const outcome = await startEmulator({
+		file: target,
+		debug,
+		launch,
+		onStdout: logEmulatorOutput
+	});
+
+	if (outcome === 'started' && !debug) {
+		// 只在"运行"时等 ROM。调试路径有自己的就绪判定（等 3563 + 钉 VM），
+		// 在那里再等 20 秒只会拖慢启动，而且卡带没加载时它会自己在 vmlist 上
+		// 看出来，不需要这条兜底提示。
+		await reportRom(target);
+	}
+	return outcome;
+}
+
+/**
+ * 确认 ROM 真的生成了。
+ *
+ * 这是"模拟器起来了但卡带没加载"的唯一可靠信号 —— 端口通了不代表加载成功，
+ * 加载失败时它照样监听 3563 并停在 BIOS 菜单。所以这里异步等一小会，没等到
+ * 就把用户引到输出面板，而不是提示成功。
+ */
+async function reportRom(file: vscode.Uri): Promise<void> {
+	const produced = await waitForRom(file.fsPath, {
+		waitMs: 20000,
+		intervalMs: 500,
+		exists: p => fs.existsSync(p),
+		sleep: ms =>
+			new Promise<void>(resolve => {
+				setTimeout(resolve, ms);
+			})
+	});
+	if (produced) {
+		return;
+	}
+
+	const show = 'Show Output';
+	const answer = await vscode.window.showWarningMessage(
+		`The simulator started but did not produce ${path.basename(romPathFor(file.fsPath))} next to your cartridge. ` +
+			'The cartridge may not have loaded. Check the "CLX Emulator" output for the reason.',
+		show
+	);
+	if (answer === show) {
+		showEmulatorOutput();
+	}
 }
 
 /**

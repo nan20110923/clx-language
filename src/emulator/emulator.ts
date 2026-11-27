@@ -55,6 +55,27 @@ function log(message: string): void {
 	channel().appendLine(message);
 }
 
+/**
+ * 把模拟器进程的输出写进 "CLX Emulator" 通道。
+ *
+ * 为什么需要：模拟器生成 ROM 失败时**不弹任何错误、进程照常运行**，只在 stdout
+ * 打一行（`!!!ROM GEN FAIL, can't open %s!!!` / `gen rom(%s) fail.`）。这些行
+ * 以前只进 `console.log`，要开 DevTools 才看得到，用户看到的现象就是"模拟器起来
+ * 了但没有 .rom"，完全无从判断。
+ */
+export function logEmulatorOutput(text: string): void {
+	for (const line of text.split(/\r?\n/)) {
+		if (line.trim().length > 0) {
+			log(line);
+		}
+	}
+}
+
+/** 把用户引到这里看输出。只在确实需要排查时调用，不要每次运行都弹。 */
+export function showEmulatorOutput(): void {
+	channel().show(true);
+}
+
 function manifestPath(context: vscode.ExtensionContext): string {
 	return path.join(context.extensionPath, ...MANIFEST_PATH);
 }

@@ -17,6 +17,8 @@
 | `src/language/lualsBundle.ts` | 清单校验、就绪判定、安装（纯逻辑，不 import vscode） |
 | `src/language/lualsConfig.ts` | 生成 LuaLS 的 configpath 内容（纯逻辑） |
 | `src/language/lualsServer.ts` | VS Code 适配：读清单、下载进度、写配置、启动规格 |
+| `src/language/languageServer.ts` | 客户端的起停与重启；接管服务器宣告的 workspace 命令 |
+| `src/language/lifecycle.ts` | 命令接管（重名跳过）与生命周期串行队列（纯逻辑，不 import vscode） |
 | `src/artifact/bundle.ts` | 下载/校验/解压/原子替换（与模拟器共用） |
 
 ---
@@ -338,6 +340,58 @@ LuaLS 自己的日志在 `globalStorageUri/luals/log/`（由 `LLS_LOG_PATH` 指�
 | `__gfx__` 段报语法错误 | 插件没生效 | 查 `config.lua` 里 `runtime.plugin` 路径；查日志里有没有插件报错 |
 | 断点/补全位置整体偏移 | 插件返回了字符串而不是 diff | 见第 2 节；位置映射没建立 |
 | 所有 CLX API 都没有补全 | `workspace.library` 路径错 | 查 `config.lua` 里的绝对路径是否指向 `res/clx-std/<lang>` |
+| 报 `couldn't create connection to server`，原因是 `command 'lua.xxx' already exists` | 两个客户端同时在役，或用户装了别的 Lua 扩展占了同名命令 | 见下面「命令重名」；1.3.1 起已不再让整条启动失败 |
+
+### 命令重名：为什么它能让整个语言客户端起不来
+
+LuaLS 在 initialize 的 capabilities 里**静态宣告**一批 workspace 命令：
+
+```lua
+-- script/provider/provider.lua
+m.register 'workspace/executeCommand' {
+    capability = {
+        executeCommandProvider = { commands = {
+            'lua.removeSpace', 'lua.solve', 'lua.jsonToLua',
+            'lua.setConfig', 'lua.getConfig', 'lua.autoRequire',
+        } },
+    },
+    ...
+```
+
+`vscode-languageclient` 收到这份宣告后，对每个命令直接调
+`vscode.commands.registerCommand`。VS Code 的命令是**全局命名空间**，重名会抛
+`command 'lua.removeSpace' already exists`。这个异常发生在客户端的
+`initializeFeatures` 里，于是**整个语言客户端启动失败** —— 用户看到的是
+"couldn't create connection to server"，完全看不出原因只是一个命令名撞车。
+
+两种触发方式：
+
+1. 另一个扩展（LuaLS 官方的 VS Code 扩展、其他 Lua 扩展）已经注册了同名命令；
+2. **我们自己的**重启竞态：旧版 `restart()` 是"先 `this._client = undefined`，
+   再 `await client.stop()`"。而 `stop()` 对还在 `starting` 的客户端会拒绝
+   （它只接受 `running`）。句柄此时已经丢了 —— 那个客户端仍在跑、命令仍注册着，
+   之后每次启动都撞重名，**直到重载窗口**。
+
+两处都已经修掉：
+
+- `src/language/languageServer.ts` 的 `takeOverCommands()` 接管了
+  `ExecuteCommandFeature.initialize`，改为自己注册；重名的跳过并记日志，服务器
+  仍然可用。被跳过的命令会落到占用它的那个扩展上 —— 它们本来就被占了。
+- `start` / `stop` / `restart` 走 `src/language/lifecycle.ts` 的 `LifecycleQueue`
+  串行执行，`stopNow()` 在 `stop()` 拒绝时走 `discard()` 连进程一起收掉，不再
+  丢句柄。
+
+**改这一层时注意**：我们在覆盖 `ExecuteCommandFeature.initialize`，这是
+`vscode-languageclient` 的内部形状。升级该库后要确认
+
+```bash
+grep -n "initializeFeatures" node_modules/vscode-languageclient/lib/common/client.js
+grep -n "getFeature(request: typeof ExecuteCommandRequest.method)" \
+  node_modules/vscode-languageclient/lib/common/client.d.ts
+```
+
+两处都还在，覆盖才有效。`test/lifecycle.test.ts` 固化了"重名要跳过"与"串行"这两条
+规则，但它测的是纯逻辑，**接口形状本身要靠上面两条 grep 确认**。
 
 ### 手动清缓存
 

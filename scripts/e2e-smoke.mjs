@@ -208,6 +208,26 @@ exports.run = async function run() {
 
     if (session) await vscode.debug.stopDebugging(session);
     sub.dispose();
+
+    // ---- 运行路径（非调试）：这是 reportRom 唯一生效的地方 ----
+    // 先删掉上一次的 ROM，否则"已存在"会让检查变成空操作。
+    await sleep(1500);
+    fs.rmSync(rom, { force: true });
+    try {
+      const runCommand = 'extension.clx-language.run';
+      const doc2 = await vscode.workspace.openTextDocument(clxPath);
+      await vscode.window.showTextDocument(doc2);
+      // 运行命令读的是编辑器里的活动文档，所以必须先把它打开
+      await vscode.commands.executeCommand(runCommand, doc2.uri);
+      let regenerated = false;
+      for (let i = 0; i < 60; i++) {
+        if (existsSync(rom)) { regenerated = true; break; }
+        await sleep(500);
+      }
+      log('运行路径重新生成了 ROM', regenerated, existsSync(rom) ? fs.statSync(rom).size + ' bytes' : 'missing');
+    } catch (e) {
+      log('运行路径重新生成了 ROM', false, String(e));
+    }
   } catch (e) {
     log('harness 自身出错', false, String(e) + '\\n' + (e && e.stack));
   } finally {

@@ -15,10 +15,11 @@
 
 import * as net from 'net';
 import * as child_process from 'child_process';
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { EmulatorLaunch } from './emulatorBundle';
+import { EmulatorLaunch, missingWindowsDebugCrt } from './emulatorBundle';
 
 /** 模拟器的调试通道。只允许一个客户端连接。 */
 export const DEBUG_HOST = '127.0.0.1';
@@ -140,13 +141,31 @@ export function startEmulator(request: LaunchRequest): Promise<LaunchOutcome> {
 			console.log('coloxProcess stdout: ', text);
 			request.onStdout?.(text);
 		});
-		child.stderr?.on('data', data => { console.log('coloxProcess stderr: ', String(data)) });
+		child.stderr?.on('data', data => {
+			console.log('coloxProcess stderr: ', String(data));
+			request.onStdout?.(String(data));
+		});
 
 		child.on('spawn', () => settle('started'));
 		child.on('error', e => {
 			console.log('coloxProcess error: ', e);
 			current = undefined;
-			vscode.window.showErrorMessage(`Run coloX simulator failed: ${e}`);
+			// Windows 缺依赖 DLL 时也报 ENOENT，光说"启动失败"没法排查。
+			// 这里只在**真的失败**时才去查 Debug CRT —— 能在 Windows 上正常
+			// 跑模拟器的用户不该被一个前置检查挡住。
+			const missing = missingWindowsDebugCrt(
+				path.dirname(request.launch.executable),
+				file => fs.existsSync(file)
+			);
+			const hint =
+				missing.length > 0
+					? `\n\nThe Microsoft Visual C++ Debug runtime is missing: ${missing.join(', ')}. ` +
+						'These libraries are not redistributable, so neither this extension nor the official download can ship them. ' +
+						'Installing the Visual C++ Redistributable does not help: it only contains the release runtime.'
+					: '';
+			vscode.window.showErrorMessage(
+				`Run coloX simulator failed: ${e.message || e} (${request.launch.executable})${hint}`
+			);
 			settle('failed');
 		});
 		// close / exit / disconnect 都表示进程结束了。exit 先于 close 触发，

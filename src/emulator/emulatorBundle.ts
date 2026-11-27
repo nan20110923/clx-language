@@ -11,6 +11,7 @@
  */
 
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import {
 	ArtifactError,
@@ -40,6 +41,121 @@ export interface EmulatorLaunch {
 	executable: string;
 	/** macOS 下需要设置 DYLD_LIBRARY_PATH 的目录 */
 	libraryDir?: string;
+}
+
+/**
+ * 卡带对应的 ROM 路径。
+ *
+ * 模拟器把 ROM 写成**卡带文件同目录**下的 sidecar：`<文件名>.clx.rom`，
+ * 不是 `<文件名>.rom`，也不是 `-d` 目录下的别的名字。扩展不传 `-b`
+ * （那是"只构建不运行"的选项），所以这是唯一正确的判定依据。
+ */
+export function romPathFor(cartridgePath: string): string {
+	return `${cartridgePath}.rom`;
+}
+
+/**
+ * 模拟器输出里表示"ROM 生成失败"的行。
+ *
+ * 官方二进制里这些字符串是成组出现的：
+ *
+ * ```
+ * !!!ROM GEN FAIL, can't open %s!!!
+ * !!!ROM GEN FAIL!!!
+ * !!!ROM GEN skip compress[%d]!!!
+ * gen rom(%s) fail.
+ * ```
+ *
+ * 关键是它**不弹错、进程继续跑**，所以"模拟器起来了"和"卡带加载了"是两件事。
+ * 端口通、有窗口，都不能说明 ROM 生成成功。
+ */
+export function isRomGenerationFailure(line: string): boolean {
+	return /ROM GEN FAIL|ROM GEN skip compress|gen rom\(.+\) fail/i.test(line);
+}
+
+/**
+ * 等待 ROM 出现。
+ *
+ * 官方实现里 ROM 是在加载完卡带之后写的，实测耗时从 1 秒到 10 秒不等
+ * （Rosetta 转译、首次解压、卡带大小都会影响）。`waitMs` 只影响"等多久"，
+ * 不改变判据：文件存在才算成功。
+ *
+ * `exists` 与 `sleep` 都可注入，方便在普通 Node 里测。
+ */
+export async function waitForRom(
+	cartridgePath: string,
+	options: { waitMs: number; intervalMs: number; exists: (p: string) => boolean; sleep: (ms: number) => Promise<void> }
+): Promise<boolean> {
+	const target = romPathFor(cartridgePath);
+	if (options.exists(target)) {
+		return true;
+	}
+	const rounds = Math.max(1, Math.ceil(options.waitMs / options.intervalMs));
+	for (let i = 0; i < rounds; i++) {
+		await options.sleep(options.intervalMs);
+		if (options.exists(target)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * 官方 Windows 版 `coloXtool.exe` 链接的是 MSVC **Debug** CRT。
+ *
+ * 这四个不在 REDIST 列表里，微软不允许随应用分发，官方 zip 也不带 —— 所以装
+ * `vc_redist.x64.exe` 解决不了（那只装 Release CRT）。缺任何一个时 Windows
+ * 在加载镜像阶段就失败：进程不起、不生成 `.rom`、`spawn` 的 error 事件只有
+ * 无意义的 `ENOENT`/`UNKNOWN`，用户只看到"点了运行什么也没发生"。
+ *
+ * 注意这只解释"进程根本起不来"。如果模拟器**能运行**却没有 `.rom`，原因在别处
+ * （卡带没加载、输出里有一行 `!!!ROM GEN FAIL`），不要拿这条去猜。
+ *
+ * 这里只能给出可诊断的提示。真正的修复在上游：改用 Release CRT 重新编译，
+ * 或者 `/MT` 静态链接。不要试图把这些 DLL 打进归档 —— 那是许可证问题。
+ */
+export const WINDOWS_DEBUG_CRT = [
+	'MSVCP140D.dll',
+	'VCRUNTIME140D.dll',
+	'VCRUNTIME140_1D.dll',
+	'ucrtbased.dll'
+] as const;
+
+/**
+ * 检查 Windows 上缺哪些 Debug CRT DLL。
+ *
+ * 查询顺序按 Windows 的搜索规则：应用目录 → System32 → PATH。`exists` 注入
+ * 是为了在非 Windows 上也能测这段逻辑。
+ *
+ * 路径一律用 `path.win32` 拼接：这个检查只在 Windows 上有意义，而测试跑在
+ * macOS/Linux 上，用平台原生的 `path.join` 会拼出 `/` 分隔的假路径。
+ *
+ * 返回空数组表示都找到了（或者不是 Windows）。
+ */
+export function missingWindowsDebugCrt(
+	appDir: string,
+	exists: (file: string) => boolean,
+	platform: string = os.platform(),
+	env: NodeJS.ProcessEnv = process.env
+): string[] {
+	if (platform !== 'win32') {
+		return [];
+	}
+
+	const win = path.win32;
+	const dirs = [appDir];
+	const systemRoot = env.SystemRoot || env.windir;
+	if (systemRoot) {
+		dirs.push(win.join(systemRoot, 'System32'));
+	}
+	// Windows 的环境变量名大小写不敏感，两种写法都可能出现
+	for (const entry of (env.PATH || env.Path || '').split(';')) {
+		if (entry.length > 0) {
+			dirs.push(entry);
+		}
+	}
+
+	return WINDOWS_DEBUG_CRT.filter(dll => !dirs.some(dir => exists(win.join(dir, dll))));
 }
 
 export interface EmulatorBundle {

@@ -38,6 +38,7 @@ const PURE_MODULES = [
 	'src/debug/testAutomation.ts',
 	'src/emulator/emulatorBundle.ts',
 	'src/language/includePath.ts',
+	'src/language/lifecycle.ts',
 	'src/language/lualsBundle.ts',
 	'src/language/lualsConfig.ts'
 ];

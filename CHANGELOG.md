@@ -1,3 +1,9 @@
+### 1.3.1 (2026-11-27)
+
+* Fixed:
+  * The language server no longer fails with `couldn't create connection to server` / `command 'lua.removeSpace' already exists`. Two causes, both fixed: VS Code commands are a global namespace, so a same-named command registered by another Lua extension used to abort the whole client start-up; and restarting while the client was still starting dropped the handle and leaked a client that kept its commands registered, which made every later start fail until the window was reloaded. A command-name collision now only skips that one command; start/stop/restart are serialized.
+  * The simulator's output now goes to the **CLX Emulator** output channel, and the extension checks that `<file>.clx.rom` actually appeared. The emulator does not raise an error when ROM generation fails — it keeps running and prints one line to stdout (`!!!ROM GEN FAIL…`), so "the window opened" never proved the cartridge loaded. Previously that line only reached the DevTools console, which made "the simulator runs but no `.rom` appears" impossible to diagnose. If the ROM does not show up within 20 seconds you now get a prompt pointing at the output. On Windows, a genuinely missing Visual C++ Debug runtime is now reported only when the process actually fails to start, so machines where the simulator runs are never blocked by the check.
+
 ### 1.3.0 (2026-11-27)
 
 * Breaking:

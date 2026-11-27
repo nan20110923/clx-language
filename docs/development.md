@@ -122,7 +122,34 @@ yarn watch    # 监听文件改动，自动重新打包
 - **`i local` 拿不到局部变量**（模拟器侧的帧偏移 bug）。内嵌的 Lua helper 硬编码了 `debug.getlocal(frame + 2, …)` 的 `+2`，帧偏移错，报的是卡带顶层 chunk。同一帧上 `p <名字>` 是正确的，所以 Variables 面板的 Locals 会明确提示改用 `p`。不要试图靠解析 `i local` 的文本凑出局部变量。
 - **`src __lua__` 应答里的 `__lua__:N`，N 是行数不是起始行号**，且**比正文行数少 1**（文件末尾空行不计）。别拿它做行号校验，正文是权威。历史上它被误读成"`__lua__` 段在原文件里的起始行"，导致断点整体错位。
 - **协议权威来源**：模拟器官方源码的 `c/coloX/src/coloX_dbg.cpp` 是权威实现（文档是摘要，漏掉应答体形状和错误文本）；`c/coloX/guide/debug.md` 是官方文档；`dbgtool/` 是手工客户端参考。改协议层前先对照它们，`help` 命令也能从模拟器直接问出全量命令表。
-- **运行成功与否的判断**：看文件同级目录是否出现 `.rom`，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。
+- **运行成功与否的判断**：看文件同级目录是否出现 `.rom`，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。ROM 由模拟器自己写成 sidecar（`<文件名>.clx.rom`），扩展不需要传 `-b`。
+- **模拟器能运行但没有 `.rom`**：先分清两种情形，它们的成因完全不同。
+
+  1. **进程根本没起来**（Windows）。官方便携版 `coloXtool.exe` 的导入表里有四个 **Debug** CRT：`MSVCP140D.dll`、`VCRUNTIME140D.dll`、`VCRUNTIME140_1D.dll`、`ucrtbased.dll`，官方 zip 一个都不带。这些 DLL 不在微软 REDIST 列表里，**不允许随应用分发**，装 `vc_redist.x64.exe` 也没用（那只装 Release CRT）。症状是点了运行什么都不发生，`spawn` 的 `error` 只有 `ENOENT`/`UNKNOWN`。这种情况进程不存在，也就谈不上"能正常运行"。
+
+  2. **进程起来了但没有 ROM**。模拟器生成 ROM 失败时**不弹错、继续跑**，只在 stdout 打一行。官方二进制里这组字符串是（macOS / Windows 完全一致）：
+
+     ```
+     !!!ROM GEN FAIL, can't open %s!!!
+     !!!ROM GEN FAIL!!!
+     !!!ROM GEN skip compress[%d]!!!
+     gen rom(%s) fail.
+     ```
+
+     最直接的诱因是 `-d` 的尾部分隔符：模拟器内部用 `'%s/%s%s'` 拼 ROM 路径，`-d` 少了尾分隔符就拼成 `projgame.clx.rom`，**既不报错也不生成**。实测确认过：`-d /p/proj` 静默无输出、无 ROM；`-d /p/proj/` 正常生成。扩展现在带尾分隔符，改这段代码时别弄丢。
+
+     其次是卡带本身没加载成功（`EIE:open file err`，通常是 `-d` 的路径不对，或者 `#include` 的目标缺失）。
+
+  - 因为失败信息只在 stdout，`startEmulator` 现在把子进程输出转进 **CLX Emulator** 输出通道（`logEmulatorOutput`）。以前这些行只进 DevTools console，用户完全看不到 —— "能运行但没 rom" 就是这样变成悬案的。
+  - 启动成功后 `runClxFile` 会等 ROM 出现（`waitForRom`，最多 20 秒），没等到就提示去看输出，而不是默默当作成功。
+  - 只在 spawn **真的失败**时才检查 Debug CRT（`missingWindowsDebugCrt`，纯逻辑在 `emulatorBundle.ts`，查询顺序为应用目录 → System32 → PATH）。不做启动前拦截：能在 Windows 上正常跑模拟器的机器不该被挡住。
+  - 查 Windows 包的导入表（在 macOS 上就能做）：
+
+    ```bash
+    objdump -p /tmp/win/coloXtool_win32/coloXtool.exe | grep 'DLL Name'
+    ```
+
+    出现 `MSVCP140D.dll` 这类带 `D` 的 Debug 版就是情形 1；只有 `MSVCP140.dll` / `VCRUNTIME140.dll` 是正常的 Release 依赖。
 - **macOS Gatekeeper**：官方 macOS 包是 ad-hoc 签名、未公证。插件通过 `https` 下载的文件不带 quarantine 属性，能直接跑；手工下载再指定路径的情形会被拦，需要 `xattr -d com.apple.quarantine`。
 
 ## 本地调试扩展
