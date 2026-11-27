@@ -20,6 +20,7 @@ import { ClxLanguageServer } from './language/languageServer';
 import { registerIncludeCompletion } from './language/includeCompletion';
 import { disposeLualsOutput } from './language/lualsServer';
 import { runClxFile } from './runClxFile';
+import { buildRomCommand } from './buildRom';
 import { activateDebug } from './debug/activate';
 import { disposeEmulatorOutput } from './emulator/emulator';
 import { isEmulatorRunning, probeDebugChannel } from './emulator/emulatorProcess';
@@ -41,7 +42,11 @@ export function activate(context: vscode.ExtensionContext) {
 			// 'cancelled' 时用户已经拒绝过下载，不再弹任何框
 			await runClxFile(context, resource, false);
 		}),
-		vscode.commands.registerCommand('extension.clx-language.restartServer', () => restartServer())
+		vscode.commands.registerCommand('extension.clx-language.restartServer', () => restartServer()),
+		// 只构建 ROM，不启动窗口。Windows 的模拟器包不会自动生成，见 buildRom.ts
+		vscode.commands.registerCommand('extension.clx-language.buildRom', (resource?: vscode.Uri) =>
+			buildRomCommand(context, resource)
+		)
 	);
 
 	void startServer();

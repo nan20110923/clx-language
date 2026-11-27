@@ -23,9 +23,8 @@ import {
 	locateBundle,
 	missingWindowsDebugCrt,
 	parseManifest,
-	isRomGenerationFailure,
+	buildRomArgs,
 	romPathFor,
-	waitForRom,
 	WINDOWS_DEBUG_CRT
 } from '../src/emulator/emulatorBundle';
 
@@ -352,71 +351,62 @@ test('romPathFor 不使用 -d 目录，ROM 总在卡带旁边', () => {
 	assert.ok(!rom.includes('/work/') || rom.startsWith('/work/src/'));
 });
 
-test('isRomGenerationFailure 认官方二进制里的四种失败行', () => {
-	const lines = [
-		"!!!ROM GEN FAIL, can't open /p/game.clx.rom!!!",
-		'!!!ROM GEN FAIL!!!',
-		'!!!ROM GEN skip compress[3]!!!',
-		'gen rom(game.clx) fail.'
-	];
-	for (const line of lines) {
-		assert.equal(isRomGenerationFailure(line), true, `应识别: ${line}`);
-	}
+
+
+// ---------------------------------------------------------------------------
+// buildRomArgs —— `coloXtool -b` 的参数表
+//
+// 为什么逐字钉住：源码里 `-b` 一旦被解析就 `exit(coloX_build_rom(...))`，
+// 会立即结束进程。所以 -d / -r 必须排在它前面，顺序错了就会去构建默认卡带
+// （`codetest.clx`）而不是用户的文件，而且**没有任何报错**。
+// ---------------------------------------------------------------------------
+
+test('buildRomArgs 把 -b 放在最后，-d/-r 在前', () => {
+	const args = buildRomArgs('/p/game.clx');
+
+	// 语法层面就断言顺序：-b 的下标必须最大
+	const b = args.indexOf('-b');
+	assert.equal(b, args.length - 2, '-b 必须在倒数第二位（后面紧跟输出路径）');
+	assert.ok(args.indexOf('-d') < b, '-d 必须在 -b 之前');
+	assert.ok(args.indexOf('-r') < b, '-r 必须在 -b 之前');
 });
 
-test('isRomGenerationFailure 不把成功行当成失败', () => {
-	const lines = [
-		'!!!ROM GEN /p/game.clx.rom!!!',
-		'use rom dir:[/p/]',
-		'use rom file:[game.clx]',
-		'load cart game.clx __lua__'
-	];
-	for (const line of lines) {
-		assert.equal(isRomGenerationFailure(line), false, `不该识别: ${line}`);
-	}
+test('buildRomArgs 的 -d 带尾部分隔符', () => {
+	const args = buildRomArgs('/p/game.clx');
+	const d = args[args.indexOf('-d') + 1];
+
+	// 少了它，模拟器内部 '%s/%s%s' 会拼成 /pgame.clx，静默失败
+	assert.ok(d.endsWith('/'), `-d 必须以分隔符结尾，实际是 ${JSON.stringify(d)}`);
+	assert.equal(d, '/p/');
 });
 
-test('waitForRom 在文件已经存在时立即成功', async () => {
-	let slept = 0;
-	const ok = await waitForRom('/p/game.clx', {
-		waitMs: 1000,
-		intervalMs: 100,
-		exists: () => true,
-		sleep: async () => { slept++; }
-	});
-	assert.equal(ok, true);
-	assert.equal(slept, 0, '不该多等');
+test('buildRomArgs 的 -r 只给文件名，不给全路径', () => {
+	const args = buildRomArgs('/p/deep/game.clx');
+	assert.equal(args[args.indexOf('-r') + 1], 'game.clx');
 });
 
-test('waitForRom 在文件稍后出现时成功', async () => {
-	let polls = 0;
-	const ok = await waitForRom('/p/game.clx', {
-		waitMs: 1000,
-		intervalMs: 100,
-		exists: () => ++polls >= 3,
-		sleep: async () => {}
-	});
-	assert.equal(ok, true);
-	assert.equal(polls, 3);
+test('buildRomArgs 的输出是完整的 <卡带>.rom 路径', () => {
+	const args = buildRomArgs('/p/game.clx');
+	const out = args[args.indexOf('-b') + 1];
+
+	// -b 的 outfile 原样使用，不补后缀；漏了 .rom 会生成一个模拟器不认的文件
+	assert.equal(out, '/p/game.clx.rom');
+	assert.ok(out.endsWith('.rom'));
 });
 
-test('waitForRom 超时返回 false 而不是抛错', async () => {
-	const ok = await waitForRom('/p/game.clx', {
-		waitMs: 500,
-		intervalMs: 100,
-		exists: () => false,
-		sleep: async () => {}
-	});
-	assert.equal(ok, false);
-});
+test('buildRomArgs 在 Windows 路径上同样成立', () => {
+	// 用 win32 语义构造输入，验证拆分与拼接。
+	// 刻意避开 C:\Users\<name> 这种形状：check-public 会把它当成真实的
+	// 开发机路径拦下来（那条 grep 是对的，别为它加 allow-public）。
+	const input = 'D:\\proj\\sub\\game.clx';
+	const args = buildRomArgs(input);
 
-test('waitForRom 只认 <卡带>.rom，同目录别的 rom 不算', async () => {
-	const present = new Set(['/p/other.clx.rom', '/p/game.rom']);
-	const ok = await waitForRom('/p/game.clx', {
-		waitMs: 300,
-		intervalMs: 100,
-		exists: p => present.has(p),
-		sleep: async () => {}
-	});
-	assert.equal(ok, false, 'game.rom / other.clx.rom 都不是本次的产物');
+	assert.equal(args.length, 6);
+	assert.equal(args[args.length - 2], '-b');
+	// 输出仍是 <源文件>.rom
+	assert.equal(args[args.length - 1], input + '.rom');
+	// -r 只取文件名，不带目录
+	assert.equal(args[args.indexOf('-r') + 1], 'game.clx');
+	// -d 用反斜杠并带尾分隔符
+	assert.equal(args[args.indexOf('-d') + 1], 'D:\\proj\\sub\\');
 });

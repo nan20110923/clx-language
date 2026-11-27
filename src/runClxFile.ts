@@ -13,8 +13,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ensureEmulator, EmulatorError, logEmulatorOutput, showEmulatorOutput } from './emulator/emulator';
-import { EmulatorLaunch, romPathFor, waitForRom } from './emulator/emulatorBundle';
+import { ensureEmulator, EmulatorError, logEmulatorOutput } from './emulator/emulator';
+import { EmulatorLaunch } from './emulator/emulatorBundle';
 import { startEmulator, type LaunchOutcome } from './emulator/emulatorProcess';
 
 /**
@@ -26,10 +26,7 @@ export async function runClxFile(
 	resource: vscode.Uri | null,
 	debug: boolean
 ): Promise<LaunchOutcome> {
-	let target = resource;
-	if (!target && vscode.window.activeTextEditor) {
-		target = vscode.window.activeTextEditor.document.uri;
-	}
+	const target = resolveTarget(resource);
 	if (!target) {
 		return 'failed';
 	}
@@ -39,77 +36,52 @@ export async function runClxFile(
 		return 'failed';
 	}
 
-	const customPath = selectCustomEmulator();
-	let launch: EmulatorLaunch | null;
-	if (customPath) {
-		if (!fs.existsSync(customPath)) {
-			vscode.window.showErrorMessage(`The configured emulator does not exist: ${customPath}`);
-			return 'failed';
-		}
-		launch = { executable: customPath, libraryDir: path.dirname(customPath) };
-	} else {
-		launch = await ensureEmulatorReady(context);
-	}
-	// 用户拒绝下载时 ensureEmulatorReady 已经静默返回 null，这里不要再报错
+	const launch = await prepareLaunch(context);
+	// 用户拒绝下载时 prepareLaunch 已经静默返回 null，这里不要再报错
 	if (!launch) {
 		return 'cancelled';
 	}
 
-	// 模拟器的输出全部转进 "CLX Emulator" 通道。ROM 生成失败时它只往 stdout
+	// 模拟器的输出全部转进 "CLX Emulator" 通道：ROM 生成失败时它只往 stdout
 	// 打一行然后继续跑，不接这里就等于把唯一的线索丢进 DevTools。
-	const outcome = await startEmulator({
+	return startEmulator({
 		file: target,
 		debug,
 		launch,
 		onStdout: logEmulatorOutput
 	});
+}
 
-	if (outcome === 'started' && !debug) {
-		// 只在"运行"时等 ROM。调试路径有自己的就绪判定（等 3563 + 钉 VM），
-		// 在那里再等 20 秒只会拖慢启动，而且卡带没加载时它会自己在 vmlist 上
-		// 看出来，不需要这条兜底提示。
-		await reportRom(target);
+/** 命令的入参：菜单会传当前资源，命令面板不传。 */
+export function resolveTarget(resource: vscode.Uri | null | undefined): vscode.Uri | undefined {
+	if (resource) {
+		return resource;
 	}
-	return outcome;
+	return vscode.window.activeTextEditor?.document.uri;
 }
 
 /**
- * 确认 ROM 真的生成了。
+ * 选定模拟器并确保它就位。
  *
- * 这是"模拟器起来了但卡带没加载"的唯一可靠信号 —— 端口通了不代表加载成功，
- * 加载失败时它照样监听 3563 并停在 BIOS 菜单。所以这里异步等一小会，没等到
- * 就把用户引到输出面板，而不是提示成功。
+ * 返回 null 表示用户取消了下载或下载失败 —— 调用方应静默退出。
  */
-async function reportRom(file: vscode.Uri): Promise<void> {
-	const produced = await waitForRom(file.fsPath, {
-		waitMs: 20000,
-		intervalMs: 500,
-		exists: p => fs.existsSync(p),
-		sleep: ms =>
-			new Promise<void>(resolve => {
-				setTimeout(resolve, ms);
-			})
-	});
-	if (produced) {
-		return;
+export async function prepareLaunch(context: vscode.ExtensionContext): Promise<EmulatorLaunch | null> {
+	const customPath = selectCustomEmulator();
+	if (customPath) {
+		if (!fs.existsSync(customPath)) {
+			vscode.window.showErrorMessage(`The configured emulator does not exist: ${customPath}`);
+			return null;
+		}
+		return { executable: customPath, libraryDir: path.dirname(customPath) };
 	}
-
-	const show = 'Show Output';
-	const answer = await vscode.window.showWarningMessage(
-		`The simulator started but did not produce ${path.basename(romPathFor(file.fsPath))} next to your cartridge. ` +
-			'The cartridge may not have loaded. Check the "CLX Emulator" output for the reason.',
-		show
-	);
-	if (answer === show) {
-		showEmulatorOutput();
-	}
+	return ensureEmulatorReady(context);
 }
 
 /**
  * 读出首行的设备规格。模拟器自己判断规格内容，插件只确认"首行确实标了"。
  * 返回 undefined 表示文件不可用（已经提示过用户）。
  */
-async function readDeviceSpec(file: vscode.Uri): Promise<string | undefined> {
+export async function readDeviceSpec(file: vscode.Uri): Promise<string | undefined> {
 	const content = await vscode.workspace.fs.readFile(file);
 	const contentStr = new TextDecoder().decode(content);
 	const lines = contentStr.split(/\r?\n/);

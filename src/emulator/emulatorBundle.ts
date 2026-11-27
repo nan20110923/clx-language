@@ -47,57 +47,42 @@ export interface EmulatorLaunch {
  * 卡带对应的 ROM 路径。
  *
  * 模拟器把 ROM 写成**卡带文件同目录**下的 sidecar：`<文件名>.clx.rom`，
- * 不是 `<文件名>.rom`，也不是 `-d` 目录下的别的名字。扩展不传 `-b`
- * （那是"只构建不运行"的选项），所以这是唯一正确的判定依据。
+ * 不是 `<文件名>.rom`。macOS 的模拟器包会在加载卡带时自己写这个文件；
+ * Windows 的包不会，需要扩展用 `-b` 显式构建（见 emulatorProcess.buildRom），
+ * 两边必须落到同一个路径，否则模拟器启动时找不到。
  */
 export function romPathFor(cartridgePath: string): string {
 	return `${cartridgePath}.rom`;
 }
 
 /**
- * 模拟器输出里表示"ROM 生成失败"的行。
+ * `coloXtool -b` 的参数表（纯逻辑，便于钉住顺序）。
  *
- * 官方二进制里这些字符串是成组出现的：
+ * 顺序有强约束：源码里 `-b` 一旦被解析就**立即 exit**（`exit(coloX_build_rom(...))`），
+ * 所以 `-d` 和 `-r` 必须排在它前面，否则构建的是默认卡带。不要为了整齐重排。
  *
- * ```
- * !!!ROM GEN FAIL, can't open %s!!!
- * !!!ROM GEN FAIL!!!
- * !!!ROM GEN skip compress[%d]!!!
- * gen rom(%s) fail.
- * ```
+ * `-d` 的尾部分隔符是模拟器的硬要求：它内部用 `'%s/%s%s'` 拼路径，少了会
+ * 拼出 `<dir><file>` 这种不存在的路径，**既不报错也不生成**。
  *
- * 关键是它**不弹错、进程继续跑**，所以"模拟器起来了"和"卡带加载了"是两件事。
- * 端口通、有窗口，都不能说明 ROM 生成成功。
+ * 输出路径原样使用，不会自动补 `.rom`，所以必须给完整文件名。
+ *
+ * 用 `path.win32` 而不是平台原生的 `path`：这条命令今天只在 Windows 上暴露
+ * （`enablement: isWindows`），但纯函数不该依赖"只会在某平台被调用"这个外部
+ * 假设 —— 那样测试在 macOS 上就测不出 Windows 的分隔符行为。
  */
-export function isRomGenerationFailure(line: string): boolean {
-	return /ROM GEN FAIL|ROM GEN skip compress|gen rom\(.+\) fail/i.test(line);
-}
+export function buildRomArgs(cartridgePath: string): string[] {
+	const usesBackslash = cartridgePath.includes('\\');
+	const p = usesBackslash ? path.win32 : path.posix;
+	const sep = usesBackslash ? path.win32.sep : path.posix.sep;
 
-/**
- * 等待 ROM 出现。
- *
- * 官方实现里 ROM 是在加载完卡带之后写的，实测耗时从 1 秒到 10 秒不等
- * （Rosetta 转译、首次解压、卡带大小都会影响）。`waitMs` 只影响"等多久"，
- * 不改变判据：文件存在才算成功。
- *
- * `exists` 与 `sleep` 都可注入，方便在普通 Node 里测。
- */
-export async function waitForRom(
-	cartridgePath: string,
-	options: { waitMs: number; intervalMs: number; exists: (p: string) => boolean; sleep: (ms: number) => Promise<void> }
-): Promise<boolean> {
-	const target = romPathFor(cartridgePath);
-	if (options.exists(target)) {
-		return true;
-	}
-	const rounds = Math.max(1, Math.ceil(options.waitMs / options.intervalMs));
-	for (let i = 0; i < rounds; i++) {
-		await options.sleep(options.intervalMs);
-		if (options.exists(target)) {
-			return true;
-		}
-	}
-	return false;
+	return [
+		'-d',
+		p.dirname(cartridgePath) + sep,
+		'-r',
+		p.basename(cartridgePath),
+		'-b',
+		romPathFor(cartridgePath)
+	];
 }
 
 /**

@@ -36,6 +36,7 @@ Node.js 22 或更高，包管理器只使用 yarn 1。
 src/extension.ts              扩展入口，只做装配（约 90 行）；esbuild 打包成 dist/extension.js
 src/ids.ts                    两个 id（LANGUAGE_ID / DEBUG_TYPE）与设置命名空间的唯一住所
 src/runClxFile.ts             选模拟器（自定义路径 or 下载）并启动；运行和调试共用
+src/buildRom.ts               CLX: Build ROM 命令（Windows 专用）：调模拟器的 -b 生成 .rom
 src/language/                 语言侧
   languageServer.ts           CLX 语言服务器（LuaLS）的启停；接管它宣告的 workspace 命令
   lifecycle.ts                命令接管（重名跳过）与生命周期串行队列（纯逻辑）
@@ -93,6 +94,7 @@ dist/                         esbuild 打包产物（extension.js），不入库
 - **模拟器不再随包分发**：1.1.0 起模拟器按需下载到 `context.globalStorageUri`，由 `src/emulator/emulator.ts`（VS Code 适配）和 `src/emulator/emulatorBundle.ts`（纯逻辑）共同管理。清单 `res/emulator-manifest.json` 指向 GitHub Releases 的 asset。**已发布的 asset 永久不删**，否则旧版扩展在冷缓存时会失能。详见 `docs/adr/0001-emulator-bundles-outside-vsix.md`。
 - **归档源自官方发布**：模拟器二进制来自 <https://x.cololight.com/mweb/docs/examples> 的 zip，用 `scripts/pack-emulator.mjs` 重新打成 tar.gz。**不要用仓库里历史上那批 2023/2024 的 `debugger/` 二进制**：官方已不再单独发布 Nature，`coloX-32` 等规格改由同一个二进制处理，macOS 也改成了 `.app` bundle 布局，字体则编译进了可执行文件。
 - **模拟器的启动方式**：用 `child_process.spawn` 传参数数组，`coloXtool -d <目录>/ -r <文件>`，调试时加 `-x`。不要改回拼接 shell 字符串的写法：Windows 的 cmd.exe 不认单引号，路径里的引号会被当成路径的一部分。
+- **ROM 生成在两个平台不一样，这是官方包的编译差异**：macOS 的包开了 `COLOX_AUTO_GEN_ROM`，加载卡带时自动写 `<文件>.clx.rom`；Windows 的包没开，从不生成。扩展用 `CLX: Build ROM` 命令（`src/buildRom.ts` + `emulatorBundle.buildRomArgs`）调官方的 `-b` 补上，只在 Windows 暴露。`-b` 的参数顺序是硬约束（它一被解析就 `exit()`，所以 `-d`/`-r` 必须在前），outfile 原样使用、不补后缀。**不要把它改成一个"自动生成"的设置项**：macOS 上任何参数都关不掉自动生成，那种开关必然有一半是假的。细节见 `docs/development.md` 的「ROM 生成」。
 - **模拟器的选择**：只有两条路。设置了 `clx-language.debugger` = `Custom` 且填了 `debuggerCustomPath` 时完全接管，不下载也不回落；否则用下载的官方包。`Nature` 选项已废弃（等价于 Default）。
 - **设备规格不枚举**：首行只要匹配 `coloX-<字母数字>` 或 `X-<宽>x<高>` 就交给模拟器自己判断。不要重新引入 `(4|16|32)` 这类白名单，官方会加新规格（`coloX-PICO8` 就是这么出现的）。
 - **调试适配器是内联的**：`src/debug/activate.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0].program` 指向一个不存在的路径，这是遗留配置，不需要补这个文件。
