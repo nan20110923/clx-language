@@ -37,7 +37,8 @@ src/extension.ts              扩展入口，只做装配（约 90 行）；esbu
 src/ids.ts                    两个 id（LANGUAGE_ID / DEBUG_TYPE）与设置命名空间的唯一住所
 src/runClxFile.ts             选模拟器（自定义路径 or 下载）并启动；运行和调试共用
 src/language/                 语言侧
-  languageServer.ts           CLX 语言服务器（LuaLS）的启停
+  languageServer.ts           CLX 语言服务器（LuaLS）的启停；接管它宣告的 workspace 命令
+  lifecycle.ts                命令接管（重名跳过）与生命周期串行队列（纯逻辑）
   lualsServer.ts              LuaLS 包的 VS Code 适配：清单、缓存根、状态栏进度
   lualsBundle.ts              LuaLS 包的纯逻辑：清单校验（带 arch）、就绪判定
   lualsConfig.ts             生成 LuaLS 的 configpath 内容（纯逻辑）
@@ -92,6 +93,7 @@ dist/                         esbuild 打包产物（extension.js），不入库
 - **模拟器不再随包分发**：1.1.0 起模拟器按需下载到 `context.globalStorageUri`，由 `src/emulator/emulator.ts`（VS Code 适配）和 `src/emulator/emulatorBundle.ts`（纯逻辑）共同管理。清单 `res/emulator-manifest.json` 指向 GitHub Releases 的 asset。**已发布的 asset 永久不删**，否则旧版扩展在冷缓存时会失能。详见 `docs/adr/0001-emulator-bundles-outside-vsix.md`。
 - **归档源自官方发布**：模拟器二进制来自 <https://x.cololight.com/mweb/docs/examples> 的 zip，用 `scripts/pack-emulator.mjs` 重新打成 tar.gz。**不要用仓库里历史上那批 2023/2024 的 `debugger/` 二进制**：官方已不再单独发布 Nature，`coloX-32` 等规格改由同一个二进制处理，macOS 也改成了 `.app` bundle 布局，字体则编译进了可执行文件。
 - **模拟器的启动方式**：用 `child_process.spawn` 传参数数组，`coloXtool -d <目录>/ -r <文件>`，调试时加 `-x`。不要改回拼接 shell 字符串的写法：Windows 的 cmd.exe 不认单引号，路径里的引号会被当成路径的一部分。
+- **ROM 由模拟器自己生成，取决于它的编译期宏 `COLOX_AUTO_GEN_ROM`**，扩展不参与。2026-11-19 的 Windows 包没开这个宏（所以当时加载卡带后从不生成 `.rom`），2026-11-27 起的包已开，与 macOS 一致。排查"没有 `.rom`"先看日志有没有 `!!!ROM GEN`；判断某个二进制有没有开宏用**裸字符串** `strings -a x.exe | grep -cx "__vm_auto_gen_rom"`（用 `grep -c` 会因内嵌 BIOS 脚本的源码文本误得 2）。细节见 `docs/development.md` 的「ROM 生成」。
 - **模拟器的选择**：只有两条路。设置了 `clx-language.debugger` = `Custom` 且填了 `debuggerCustomPath` 时完全接管，不下载也不回落；否则用下载的官方包。`Nature` 选项已废弃（等价于 Default）。
 - **设备规格不枚举**：首行只要匹配 `coloX-<字母数字>` 或 `X-<宽>x<高>` 就交给模拟器自己判断。不要重新引入 `(4|16|32)` 这类白名单，官方会加新规格（`coloX-PICO8` 就是这么出现的）。
 - **调试适配器是内联的**：`src/debug/activate.ts` 注册的工厂返回 `DebugAdapterInlineImplementation`，调试会话运行在扩展进程里。`package.json` 里 `debuggers[0].program` 指向一个不存在的路径，这是遗留配置，不需要补这个文件。
@@ -109,7 +111,8 @@ dist/                         esbuild 打包产物（extension.js），不入库
 
 - `dist/`、`.artifacts/` 和 `*.vsix` 不入库。`dist/` 放会被装进插件包的构建产物，`.artifacts/` 放交出去的东西（模拟器归档、vsix），两者不要混。不要往 `dist/` 里放 vsix：`vscode:prepublish` 每次先 `rimraf dist`，上一份产物会连根消失。
 - 模拟器归档里的可执行位必须保留。`src/emulator/emulatorBundle.ts` 解压时按 tar 头的 mode 还原权限；打包脚本拒绝 symlink 和非普通文件。
-- `src/emulator/emulatorBundle.ts`、`src/debug/debugChannel.ts`、`src/debug/luaProtocol.ts`、`src/debug/lineMapping.ts` 都不许 import `vscode`。它承载全部处理不可信输入的代码（tar 解析、路径穿越防护、sha256），必须能在普通 Node 进程里加载和测试。需要编辑器能力时从参数注入 `ProgressSink` / `Cancellation`。
+- `src/emulator/emulatorBundle.ts`、`src/debug/debugChannel.ts`、`src/debug/luaProtocol.ts`、`src/debug/lineMapping.ts`、`src/language/lifecycle.ts` 都不许 import `vscode`。它承载全部处理不可信输入的代码（tar 解析、路径穿越防护、sha256），必须能在普通 Node 进程里加载和测试。需要编辑器能力时从参数注入 `ProgressSink` / `Cancellation` / `CommandRegistrar`。
+- **语言客户端的命令注册不许交回 `vscode-languageclient`。** LuaLS 在 initialize 里静态宣告 `lua.removeSpace` / `lua.solve` / `lua.jsonToLua` 等 workspace 命令，库对每个名字直接 `registerCommand`；命令是全局命名空间，重名会抛错，而异常发生在 `initializeFeatures` 里，**整个语言客户端**跟着起不来（表现为 "couldn't create connection to server"）。`src/language/languageServer.ts` 的 `takeOverCommands()` 接管了这个环节，重名只跳过、不让启动失败。同理 `start` / `stop` / `restart` 必须走 `LifecycleQueue`：两个客户端同时在役也会撞上同一批名字。细节与升级核对方法见 `docs/luals.md` 的「命令重名」。
 - 三个平台的模拟器二进制都只有 x86_64（macOS 靠 Rosetta 2）。归档按 **platform** 命名，**不要**带 `process.arch`，否则 Apple Silicon 会去找不存在的 arm64 包。
 - macOS 的 `.app` 结构不能压平：可执行文件用 `@executable_path/../Frameworks` 加载 SDL2，清单里的 `executable` 和 `libraryPath` 缺一不可。
 - 官方 macOS 包是 ad-hoc 签名、未公证。插件自己下载的文件不带 quarantine 属性所以能直接跑；用户手动下载的会被 Gatekeeper 拦，README 里给了 `xattr -d com.apple.quarantine`。
@@ -119,7 +122,8 @@ dist/                         esbuild 打包产物（extension.js），不入库
   确实无害但被误报时，在该行加 `allow-public` 注释；历史里的误报只能在
   `scripts/check-public.mjs` 的 `HISTORY_ALLOWLIST` 里登记路径，并写明理由。
 - 工作区设置把 `main` 设为受保护分支（`.vscode/settings.json`），在 VS Code 里直接提交到 `main` 会提示新建分支。
-- **提交前钩子跑 lint/typecheck/test/check-public**：仓库用 `core.hooksPath=.githooks`（不是 husky）。换机器 clone 后要执行一次 `git config core.hooksPath .githooks`，否则钩子不生效。确实需要跳过时用 `git commit --no-verify`。
+- **推送只认 `origin`**。本机 clone 里可能还配着别的远端（历史遗留的内网镜像），但本仓库对外的是 `origin`，发布用的 GitHub Actions 也只看它。`git remote -v` 按字母序排列，读全文再判断，不要用 `head` 截断后下结论。
+- **提交前钩子跑 lint/typecheck/test/check-public**：仓库用 `core.hooksPath=.githooks`（不是 husky）。换机器 clone 后要执行一次 `git config core.hooksPath .githooks`，否则钩子不生效。确实需要跳过时用 `git commit --no-verify`。`pre-push` 另外拦"推到了 `origin` 以外的远端"。
 - **TypeScript 锁在 5.9.3，不要升到 7.x。** TS 7 是原生重写版，`require("typescript")` 只返回 `{ version }`（编译 API 在 `./unstable/*` 下），`@typescript-eslint` 会直接拒绝启动。官方共存方案要把 `typescript` alias 到 `@typescript/typescript6`、TS 7 用别名给 `tsc`，但 **yarn 1 不支持 npm alias**（空白项目上也会失败）。要升就得连包管理器一起换。详细理由见 `docs/development.md`。
 - `@typescript-eslint@8` 的 peer 是 `typescript >=4.8.4 <6.1.0`。换 TS 版本前先确认还落在范围里，否则 `yarn lint` 会挂。
 

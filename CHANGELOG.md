@@ -1,3 +1,11 @@
+### 1.3.1 (2026-11-27)
+
+* Fixed:
+  * The language server no longer fails with `couldn't create connection to server` / `command 'lua.removeSpace' already exists`. Two causes, both fixed: VS Code commands are a global namespace, so a same-named command registered by another Lua extension used to abort the whole client start-up; and restarting while the client was still starting dropped the handle and leaked a client that kept its commands registered, which made every later start fail until the window was reloaded. A command-name collision now only skips that one command; start/stop/restart are serialized.
+  * The simulator's output now goes to the **CLX Emulator** output channel. It used to be captured but never forwarded, so everything the emulator printed — including its one-line `!!!ROM GEN FAIL…` message — only reached the DevTools console. That is what made "the simulator runs but no `.rom` appears" so hard to diagnose.
+  * **Windows: a `.rom` is now generated when you run a cartridge.** The previous Windows emulator package was compiled without `COLOX_AUTO_GEN_ROM`, so it never wrote one, while the macOS package enables it and does. The updated Windows package enables it too. The same macro also brings back the memory-layout log block (`sprites:00000 map:24900 …`) and the source-line printout on errors, so those now appear in the Windows emulator's output as well.
+  * **Windows: the emulator no longer needs any Visual C++ runtime installed.** The previous package linked the *debug* CRT (`MSVCP140D.dll`, `VCRUNTIME140D.dll`, `VCRUNTIME140_1D.dll`, `ucrtbased.dll`), which cannot be redistributed and which the official download did not include, so the process failed during image load. The updated package is built against the release CRT and bundles every DLL it needs.
+
 ### 1.3.0 (2026-11-27)
 
 * Breaking:

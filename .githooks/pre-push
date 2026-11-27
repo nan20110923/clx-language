@@ -1,0 +1,36 @@
+#!/bin/sh
+# 推送前确认真的推到了 origin。
+#
+# 为什么需要：本机 clone 里同时配着 origin 和一个历史遗留的内网镜像。
+# `git remote -v` 按字母序排列，内网那个排在前面 —— 一次 `| head -2`
+# 就能让人得出"只有一个远端"的结论，然后把代码推到非公开的那个去。
+# 这是外向操作，且推送不可收回，值得一道确定性的拦截。
+#
+# git 通过 stdin 给钩子传 "<local ref> <local sha> <remote ref> <remote sha>"
+# 每行一个要推的分支，远端名在 $1。
+#
+# 想跳过：git push --no-verify。只在明确知道为什么时用。
+
+set -e
+
+remote="$1"
+
+if [ -z "$remote" ]; then
+	echo "pre-push: 没有解析出远端名，无法校验" >&2
+	exit 1
+fi
+
+if [ "$remote" != "origin" ]; then
+	cat >&2 <<EOF
+pre-push: 拒绝推送到 '$remote'。
+
+本仓库对外只在 origin（$(git remote get-url origin 2>/dev/null || echo '<未配置>')）。
+发布用的 GitHub Actions 也只跟 origin。
+
+如果确实要推别的远端，用 'git push --no-verify'。现有远端：
+$(git remote -v)
+EOF
+	exit 1
+fi
+
+exit 0

@@ -21,7 +21,10 @@ import {
 	findBundle,
 	formatBytes,
 	locateBundle,
-	parseManifest
+	missingWindowsDebugCrt,
+	parseManifest,
+	romPathFor,
+	WINDOWS_DEBUG_CRT
 } from '../src/emulator/emulatorBundle';
 
 let workDir: string;
@@ -244,3 +247,107 @@ test('formatBytes 覆盖三个量级', () => {
 	assert.equal(formatBytes(2048), '2 KB');
 	assert.equal(formatBytes(5 * 1024 * 1024), '5.0 MB');
 });
+
+// ---------------------------------------------------------------------------
+// missingWindowsDebugCrt
+//
+// 官方便携版 coloXtool.exe 链接 MSVC **Debug** CRT（MSVCP140D 等四个），
+// 官方 zip 不带，而微软不允许分发。缺了的话 Windows 在加载镜像阶段就失败：
+// 进程不起、不生成 .rom、error 事件只有 ENOENT/UNKNOWN。这几条测试钉住
+// "能诊断"这一步 —— 没有它们，用户只会看到"点了运行没反应"。
+// ---------------------------------------------------------------------------
+
+/** 用一组"存在的文件"造 exists 谓词，路径按 Windows 风格拼接。 */
+function existsIn(files: string[]): (file: string) => boolean {
+	const set = new Set(files.map(f => f.toLowerCase()));
+	return file => set.has(file.toLowerCase());
+}
+
+test('missingWindowsDebugCrt 在非 Windows 上不检查', () => {
+	const missing = missingWindowsDebugCrt('/app', () => false, 'darwin');
+	assert.deepEqual(missing, []);
+});
+
+test('missingWindowsDebugCrt 在 win32 上列出全部缺失项', () => {
+	const missing = missingWindowsDebugCrt('C:\\app', () => false, 'win32', {} as NodeJS.ProcessEnv);
+	assert.deepEqual([...missing].sort(), [...WINDOWS_DEBUG_CRT].sort());
+});
+
+test('missingWindowsDebugCrt 四个 DLL 都在应用目录时不报缺失', () => {
+	const appDir = 'C:\\app';
+	const files = WINDOWS_DEBUG_CRT.map(dll => path.win32.join(appDir, dll));
+	const missing = missingWindowsDebugCrt(appDir, existsIn(files), 'win32', {} as NodeJS.ProcessEnv);
+	assert.deepEqual(missing, []);
+});
+
+test('missingWindowsDebugCrt 在 System32 里也算找到', () => {
+	const appDir = 'C:\\app';
+	const sys32 = 'C:\\Windows\\System32';
+	const files = WINDOWS_DEBUG_CRT.map(dll => path.win32.join(sys32, dll));
+	const missing = missingWindowsDebugCrt(appDir, existsIn(files), 'win32', { SystemRoot: 'C:\\Windows' } as NodeJS.ProcessEnv);
+	assert.deepEqual(missing, []);
+});
+
+test('missingWindowsDebugCrt 也会搜 PATH', () => {
+	const appDir = 'C:\\app';
+	const extra = 'D:\\tools\\vc';
+	const files = WINDOWS_DEBUG_CRT.map(dll => path.win32.join(extra, dll));
+	const missing = missingWindowsDebugCrt(
+		appDir,
+		existsIn(files),
+		'win32',
+		{ PATH: `C:\\Windows;${extra}` } as NodeJS.ProcessEnv
+	);
+	assert.deepEqual(missing, []);
+});
+
+test('missingWindowsDebugCrt 只报真正缺的那个', () => {
+	const appDir = 'C:\\app';
+	// 只放三个，缺 ucrtbased.dll
+	const files = WINDOWS_DEBUG_CRT.filter(d => d !== 'ucrtbased.dll').map(dll => path.win32.join(appDir, dll));
+	const missing = missingWindowsDebugCrt(appDir, existsIn(files), 'win32', {} as NodeJS.ProcessEnv);
+	assert.deepEqual(missing, ['ucrtbased.dll']);
+});
+
+test('missingWindowsDebugCrt 的查询顺序是应用目录优先于 PATH', () => {
+	const appDir = 'C:\\app';
+	const elsewhere = 'D:\\other';
+	const seen: string[] = [];
+	const exists = (file: string) => {
+		seen.push(file);
+		return file.toLowerCase() === path.win32.join(appDir, 'MSVCP140D.dll').toLowerCase();
+	};
+	missingWindowsDebugCrt(appDir, exists, 'win32', { PATH: elsewhere } as NodeJS.ProcessEnv);
+
+	// 第一个被查的必须是应用目录，这是 Windows 的加载顺序
+	assert.equal(seen[0], path.win32.join(appDir, 'MSVCP140D.dll'));
+	assert.ok(!missingWindowsDebugCrt(appDir, exists, 'win32', { PATH: elsewhere }).includes('MSVCP140D.dll'));
+});
+
+// ---------------------------------------------------------------------------
+// ROM 生成判定
+//
+// 这些字符串是从官方二进制里读出来的（macOS 与 Windows 版完全一致）：
+//
+//   !!!ROM GEN FAIL, can't open %s!!!
+//   !!!ROM GEN FAIL!!!
+//   !!!ROM GEN skip compress[%d]!!!
+//   gen rom(%s) fail.
+//
+// 关键行为：生成失败时模拟器**不报错、进程继续跑**，只在 stdout 打一行。
+// 所以"模拟器起来了"证明不了"卡带加载了"，只能看 ROM 文件。
+// ---------------------------------------------------------------------------
+
+test('romPathFor 是卡带路径加 .rom —— 不是替换扩展名', () => {
+	// 用户看到的是 <文件名>.clx.rom，别写成 <文件名>.rom
+	assert.equal(romPathFor('/p/game.clx'), '/p/game.clx.rom');
+	assert.equal(romPathFor('C:\\p\\game.clx'), 'C:\\p\\game.clx.rom');
+});
+
+test('romPathFor 不使用 -d 目录，ROM 总在卡带旁边', () => {
+	const rom = romPathFor('/work/src/game.clx');
+	assert.ok(rom.startsWith('/work/src/'));
+	assert.ok(!rom.includes('/work/') || rom.startsWith('/work/src/'));
+});
+
+

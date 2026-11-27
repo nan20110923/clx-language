@@ -25,7 +25,7 @@
  *   CLX_E2E_KEEP=1   跑完不删临时目录，便于看日志
  */
 
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, basename, resolve, delimiter } from 'node:path';
@@ -208,6 +208,26 @@ exports.run = async function run() {
 
     if (session) await vscode.debug.stopDebugging(session);
     sub.dispose();
+
+    // ---- 运行路径（非调试）：这是 reportRom 唯一生效的地方 ----
+    // 先删掉上一次的 ROM，否则"已存在"会让检查变成空操作。
+    await sleep(1500);
+    fs.rmSync(rom, { force: true });
+    try {
+      const runCommand = 'extension.clx-language.run';
+      const doc2 = await vscode.workspace.openTextDocument(clxPath);
+      await vscode.window.showTextDocument(doc2);
+      // 运行命令读的是编辑器里的活动文档，所以必须先把它打开
+      await vscode.commands.executeCommand(runCommand, doc2.uri);
+      let regenerated = false;
+      for (let i = 0; i < 60; i++) {
+        if (existsSync(rom)) { regenerated = true; break; }
+        await sleep(500);
+      }
+      log('运行路径重新生成了 ROM', regenerated, existsSync(rom) ? fs.statSync(rom).size + ' bytes' : 'missing');
+    } catch (e) {
+      log('运行路径重新生成了 ROM', false, String(e));
+    }
   } catch (e) {
     log('harness 自身出错', false, String(e) + '\\n' + (e && e.stack));
   } finally {
@@ -315,8 +335,47 @@ function main() {
 	}, 500);
 }
 
+/**
+ * 杀掉本次 e2e 启动的模拟器。
+ *
+ * 为什么必须做：`run` 路径的模拟器不会自己退出（那是对的），所以它会在
+ * 3563 上留着监听。下一次 e2e 就会撞上"端口占用"，而表现是
+ * **调试会话永远不停止** —— 一个看起来像代码回归的假失败。
+ *
+ * 只杀命令行里带本次临时目录的那些，不碰用户自己开着的模拟器：
+ * 扩展给每个进程传的是 `-d <临时目录>/`，这是它能被唯一认出来的标记。
+ */
+function killEmulatorsFor(base) {
+	const marker = `-d ${base}`;
+	let killed = 0;
+	try {
+		// ps 在所有 POSIX 上都有；这里只跑在 macOS/Linux（扩展没有 Linux 版模拟器，
+		// e2e 本身也不进 CI）。
+		const out = execFileSync('ps', ['-Ao', 'pid=,command='], { encoding: 'utf8' });
+		for (const line of out.split('\n')) {
+			if (!line.includes('coloXtool') || !line.includes(marker)) {
+				continue;
+			}
+			const pid = Number(line.trim().split(/\s+/)[0]);
+			if (!Number.isInteger(pid) || pid <= 0) {
+				continue;
+			}
+			try {
+				process.kill(pid, 'SIGTERM');
+				killed++;
+			} catch {
+				// 已经退出了
+			}
+		}
+	} catch {
+		// ps 不可用：不阻塞报告，下面仍然会提示端口状态
+	}
+	return killed;
+}
+
 function report(resultPath, base) {
 	if (!existsSync(resultPath)) {
+		killEmulatorsFor(base);
 		console.error('\n超时：测试宿主没有写出结果。日志在', base);
 		process.exit(1);
 	}
@@ -333,6 +392,11 @@ function report(resultPath, base) {
 		}
 	}
 	console.log(`\n${pass}/${pass + fail} 项通过`);
+
+	const killed = killEmulatorsFor(base);
+	if (killed > 0) {
+		console.log(`已清理 ${killed} 个本次启动的模拟器进程`);
+	}
 
 	if (!process.env.CLX_E2E_KEEP) {
 		rmSync(base, { recursive: true, force: true });

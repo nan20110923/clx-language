@@ -1,5 +1,5 @@
 {
-  "release": "emu-2026-11-19",
+  "release": "emu-2026-11-27",
   "baseUrl": "https://github.com/nan20110923/clx-language/releases/download",
   "bundles": [
     {
@@ -15,10 +15,10 @@
     {
       "product": "ColoPlay",
       "platform": "win32",
-      "date": "2026-11-19",
-      "asset": "coloplay-win32-2026-11-19.tar.gz",
-      "size": 5947849,
-      "sha256": "99864b1fad783f6ab8b6f6af77cc88dbe560a660f728de63b83c462cd2afcf7b",
+      "date": "2026-11-27",
+      "asset": "coloplay-win32-2026-11-27.tar.gz",
+      "size": 5822823,
+      "sha256": "aa3e1b1389dd78b8f7bac4a9adbb2e6a888ceff348b98a86948417103f62cab5",
       "executable": "coloXtool.exe"
     }
   ]

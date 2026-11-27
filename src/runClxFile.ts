@@ -13,7 +13,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ensureEmulator, EmulatorError } from './emulator/emulator';
+import { ensureEmulator, EmulatorError, logEmulatorOutput } from './emulator/emulator';
 import { EmulatorLaunch } from './emulator/emulatorBundle';
 import { startEmulator, type LaunchOutcome } from './emulator/emulatorProcess';
 
@@ -55,7 +55,14 @@ export async function runClxFile(
 		return 'cancelled';
 	}
 
-	return startEmulator({ file: target, debug, launch });
+	// 模拟器的输出全部转进 "CLX Emulator" 通道。以前 onStdout 从来没人传，
+	// 这些行只进 DevTools console —— 排查"没有 .rom"时等于把唯一的线索丢掉。
+	return startEmulator({
+		file: target,
+		debug,
+		launch,
+		onStdout: logEmulatorOutput
+	});
 }
 
 /**

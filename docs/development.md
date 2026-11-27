@@ -122,7 +122,44 @@ yarn watch    # 监听文件改动，自动重新打包
 - **`i local` 拿不到局部变量**（模拟器侧的帧偏移 bug）。内嵌的 Lua helper 硬编码了 `debug.getlocal(frame + 2, …)` 的 `+2`，帧偏移错，报的是卡带顶层 chunk。同一帧上 `p <名字>` 是正确的，所以 Variables 面板的 Locals 会明确提示改用 `p`。不要试图靠解析 `i local` 的文本凑出局部变量。
 - **`src __lua__` 应答里的 `__lua__:N`，N 是行数不是起始行号**，且**比正文行数少 1**（文件末尾空行不计）。别拿它做行号校验，正文是权威。历史上它被误读成"`__lua__` 段在原文件里的起始行"，导致断点整体错位。
 - **协议权威来源**：模拟器官方源码的 `c/coloX/src/coloX_dbg.cpp` 是权威实现（文档是摘要，漏掉应答体形状和错误文本）；`c/coloX/guide/debug.md` 是官方文档；`dbgtool/` 是手工客户端参考。改协议层前先对照它们，`help` 命令也能从模拟器直接问出全量命令表。
-- **运行成功与否的判断**：看文件同级目录是否出现 `.rom`，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。
+- **运行成功与否的判断**：看文件同级目录是否出现 `.rom`，不要看 3563 端口有没有打开。加载失败时模拟器也会继续运行并监听端口。ROM 由模拟器自己写成 sidecar（`<文件名>.clx.rom`），扩展不参与生成 —— 能不能生成取决于模拟器包的编译期宏，见下一条。
+
+  **对照基线** —— 卡带真的被解析时，日志里一定依次出现这三段：
+
+  ```
+  load cart <dir>/ <file>
+  !!!ROM GEN <dir>/<file>.rom!!!          ← 缺这行 = 根本没进解析流程
+     sprites:00000  map:24900  flags:2C900 …    ← 内存布局，紧随其后
+  ======waiting for client's request on TCPPORT:3563 ======
+  ```
+- **ROM 生成靠模拟器的编译期宏 `COLOX_AUTO_GEN_ROM`**。这是两个平台历史上行为不同的唯一原因，也是排查"没有 `.rom`"的起点。
+
+  - `coloX_cart.c` 里加载卡带后，只有开了该宏才调 `coloX_cart_export()` 写 `.rom`。
+  - **2026-11-19 的 Windows 包没开**（`SConstruct` 只在 `NatureType == 'mac'` 分支加这个宏），所以加载卡带后从不生成。**2026-11-27 起的 Windows 包已开**，与 macOS 一致。
+  - 判据：该宏同时控制 `lua_setglobal(L, "__vm_auto_gen_rom")`，所以可用**裸字符串**判断。`strings -a coloXtool.exe | grep -cx "__vm_auto_gen_rom"`：1 = 宏已开，0 = 未开。**不要用 `grep -c`** —— 内嵌 BIOS 脚本里有 `if __vm_auto_gen_rom then` 的源码文本，会把计数抬到 2。
+  - 同一个宏还控制**内存布局日志**（`sprites:00000 map:24900 …`）和**报错时打印源码行**。老 Windows 包输出里缺这两样是同一个原因，不是故障；新包起都有了。
+
+  **排查"没有 `.rom`"**：先看日志里有没有 `!!!ROM GEN`。
+
+  - 没有这行 → 卡带没被解析。检查首行设备规格，以及编码（UTF-8 BOM 会让模拟器静默回落到 BIOS 菜单）。
+  - 有 `!!!ROM GEN FAIL…` → 解析成功、写盘失败。多半是 `-d` 丢了尾分隔符：模拟器内部用 `'%s/%s%s'` 拼路径，少了就拼成 `projgame.clx.rom`，**既不报错也不生成**。实测：`-d /p/proj` 静默无输出、无 ROM；`-d /p/proj/` 正常生成。
+
+  已实测排除的因素（不要重复怀疑）：中文路径、UTF-8/GBK 内容、CRLF、纯 CR、Ctrl-Z。
+
+  模拟器的输出都会进 **CLX Emulator** 输出通道（`logEmulatorOutput`）。以前 `startEmulator` 的 `onStdout` 从来没人传，这些行只进 DevTools console —— 排查时等于把唯一的线索丢掉。
+- **Windows 包的 CRT 必须是 Release 版**。2026-11-19 那批链接的是 MSVC **Debug** CRT（`MSVCP140D.dll`、`VCRUNTIME140D.dll`、`VCRUNTIME140_1D.dll`、`ucrtbased.dll`），官方 zip 一个都不带，而这些 DLL **不在微软 REDIST 列表里、不允许随应用分发**（装 `vc_redist.x64.exe` 也没用，那只装 Release CRT）。症状是进程在加载镜像阶段就死，`spawn` 的 `error` 只有 `ENOENT`/`UNKNOWN`。
+
+  2026-11-27 的包已改为 Release CRT（`MSVCP140.dll` / `VCRUNTIME140.dll` / `VCRUNTIME140_1.dll`），并把这几个 DLL 连同 `libcurl.dll`、`zlib.dll`、`zlib1.dll` 一起打进归档，**依赖完全自足**。注意 `zlib.dll` 与 `zlib1.dll` 内容相同但**都必需**：`coloXtool.exe` 导入前者，`libcurl.dll` 导入后者。
+
+  核对方法（在 macOS 上就能做，不需要 Windows）：
+
+  ```bash
+  objdump -p /tmp/win/coloXtool.exe | grep 'DLL Name'
+  ```
+
+  出现带 `D` 的 Debug 版就是问题包；只有 `MSVCP140.dll` / `VCRUNTIME140.dll` 是正常的。
+
+  只在 spawn **真的失败**时才检查 Debug CRT（`missingWindowsDebugCrt`，纯逻辑在 `emulatorBundle.ts`）。不做启动前拦截：能在 Windows 上正常跑模拟器的机器不该被挡住。
 - **macOS Gatekeeper**：官方 macOS 包是 ad-hoc 签名、未公证。插件通过 `https` 下载的文件不带 quarantine 属性，能直接跑；手工下载再指定路径的情形会被拦，需要 `xattr -d com.apple.quarantine`。
 
 ## 本地调试扩展
